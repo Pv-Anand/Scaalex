@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Documents — Scaalex Intelligence{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Institutional Record</div>
+    <h1>Documents</h1>
+  </div>
+</div>
+
+<form class="filter-bar">
+  <select name="client_id" onchange="this.form.submit()">
+    <option value="">All Clients</option>
+    {% for c in clients %}
+    <option value="{{ c.id }}" {{ 'selected' if current_client_id == c.id }}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+{% if documents %}
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>File</th><th>Client</th><th>Type</th><th>Uploaded</th><th></th></tr></thead>
+    <tbody>
+      {% for d in documents %}
+      <tr>
+        <td>{{ d.file_name }}</td>
+        <td><a href="{{ url_for('clients.overview', slug=d.client.slug) }}">{{ d.client.name }}</a></td>
+        <td>{{ d.file_type|upper }}</td>
+        <td>{{ d.uploaded_at.strftime('%d %b %Y') }}</td>
+        <td><a href="{{ url_for('documents.download', doc_id=d.id) }}" class="small">Download</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><h3>No documents uploaded yet</h3></div>
+{% endif %}
+{% endblock %}

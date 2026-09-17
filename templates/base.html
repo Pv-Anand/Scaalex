@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% if current_user.is_authenticated %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
+  <title>{% block title %}Scaalex Intelligence{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  {% if current_user.is_authenticated %}
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="mark">Scaalex</div>
+        <div class="sub">Project Intelligence</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('home.index') }}" class="{{ 'active' if request.endpoint == 'home.index' }}">Home</a>
+        <a href="{{ url_for('action_items.global_list') }}" class="{{ 'active' if request.endpoint == 'action_items.global_list' }}">Action Items</a>
+        <a href="{{ url_for('decisions.global_list') }}" class="{{ 'active' if request.endpoint == 'decisions.global_list' }}">Decisions</a>
+        <a href="{{ url_for('documents.global_list') }}" class="{{ 'active' if request.endpoint == 'documents.global_list' }}">Documents</a>
+      </nav>
+      <div class="sidebar-section-label">Clients</div>
+      <div class="sidebar-clients">
+        {% for c in sidebar_clients %}
+        <a href="{{ url_for('clients.overview', slug=c.slug) }}"
+           class="sidebar-client-link {{ 'active' if client is defined and client and client.id == c.id }}">
+          <span>{{ c.name }}</span>
+          <span class="status-dot {{ c.status }}"></span>
+        </a>
+        {% endfor %}
+        <a href="{{ url_for('clients.new') }}" class="sidebar-client-link" style="color: var(--grey-500)">+ Add Client</a>
+      </div>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">{{ current_user.name }}</div>
+        <a href="{{ url_for('auth.logout') }}" class="sidebar-logout">Sign out</a>
+      </div>
+    </aside>
+    <main class="main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% else %}
+    {% block auth_content %}{% endblock %}
+  {% endif %}
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

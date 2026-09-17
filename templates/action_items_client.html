@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Action Items — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="flex-between mb-16">
+  <h2 class="section-title" style="margin-bottom:0;">Action Items</h2>
+  <a href="{{ url_for('action_items.new', slug=client.slug) }}" class="btn btn-sm">+ New Action Item</a>
+</div>
+
+<form class="filter-bar">
+  <select name="status" onchange="this.form.submit()">
+    <option value="">All Statuses</option>
+    {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if filters.get('status') == s }}>{{ s }}</option>{% endfor %}
+  </select>
+  <select name="priority" onchange="this.form.submit()">
+    <option value="">All Priorities</option>
+    {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if filters.get('priority') == p }}>{{ p }}</option>{% endfor %}
+  </select>
+  <select name="sort" onchange="this.form.submit()">
+    <option value="due_date" {{ 'selected' if filters.get('sort', 'due_date') == 'due_date' }}>Sort: Due Date</option>
+    <option value="priority" {{ 'selected' if filters.get('sort') == 'priority' }}>Sort: Priority</option>
+  </select>
+</form>
+
+{% if items %}
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th><th>Source</th></tr></thead>
+    <tbody>
+      {% for a in items %}
+      <tr>
+        <td>{{ a.task }}{% if a.needs_confirmation %} <span class="needs-confirmation-tag small">Needs Confirmation</span>{% endif %}</td>
+        <td>{{ a.owner }}</td>
+        <td class="{{ 'overdue-text' if a.is_overdue }}">{{ a.due_date.strftime('%d %b %Y') if a.due_date else '—' }}{% if a.is_overdue %} (Overdue){% endif %}</td>
+        <td><span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span></td>
+        <td>
+          <select onchange="updateActionStatus({{ a.id }}, this.value, this)">
+            {% for s in statuses %}
+            <option value="{{ s }}" {{ 'selected' if s == a.status }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td class="small muted">
+          {% if a.conversation_id %}<a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=a.conversation_id) }}">{{ a.source_label }}</a>{% else %}{{ a.source_label }}{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <h3>No action items yet</h3>
+  <a href="{{ url_for('action_items.new', slug=client.slug) }}" class="btn mt-16">+ New Action Item</a>
+</div>
+{% endif %}
+{% endblock %}

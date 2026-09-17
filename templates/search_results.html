@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Search — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<h2 class="section-title">Search Results for "{{ query }}"</h2>
+
+{% if not query %}
+<p class="muted">Enter a search term above to look across conversations, decisions, and action items for {{ client.name }}.</p>
+{% elif not conversations and not decisions and not action_items %}
+<div class="empty-state"><h3>No matches found</h3></div>
+{% else %}
+
+{% if conversations %}
+<div class="section">
+  <h3 class="timeline-section-title">Conversations</h3>
+  {% for c in conversations %}
+  <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=c.id) }}" style="display:block;">
+    <div class="list-item">
+      <strong>{{ c.interaction_type }}</strong> — {{ c.date.strftime('%d %b %Y') }}
+      <div class="small muted mt-8">{{ (c.summary or c.raw_notes or '')[:180] }}</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if decisions %}
+<div class="section">
+  <h3 class="timeline-section-title">Decisions</h3>
+  {% for d in decisions %}
+  <div class="list-item">{{ d.decision }} <span class="small muted">— {{ d.date.strftime('%d %b %Y') }}</span></div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if action_items %}
+<div class="section">
+  <h3 class="timeline-section-title">Action Items</h3>
+  {% for a in action_items %}
+  <div class="list-item">{{ a.task }} <span class="small muted">— {{ a.owner }}</span></div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: scaalex-intel
+    runtime: python
+    plan: starter
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 180"
+    healthCheckPath: /login
+    disk:
+      name: scaalex-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATA_DIR
+        value: /var/data
+      - key: FORCE_HTTPS
+        value: "true"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_TRANSCRIBE_MODEL
+        value: whisper-1
+      - key: MAX_UPLOAD_MB
+        value: "50"

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}{{ conversation.interaction_type }} — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="page-header" style="margin-bottom:20px;">
+  <div>
+    <div class="page-eyebrow">{{ conversation.date.strftime('%d %B %Y, %I:%M %p') }}</div>
+    <h1>{{ conversation.interaction_type }}</h1>
+    <div class="page-subtitle">{{ conversation.participants_display or 'No participants listed' }}</div>
+  </div>
+  <a href="{{ url_for('conversations.edit', slug=client.slug, conversation_id=conversation.id) }}" class="btn btn-secondary btn-sm">Edit Details</a>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="section">
+      <h2 class="section-title">Discussion / Notes</h2>
+      <div class="card">
+        <p style="white-space:pre-wrap;">{{ conversation.raw_notes or 'No notes recorded.' }}</p>
+      </div>
+      <textarea id="raw-notes-view" style="display:none;">{{ conversation.raw_notes }}</textarea>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Voice Recording</h2>
+      <div class="card">
+        {% if conversation.audio_filename %}
+        <audio class="audio-player" controls src="{{ url_for('documents.audio', slug=client.slug, conversation_id=conversation.id) }}"></audio>
+        <div class="small muted mb-16">{{ conversation.audio_original_name }}</div>
+        {% endif %}
+
+        <label class="btn btn-secondary btn-sm" for="audio-input" style="cursor:pointer;">
+          {{ 'Replace Voice Recording' if conversation.audio_filename else 'Upload Voice Recording' }}
+        </label>
+        <input type="file" id="audio-input" accept=".mp3,.wav,.m4a,.mp4" style="display:none;">
+        <p id="transcribe-status" class="form-hint"></p>
+
+        {% if conversation.transcript or conversation.audio_filename %}
+        <div class="form-group mt-16">
+          <label>Transcript {% if conversation.transcript_status == 'pending' %}<span class="small muted">(processing…)</span>{% endif %}</label>
+          <textarea id="transcript-editor" rows="8">{{ conversation.transcript or '' }}</textarea>
+          <div class="flex-gap mt-8">
+            <button class="btn btn-sm btn-secondary" onclick="document.getElementById('confirm-transcript-form').submit()">Save Transcript</button>
+          </div>
+        </div>
+        <form id="confirm-transcript-form" method="POST" action="{{ url_for('conversations.save_transcript', slug=client.slug, conversation_id=conversation.id) }}" style="display:none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="transcript" id="transcript-hidden">
+        </form>
+        {% else %}
+        <textarea id="transcript-editor" style="display:none;"></textarea>
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="extract-section" class="section" style="{{ '' if conversation.transcript or conversation.raw_notes else 'display:none;' }}">
+      <div class="flex-gap">
+        <button class="btn" onclick="runExtraction({{ conversation.id }}, this)">Generate Structured Information</button>
+        <span class="small muted">Extracts summary, decisions, action items, and open questions using AI. Nothing is saved until you confirm it.</span>
+      </div>
+      <div id="extraction-review" class="mt-24" style="display:none;"></div>
+    </div>
+
+    {% if conversation.extraction_status == 'confirmed' %}
+    <div class="section">
+      <h2 class="section-title">Confirmed Summary</h2>
+      <div class="card">
+        <p style="white-space:pre-wrap;">{{ conversation.summary }}</p>
+        {% if conversation.important_context %}
+        <div class="timeline-section-title">Important Context</div>
+        <p style="white-space:pre-wrap;">{{ conversation.important_context }}</p>
+        {% endif %}
+        {% if conversation.open_questions %}
+        <div class="timeline-section-title">Open Questions</div>
+        <ul class="bullets">{% for q in conversation.open_questions %}<li>{{ q }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Decisions From This Conversation</h2>
+      {% set decisions = conversation.decisions.all() %}
+      {% if decisions %}
+      <ul>
+        {% for d in decisions %}
+        <li class="list-item">
+          <div class="flex-between">
+            <span>{{ d.decision }}</span>
+            <span class="badge {{ 'badge-status-Needs.Confirmation' if d.status == 'Needs Confirmation' else 'badge-status-Confirmed' }}">{{ d.status }}</span>
+          </div>
+          {% if d.context %}<div class="small muted mt-8">{{ d.context }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted small">None recorded.</p>{% endif %}
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Action Items From This Conversation</h2>
+      {% set items = conversation.action_items.all() %}
+      {% if items %}
+      <ul>
+        {% for a in items %}
+        <li class="list-item">
+          <div class="flex-between">
+            <span>{{ a.task }}</span>
+            <span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span>
+          </div>
+          <div class="small muted mt-8">{{ a.owner }}{% if a.due_date %} · Due {{ a.due_date.strftime('%d %b %Y') }}{% endif %} · {{ a.status }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted small">None recorded.</p>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="section">
+      <h2 class="section-title">Documents</h2>
+      <div class="card">
+        {% set docs = conversation.documents.all() %}
+        {% if docs %}
+        <ul class="mb-16">
+          {% for d in docs %}
+          <li class="list-item">
+            <a href="{{ url_for('documents.download', doc_id=d.id) }}">{{ d.file_name }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted small mb-16">No files attached.</p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('documents.upload', slug=client.slug) }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
+          <input type="file" name="file" required>
+          <button type="submit" class="btn btn-sm btn-secondary mt-8">Upload File</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Record Info</h2>
+      <div class="card small">
+        <div class="flex-between mb-8"><span class="muted">Created</span><span>{{ conversation.created_at.strftime('%d %b %Y, %I:%M %p') }}</span></div>
+        {% if conversation.created_by %}<div class="flex-between mb-8"><span class="muted">Recorded by</span><span>{{ conversation.created_by.name }}</span></div>{% endif %}
+        <div class="flex-between"><span class="muted">Extraction Status</span><span>{{ conversation.extraction_status.replace('_', ' ').title() }}</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+  window._clientSlug = "{{ client.slug }}";
+  initAudioUpload({{ conversation.id }});
+  document.getElementById('confirm-transcript-form')?.addEventListener('submit', function() {
+    document.getElementById('transcript-hidden').value = document.getElementById('transcript-editor').value;
+  });
+</script>
+{% endblock %}

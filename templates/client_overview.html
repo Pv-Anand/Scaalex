@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }} — Scaalex Intelligence{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="stat-row">
+  <div class="stat-cell">
+    <div class="num">{{ client.status }}</div>
+    <div class="label">Engagement Status</div>
+  </div>
+  <div class="stat-cell">
+    <div class="num">{{ client.last_activity.strftime('%d %b %Y') if client.last_activity else '—' }}</div>
+    <div class="label">Last Interaction</div>
+  </div>
+  <div class="stat-cell">
+    <div class="num">{{ client.conversation_count }}</div>
+    <div class="label">Conversations</div>
+  </div>
+  <div class="stat-cell">
+    <div class="num">{{ client.open_action_items_count }}</div>
+    <div class="label">Pending Action Items</div>
+  </div>
+  <div class="stat-cell">
+    <div class="num">{{ client.decision_count }}</div>
+    <div class="label">Decisions Recorded</div>
+  </div>
+</div>
+
+<div class="mb-24">
+  <a href="{{ url_for('ai_overview.ai_summary', slug=client.slug) }}" class="btn btn-secondary">Generate Leadership Overview →</a>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="section">
+      <div class="flex-between mb-16">
+        <h2 class="section-title" style="margin-bottom:0;">Recent Conversations</h2>
+        <a href="{{ url_for('conversations.timeline', slug=client.slug) }}" class="small muted">View timeline →</a>
+      </div>
+      {% if recent_conversations %}
+      {% for c in recent_conversations %}
+      <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=c.id) }}" style="display:block;">
+        <div class="list-item">
+          <div class="flex-between">
+            <strong>{{ c.interaction_type }}</strong>
+            <span class="small muted">{{ c.date.strftime('%d %b %Y') }}</span>
+          </div>
+          <div class="small muted mt-8">{{ c.summary or (c.raw_notes[:160] ~ ('…' if c.raw_notes|length > 160 else '')) or 'No notes yet' }}</div>
+        </div>
+      </a>
+      {% endfor %}
+      {% else %}
+      <div class="empty-state">
+        <h3>No conversations yet</h3>
+        <p>Record your first update to begin this client's institutional record.</p>
+        <a href="{{ url_for('conversations.new', slug=client.slug) }}" class="btn">+ Add Update</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div class="section">
+      <div class="flex-between mb-16">
+        <h2 class="section-title" style="margin-bottom:0;">Open Action Items</h2>
+        <a href="{{ url_for('action_items.client_list', slug=client.slug) }}" class="small muted">View all →</a>
+      </div>
+      {% if open_actions %}
+      <ul>
+        {% for a in open_actions %}
+        <li class="list-item">
+          <div class="flex-between">
+            <span>{{ a.task }}</span>
+            <span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span>
+          </div>
+          <div class="small mt-8 {{ 'overdue-text' if a.is_overdue else 'muted' }}">
+            {{ a.owner }}{% if a.due_date %} · Due {{ a.due_date.strftime('%d %b') }}{% if a.is_overdue %} (Overdue){% endif %}{% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted small">No open action items.</p>
+      {% endif %}
+    </div>
+
+    <div class="section">
+      <div class="flex-between mb-16">
+        <h2 class="section-title" style="margin-bottom:0;">Recent Decisions</h2>
+        <a href="{{ url_for('decisions.client_list', slug=client.slug) }}" class="small muted">View all →</a>
+      </div>
+      {% if recent_decisions %}
+      <ul>
+        {% for d in recent_decisions %}
+        <li class="list-item">
+          <div>{{ d.decision }}</div>
+          <div class="small muted mt-8">{{ d.date.strftime('%d %b %Y') }}{% if d.owner %} · {{ d.owner }}{% endif %}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted small">No decisions recorded.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

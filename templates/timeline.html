@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Timeline — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<form class="filter-bar">
+  <select name="type" onchange="this.form.submit()">
+    <option value="">All Types</option>
+    {% for t in interaction_types %}
+    <option value="{{ t }}" {{ 'selected' if t == filters.get('type') }}>{{ t }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="person" placeholder="Person" value="{{ filters.get('person', '') }}">
+  <input type="text" name="q" placeholder="Keyword, decision, action item…" value="{{ filters.get('q', '') }}">
+  <input type="date" name="from" value="{{ filters.get('from', '') }}">
+  <span class="muted small">to</span>
+  <input type="date" name="to" value="{{ filters.get('to', '') }}">
+  <button type="submit" class="btn btn-sm btn-secondary">Apply</button>
+  <a href="{{ url_for('conversations.timeline', slug=client.slug) }}" class="small muted">Clear</a>
+</form>
+
+{% if conversations %}
+<div>
+  {% for c in conversations %}
+  <div class="timeline-entry">
+    <div class="timeline-date-col">
+      <div class="date">{{ c.date.strftime('%d %B %Y') }}</div>
+      <div class="type">{{ c.interaction_type }}</div>
+    </div>
+    <div class="timeline-body">
+      <div class="timeline-participants">Participants: {{ c.participants_display or 'Not specified' }}</div>
+
+      <div class="timeline-section-title">Summary</div>
+      <p>{{ c.summary or c.raw_notes or 'No summary recorded yet.' }}</p>
+
+      {% set decisions = c.decisions.all() %}
+      {% if decisions %}
+      <div class="timeline-section-title">Decisions</div>
+      <ul class="bullets">
+        {% for d in decisions %}
+        <li>{{ d.decision }}{% if d.status == 'Needs Confirmation' %} <span class="needs-confirmation-tag">(Needs Confirmation)</span>{% endif %}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% set items = c.action_items.all() %}
+      {% if items %}
+      <div class="timeline-section-title">Action Items</div>
+      <ul class="bullets">
+        {% for a in items %}
+        <li>{{ a.owner }} — {{ a.task }}{% if a.due_date %} (due {{ a.due_date.strftime('%d %b') }}){% endif %}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <div class="mt-16">
+        <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=c.id) }}" class="small">View full record →</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <h3>No matching entries</h3>
+  <p>Try adjusting your filters, or add the first update for this client.</p>
+</div>
+{% endif %}
+{% endblock %}

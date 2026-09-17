@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}New Action Item — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="card" style="max-width:600px;">
+  <h2 class="section-title">New Action Item</h2>
+  <form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>Task</label>
+      <input type="text" name="task" required placeholder="e.g. Prepare campaign performance update">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Owner</label>
+        <input type="text" name="owner" placeholder="e.g. Scaalex, Client CFO">
+      </div>
+      <div class="form-group">
+        <label>Due Date</label>
+        <input type="date" name="due_date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Priority</label>
+        <select name="priority">
+          {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if p == 'Medium' }}>{{ p }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn">Save Action Item</button>
+      <a href="{{ url_for('action_items.client_list', slug=client.slug) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

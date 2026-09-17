@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+instance/*.db
+uploads/audio/*
+uploads/documents/*
+!uploads/audio/.gitkeep
+!uploads/documents/.gitkeep
+.env
+.DS_Store

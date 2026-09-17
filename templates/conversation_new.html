@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Add Update — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="card" style="max-width:680px;">
+  <h2 class="section-title">Add Update</h2>
+  <form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Interaction Type</label>
+        <select name="interaction_type">
+          {% for t in interaction_types %}
+          <option value="{{ t }}">{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date &amp; Time</label>
+        <input type="datetime-local" name="date" value="{{ now.strftime('%Y-%m-%dT%H:%M') }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Participants</label>
+      <input type="text" name="participants" placeholder="Anand, Client CEO, Finance Head">
+      <div class="form-hint">Comma-separated names.</div>
+    </div>
+
+    <div class="form-group">
+      <label>Discussion / Notes</label>
+      <textarea name="raw_notes" rows="8" placeholder="What was discussed? Capture important context, questions, decisions, concerns, and next steps."></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn">Save Update</button>
+      <a href="{{ url_for('conversations.list_conversations', slug=client.slug) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+  <div class="form-hint mt-16">You can attach a voice recording, upload documents, and run AI extraction from the update's detail page after saving.</div>
+</div>
+{% endblock %}

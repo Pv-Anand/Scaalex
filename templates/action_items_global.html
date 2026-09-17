@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Action Items — Scaalex Intelligence{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Institutional Record</div>
+    <h1>Action Items</h1>
+  </div>
+</div>
+
+<form class="filter-bar">
+  <select name="client_id" onchange="this.form.submit()">
+    <option value="">All Clients</option>
+    {% for c in clients %}
+    <option value="{{ c.id }}" {{ 'selected' if current_client_id == c.id }}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="status" onchange="this.form.submit()">
+    <option value="">All Statuses</option>
+    {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if filters.get('status') == s }}>{{ s }}</option>{% endfor %}
+  </select>
+  <select name="priority" onchange="this.form.submit()">
+    <option value="">All Priorities</option>
+    {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if filters.get('priority') == p }}>{{ p }}</option>{% endfor %}
+  </select>
+  <select name="sort" onchange="this.form.submit()">
+    <option value="due_date" {{ 'selected' if filters.get('sort', 'due_date') == 'due_date' }}>Sort: Due Date</option>
+    <option value="priority" {{ 'selected' if filters.get('sort') == 'priority' }}>Sort: Priority</option>
+  </select>
+</form>
+
+{% if items %}
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Task</th><th>Client</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for a in items %}
+      <tr>
+        <td>{{ a.task }}{% if a.needs_confirmation %} <span class="needs-confirmation-tag small">Needs Confirmation</span>{% endif %}</td>
+        <td><a href="{{ url_for('clients.overview', slug=a.client.slug) }}">{{ a.client.name }}</a></td>
+        <td>{{ a.owner }}</td>
+        <td class="{{ 'overdue-text' if a.is_overdue }}">{{ a.due_date.strftime('%d %b %Y') if a.due_date else '—' }}{% if a.is_overdue %} (Overdue){% endif %}</td>
+        <td><span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span></td>
+        <td>
+          <select onchange="updateActionStatus({{ a.id }}, this.value, this)">
+            {% for s in statuses %}
+            <option value="{{ s }}" {{ 'selected' if s == a.status }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><h3>No action items match these filters</h3></div>
+{% endif %}
+{% endblock %}

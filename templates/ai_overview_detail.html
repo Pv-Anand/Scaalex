@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Leadership Overview — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="page-header" style="margin-bottom:20px;">
+  <div>
+    <div class="page-eyebrow">Leadership Overview</div>
+    <h1>{{ client.name }}</h1>
+    <div class="page-subtitle">Generated {{ overview.generated_at.strftime('%d %B %Y, %I:%M %p') }}{% if overview.generated_by %} by {{ overview.generated_by.name }}{% endif %}</div>
+  </div>
+  <button class="btn" onclick="generateEmailDraft({{ overview.id }}, this)">Draft Client Email</button>
+</div>
+
+<div class="section">
+  <h2 class="section-title">1. Executive Summary</h2>
+  <div class="card">
+    <p>{{ overview.executive_summary }}</p>
+    {% if overview.changes_since_last %}
+    <div class="timeline-section-title">What Changed Since Last Overview</div>
+    <p>{{ overview.changes_since_last }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">2. Key Action Items</h2>
+  {% if overview.key_actions %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Action</th><th>Owner</th><th>Due Date</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for a in overview.key_actions %}
+        <tr>
+          <td>{{ a.action }}</td>
+          <td>{{ a.owner }}</td>
+          <td>{{ a.due_date or '—' }}</td>
+          <td>{{ a.status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="muted small">No outstanding actions identified.</p>{% endif %}
+</div>
+
+<div class="section">
+  <h2 class="section-title">3. Key Decisions</h2>
+  {% if overview.key_decisions %}
+  {% for d in overview.key_decisions %}
+  <div class="card mb-16">
+    <div class="flex-between"><strong>{{ d.decision }}</strong><span class="small muted">{{ d.date or '' }}</span></div>
+    {% if d.context %}<p class="small mt-8">{{ d.context }}</p>{% endif %}
+    {% if d.impact %}<p class="small muted mt-8"><em>Impact:</em> {{ d.impact }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  {% else %}<p class="muted small">No major decisions in this period.</p>{% endif %}
+</div>
+
+<div class="section">
+  <h2 class="section-title">4. Risks &amp; Open Issues</h2>
+  {% if overview.risks %}
+  <ul>
+    {% for r in overview.risks %}
+    <li class="list-item">
+      <span class="badge {{ 'badge-fact' if r.label == 'Documented Fact' else 'badge-observation' }}">{{ r.label }}</span>
+      <span class="mt-8" style="display:block;">{{ r.issue }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted small">No unresolved risks identified from the documented history.</p>{% endif %}
+</div>
+
+<div class="section">
+  <h2 class="section-title">5. What Leadership Should Know</h2>
+  <div class="card" style="background:var(--grey-50);">
+    <p>{{ overview.leadership_notes }}</p>
+  </div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">6. Recommended Next Steps <span class="small muted" style="font-weight:400; text-transform:none; letter-spacing:0;">(Suggested — not yet agreed)</span></h2>
+  {% if overview.suggested_next_steps %}
+  <ul class="bullets">
+    {% for s in overview.suggested_next_steps %}<li>{{ s }}</li>{% endfor %}
+  </ul>
+  {% else %}<p class="muted small">No further steps suggested.</p>{% endif %}
+</div>
+
+<div id="email-draft-panel" class="section card" style="{{ '' if latest_draft else 'display:none;' }} background:var(--grey-50);">
+  <div class="flex-between mb-16">
+    <h2 class="section-title" style="margin-bottom:0;">Draft Client Email</h2>
+    <div class="flex-gap">
+      <button class="btn btn-sm btn-secondary" onclick="toggleEditEmail()">Edit</button>
+      <button class="btn btn-sm btn-secondary" onclick="copyText('email-body-with-subject')">Copy Email</button>
+      <button class="btn btn-sm btn-secondary" onclick="generateEmailDraft({{ overview.id }}, this)">Regenerate</button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Subject</label>
+    <input type="text" id="email-subject" readonly value="{{ latest_draft.subject if latest_draft else '' }}">
+  </div>
+  <div class="form-group">
+    <label>Body</label>
+    <textarea id="email-body" rows="14" readonly>{{ latest_draft.body if latest_draft else '' }}</textarea>
+  </div>
+  <textarea id="email-body-with-subject" style="display:none;"></textarea>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window._clientSlug = "{{ client.slug }}";
+  function syncHiddenEmail() {
+    const subject = document.getElementById('email-subject').value;
+    const body = document.getElementById('email-body').value;
+    document.getElementById('email-body-with-subject').value = `Subject: ${subject}\n\n${body}`;
+  }
+  document.getElementById('email-subject').addEventListener('input', syncHiddenEmail);
+  document.getElementById('email-body').addEventListener('input', syncHiddenEmail);
+  syncHiddenEmail();
+  const origGenerate = generateEmailDraft;
+  window.generateEmailDraft = async function(id, btn) {
+    await origGenerate(id, btn);
+    syncHiddenEmail();
+  };
+</script>
+{% endblock %}

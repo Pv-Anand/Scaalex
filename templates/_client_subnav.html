@@ -1,0 +1,22 @@
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">{{ client.engagement_type }}</div>
+    <h1>{{ client.name }}</h1>
+  </div>
+  <div class="flex-gap">
+    <form action="{{ url_for('search.client_search', slug=client.slug) }}" method="GET">
+      <input type="search" name="q" placeholder="Search this client…" style="width:220px;">
+    </form>
+    <a href="{{ url_for('conversations.new', slug=client.slug) }}" class="btn">+ Add Update</a>
+  </div>
+</div>
+<div class="subnav">
+  <a href="{{ url_for('clients.overview', slug=client.slug) }}" class="{{ 'active' if active_tab == 'overview' }}">Overview</a>
+  <a href="{{ url_for('conversations.timeline', slug=client.slug) }}" class="{{ 'active' if active_tab == 'timeline' }}">Timeline</a>
+  <a href="{{ url_for('conversations.list_conversations', slug=client.slug) }}" class="{{ 'active' if active_tab == 'conversations' }}">Conversations</a>
+  <a href="{{ url_for('action_items.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'action_items' }}">Action Items</a>
+  <a href="{{ url_for('decisions.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'decisions' }}">Decisions</a>
+  <a href="{{ url_for('documents.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'documents' }}">Documents</a>
+  <a href="{{ url_for('ai_overview.ai_summary', slug=client.slug) }}" class="{{ 'active' if active_tab == 'ai_summary' }}">AI Summary</a>
+  <a href="{{ url_for('clients.settings', slug=client.slug) }}" class="{{ 'active' if active_tab == 'settings' }}">Settings</a>
+</div>

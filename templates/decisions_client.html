@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Decisions — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="flex-between mb-16">
+  <h2 class="section-title" style="margin-bottom:0;">Decision Log</h2>
+  <a href="{{ url_for('decisions.new', slug=client.slug) }}" class="btn btn-sm">+ Record Decision</a>
+</div>
+
+{% if decisions %}
+{% for d in decisions %}
+<div class="card mb-16">
+  <div class="flex-between">
+    <h3 style="font-size:15px;">{{ d.decision }}</h3>
+    <span class="badge {{ 'badge-status-Needs.Confirmation' if d.status == 'Needs Confirmation' else 'badge-status-Confirmed' }}">{{ d.status }}</span>
+  </div>
+  <div class="small muted mt-8">
+    {{ d.date.strftime('%d %b %Y') }}
+    {% if d.source_label %} · Source: {{ d.source_label }}{% endif %}
+    {% if d.owner %} · Owner: {{ d.owner }}{% endif %}
+  </div>
+  {% if d.context %}
+  <p class="mt-16">{{ d.context }}</p>
+  {% endif %}
+  {% if d.conversation_id %}
+  <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=d.conversation_id) }}" class="small mt-8" style="display:inline-block;">View source conversation →</a>
+  {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+  <h3>No decisions recorded yet</h3>
+  <p>Decisions confirmed from AI extraction, or added manually, will appear here.</p>
+  <a href="{{ url_for('decisions.new', slug=client.slug) }}" class="btn">+ Record Decision</a>
+</div>
+{% endif %}
+{% endblock %}

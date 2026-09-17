@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}AI Summary — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="card mb-24" style="background:var(--grey-50);">
+  <div class="flex-between">
+    <div>
+      <h2 style="font-size:16px;">Generate Leadership Overview</h2>
+      <p class="small muted mt-8">Synthesizes every conversation, decision, and action item on record into a partner-ready briefing, and highlights what's changed since the last overview.</p>
+    </div>
+    <form method="POST" action="{{ url_for('ai_overview.generate', slug=client.slug) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn" {{ 'disabled' if not has_data }}>Generate Leadership Overview</button>
+    </form>
+  </div>
+  {% if not has_data %}<p class="small needs-confirmation-tag mt-8">Add at least one conversation first.</p>{% endif %}
+</div>
+
+{% if latest %}
+<div class="section">
+  <div class="flex-between mb-16">
+    <h2 class="section-title" style="margin-bottom:0;">Latest Overview — {{ latest.generated_at.strftime('%d %b %Y, %I:%M %p') }}</h2>
+    <a href="{{ url_for('ai_overview.view_overview', slug=client.slug, overview_id=latest.id) }}" class="btn btn-sm btn-secondary">Open Full Overview →</a>
+  </div>
+  <div class="card">
+    <p>{{ latest.executive_summary }}</p>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <h3>No leadership overview generated yet</h3>
+  <p>Once conversations are recorded, generate the first overview above.</p>
+</div>
+{% endif %}
+
+{% if history %}
+<div class="section">
+  <h2 class="section-title">Overview History</h2>
+  <ul>
+    {% for o in history %}
+    <li class="list-item">
+      <a href="{{ url_for('ai_overview.view_overview', slug=client.slug, overview_id=o.id) }}">
+        {{ o.generated_at.strftime('%d %b %Y, %I:%M %p') }}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

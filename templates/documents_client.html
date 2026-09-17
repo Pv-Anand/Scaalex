@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Documents — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="two-col">
+  <div>
+    {% if documents %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>File</th><th>Type</th><th>Linked Conversation</th><th>Uploaded</th><th></th></tr></thead>
+        <tbody>
+          {% for d in documents %}
+          <tr>
+            <td>{{ d.file_name }}</td>
+            <td>{{ d.file_type|upper }}</td>
+            <td>{% if d.conversation_id %}<a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=d.conversation_id) }}">View</a>{% else %}—{% endif %}</td>
+            <td>{{ d.uploaded_at.strftime('%d %b %Y') }}</td>
+            <td><a href="{{ url_for('documents.download', doc_id=d.id) }}" class="small">Download</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><h3>No documents uploaded yet</h3></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">Upload File</h3>
+    <form method="POST" action="{{ url_for('documents.upload', slug=client.slug) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>File</label>
+        <input type="file" name="file" required>
+      </div>
+      <div class="form-group">
+        <label>Link to Conversation (optional)</label>
+        <select name="conversation_id">
+          <option value="">None</option>
+          {% for c in conversations %}
+          <option value="{{ c.id }}">{{ c.date.strftime('%d %b %Y') }} — {{ c.interaction_type }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn">Upload</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
