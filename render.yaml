@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: scaalex-intel
+    name: scaalex
     runtime: python
     plan: starter
     buildCommand: "pip install -r requirements.txt"
