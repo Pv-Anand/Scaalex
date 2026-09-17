@@ -23,6 +23,7 @@
   <a href="{{ url_for('action_items.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'action_items' }}">Action Items</a>
   <a href="{{ url_for('decisions.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'decisions' }}">Decisions</a>
   <a href="{{ url_for('documents.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'documents' }}">Documents</a>
+  <a href="{{ url_for('conversations.sync_history', slug=client.slug) }}" class="{{ 'active' if active_tab == 'sync_history' }}">Sync History</a>
   <a href="{{ url_for('ai_overview.ai_summary', slug=client.slug) }}" class="{{ 'active' if active_tab == 'ai_summary' }}">AI Summary</a>
   <a href="{{ url_for('clients.settings', slug=client.slug) }}" class="{{ 'active' if active_tab == 'settings' }}">Settings</a>
 </div>

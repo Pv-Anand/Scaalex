@@ -265,12 +265,14 @@ class FirefliesMeeting(db.Model):
     matched_client_id = db.Column(db.Integer, db.ForeignKey("clients.id"))  # auto-match suggestion
     assigned_client_id = db.Column(db.Integer, db.ForeignKey("clients.id"))
     assigned_conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"))
+    synced_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))  # who ran the sync/assign that completed this
 
     synced_at = db.Column(db.DateTime, default=_now)
 
     matched_client = db.relationship("Client", foreign_keys=[matched_client_id])
     assigned_client = db.relationship("Client", foreign_keys=[assigned_client_id])
     assigned_conversation = db.relationship("Conversation")
+    synced_by = db.relationship("User", foreign_keys=[synced_by_id])
 
 
 class CalendarConnection(db.Model):

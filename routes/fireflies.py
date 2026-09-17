@@ -63,6 +63,7 @@ def _sync_transcripts():
             transcript=transcript_text,
             fireflies_overview=overview,
             matched_client_id=client.id if client else None,
+            synced_by_id=current_user.id if client else None,
         )
         db.session.add(record)
         db.session.flush()
@@ -105,15 +106,15 @@ def _sync_transcripts():
 @fireflies_bp.route("")
 @login_required
 def inbox():
-    uncategorized = (
+    pending = (
         FirefliesMeeting.query.filter_by(status="uncategorized")
         .order_by(FirefliesMeeting.meeting_date.desc())
         .all()
     )
-    recent_assigned = (
+    completed = (
         FirefliesMeeting.query.filter_by(status="assigned")
         .order_by(FirefliesMeeting.synced_at.desc())
-        .limit(10)
+        .limit(100)
         .all()
     )
     clients = Client.query.order_by(Client.name).all()
@@ -134,7 +135,7 @@ def inbox():
 
     return render_template(
         "fireflies_inbox.html",
-        uncategorized=uncategorized, recent_assigned=recent_assigned, clients=clients,
+        pending=pending, completed=completed, clients=clients,
         calendar_connection=calendar_connection, upcoming_events=upcoming_events,
         calendar_error=calendar_error,
     )
@@ -190,6 +191,7 @@ def assign(meeting_id):
     meeting.status = "assigned"
     meeting.assigned_client_id = client.id
     meeting.assigned_conversation_id = conversation.id
+    meeting.synced_by_id = current_user.id
 
     log_activity(
         current_user.id, client.id, "Fireflies meeting moved to project",

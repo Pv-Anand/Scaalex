@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Sync History — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div class="flex-between mb-16">
+  <h2 class="section-title" style="margin-bottom:0;">Sync History</h2>
+</div>
+
+{% if conversations %}
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Date</th><th>Type</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for c in conversations %}
+      <tr>
+        <td style="white-space:nowrap;">{{ c.date.strftime('%d %b %Y') }}</td>
+        <td><span class="badge badge-type">{{ c.interaction_type }}</span></td>
+        <td>
+          {% if c.extraction_status == 'pending_review' %}
+          <span class="needs-confirmation-tag small">Pending Review</span>
+          {% elif c.extraction_status == 'confirmed' %}
+          <span class="badge badge-status-Confirmed">Confirmed</span>
+          {% else %}
+          <span class="small muted">Not Synced</span>
+          {% endif %}
+        </td>
+        <td style="white-space:nowrap;">
+          <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=c.id) }}" class="small">View</a>
+          &middot;
+          <a href="{{ url_for('conversations.edit', slug=client.slug, conversation_id=c.id) }}" class="small">Edit</a>
+          {% if c.raw_notes or c.transcript %}
+          &middot;
+          <form method="POST" action="{{ url_for('conversations.resync', slug=client.slug, conversation_id=c.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="small link-btn">{{ 'Re-sync' if c.extraction_status in ('pending_review', 'confirmed') else 'Sync' }}</button>
+          </form>
+          {% endif %}
+          &middot;
+          <form method="POST" action="{{ url_for('conversations.delete', slug=client.slug, conversation_id=c.id) }}" style="display:inline;" onsubmit="return confirm('Delete this update? Confirmed decisions and action items from it are kept, but the notes/transcript and any attached documents will be gone for good.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="small link-btn" style="color:var(--danger);">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <h3>No updates yet</h3>
+  <p>Every update's sync status will appear here once you start logging updates for this project.</p>
+</div>
+{% endif %}
+{% endblock %}

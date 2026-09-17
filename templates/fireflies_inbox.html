@@ -7,9 +7,9 @@
     <h1>Meetings</h1>
     <div class="page-subtitle">Meetings recorded by Fireflies sync here automatically. Ones we can confidently match to a client become part of that client's record right away — anything else waits below for you to assign.</div>
   </div>
-  <form method="POST" action="{{ url_for('fireflies.sync') }}">
+  <form method="POST" action="{{ url_for('fireflies.sync') }}" style="flex-shrink:0;">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn">Sync Now</button>
+    <button type="submit" class="btn" style="white-space:nowrap;">Sync Now</button>
   </form>
 </div>
 
@@ -62,70 +62,93 @@
 </div>
 
 <div class="section">
-  <h2 class="section-title">Uncategorized Meetings {% if uncategorized %}({{ uncategorized|length }}){% endif %}</h2>
-  {% if uncategorized %}
-  {% for m in uncategorized %}
-  <div class="card mb-16">
-    <div class="flex-between">
-      <div>
-        <h3 style="font-size:15px;">{{ m.title }}</h3>
-        <div class="small muted mt-8">
-          {{ m.meeting_date.strftime('%d %b %Y, %I:%M %p') if m.meeting_date else 'Unknown date' }}
-          {% if m.duration_minutes %} · {{ m.duration_minutes|round|int }} min{% endif %}
-          {% if m.participants %} · {{ m.participants|join(', ') }}{% endif %}
-        </div>
-      </div>
-    </div>
-    {% if m.fireflies_overview %}
-    <p class="small mt-16"><em>Fireflies overview:</em> {{ m.fireflies_overview }}</p>
-    {% endif %}
-    <div class="flex-gap mt-16" style="align-items:flex-end;">
-      <form method="POST" action="{{ url_for('fireflies.assign', meeting_id=m.id) }}" class="flex-gap" style="align-items:flex-end;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group" style="margin-bottom:0;">
-          <label>Move to Project</label>
-          <select name="client_id" required style="min-width:200px;">
-            <option value="">Select a client…</option>
-            {% for c in clients %}
-            <option value="{{ c.id }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <button type="submit" class="btn btn-sm">Move</button>
-      </form>
-      <form method="POST" action="{{ url_for('fireflies.ignore', meeting_id=m.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-sm btn-secondary">Ignore</button>
-      </form>
-    </div>
+  <div class="subnav" style="margin-bottom:20px;">
+    <button type="button" class="tab-btn active" id="tab-pending-btn" onclick="switchMeetingTab('pending')">Pending{% if pending %} ({{ pending|length }}){% endif %}</button>
+    <button type="button" class="tab-btn" id="tab-completed-btn" onclick="switchMeetingTab('completed')">Completed{% if completed %} ({{ completed|length }}){% endif %}</button>
   </div>
-  {% endfor %}
-  {% else %}
-  <div class="empty-state">
-    <h3>No uncategorized meetings</h3>
-    <p>Meetings Fireflies can't confidently match to a client will show up here for manual review.</p>
-  </div>
-  {% endif %}
-</div>
 
-{% if recent_assigned %}
-<div class="section">
-  <h2 class="section-title">Recently Synced &amp; Matched</h2>
-  <ul>
-    {% for m in recent_assigned %}
-    <li class="list-item">
+  <div id="tab-pending">
+    {% if pending %}
+    {% for m in pending %}
+    <div class="card mb-16">
       <div class="flex-between">
-        {% if m.assigned_client and m.assigned_conversation_id %}
-        <a href="{{ url_for('conversations.detail', slug=m.assigned_client.slug, conversation_id=m.assigned_conversation_id) }}">{{ m.title }}</a>
-        {% else %}
-        <span>{{ m.title }}</span>
-        {% endif %}
-        <span class="small muted">{{ m.assigned_client.name if m.assigned_client else '' }}</span>
+        <div>
+          <h3 style="font-size:15px;">{{ m.title }}</h3>
+          <div class="small muted mt-8">
+            {{ m.meeting_date.strftime('%d %b %Y, %I:%M %p') if m.meeting_date else 'Unknown date' }}
+            {% if m.duration_minutes %} · {{ m.duration_minutes|round|int }} min{% endif %}
+            {% if m.participants %} · {{ m.participants|join(', ') }}{% endif %}
+          </div>
+        </div>
       </div>
-      <div class="small muted mt-8">{{ m.meeting_date.strftime('%d %b %Y') if m.meeting_date else '' }}</div>
-    </li>
+      {% if m.fireflies_overview %}
+      <p class="small mt-16"><em>Fireflies overview:</em> {{ m.fireflies_overview }}</p>
+      {% endif %}
+      <div class="flex-gap mt-16" style="align-items:flex-end;">
+        <form method="POST" action="{{ url_for('fireflies.assign', meeting_id=m.id) }}" class="flex-gap" style="align-items:flex-end;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Move to Project</label>
+            <select name="client_id" required style="min-width:200px;">
+              <option value="">Select a client…</option>
+              {% for c in clients %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-sm">Move</button>
+        </form>
+        <form method="POST" action="{{ url_for('fireflies.ignore', meeting_id=m.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-secondary">Ignore</button>
+        </form>
+      </div>
+    </div>
     {% endfor %}
-  </ul>
+    {% else %}
+    <div class="empty-state">
+      <h3>No pending meetings</h3>
+      <p>Meetings Fireflies can't confidently match to a client will show up here for manual review.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="tab-completed" style="display:none;">
+    {% if completed %}
+    <ul>
+      {% for m in completed %}
+      <li class="list-item">
+        <div class="flex-between">
+          {% if m.assigned_client and m.assigned_conversation_id %}
+          <a href="{{ url_for('conversations.detail', slug=m.assigned_client.slug, conversation_id=m.assigned_conversation_id) }}">{{ m.title }}</a>
+          {% else %}
+          <span>{{ m.title }}</span>
+          {% endif %}
+          <span class="small muted">{{ m.assigned_client.name if m.assigned_client else '' }}</span>
+        </div>
+        <div class="small muted mt-8">
+          {{ m.meeting_date.strftime('%d %b %Y') if m.meeting_date else '' }}
+          {% if m.synced_by %} · Synced by {{ m.synced_by.name }}{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+      <h3>No completed meetings yet</h3>
+      <p>Meetings that are matched or moved to a project will show up here, with who synced them.</p>
+    </div>
+    {% endif %}
+  </div>
 </div>
-{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+function switchMeetingTab(tab) {
+  document.getElementById('tab-pending').style.display = tab === 'pending' ? '' : 'none';
+  document.getElementById('tab-completed').style.display = tab === 'completed' ? '' : 'none';
+  document.getElementById('tab-pending-btn').classList.toggle('active', tab === 'pending');
+  document.getElementById('tab-completed-btn').classList.toggle('active', tab === 'completed');
+}
+</script>
 {% endblock %}

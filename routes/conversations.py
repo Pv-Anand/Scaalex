@@ -1,6 +1,7 @@
+import os
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 
 from extensions import db
@@ -120,16 +121,26 @@ def new(slug):
     )
 
 
+def _extract_and_store(client, conversation):
+    """Runs AI extraction for one conversation and stores it as pending_review.
+    Shared by the bulk Sync button and the per-conversation re-sync action, so
+    both paths land in the same confirm/edit/discard review a manual
+    extraction goes through - extraction never silently becomes record."""
+    source_text = (conversation.transcript or conversation.raw_notes or "").strip()
+    result = extract_from_text(
+        client.name, conversation.interaction_type, conversation.participants,
+        conversation.date.strftime("%d %b %Y"), source_text,
+    )
+    conversation.ai_extraction = result
+    conversation.extraction_status = "pending_review"
+
+
 @conversations_bp.route("/sync", methods=["POST"])
 @login_required
 def sync(slug):
     """Runs AI extraction on every update since the last sync (extraction_status
     still "none") in one click, instead of opening each conversation and
-    clicking Generate Structured Information individually. Nothing becomes
-    a permanent Decision/ActionItem here - each processed conversation lands
-    in the same pending_review state and confirm/edit/discard review as the
-    manual per-conversation flow, so extraction still can't silently become
-    record without an advisor looking at it."""
+    clicking Generate Structured Information individually."""
     client = get_client_or_404(slug)
     candidates = (
         Conversation.query.filter_by(client_id=client.id, extraction_status="none")
@@ -144,12 +155,8 @@ def sync(slug):
 
     processed_ids = []
     for conversation in candidates:
-        source_text = (conversation.transcript or conversation.raw_notes or "").strip()
         try:
-            result = extract_from_text(
-                client.name, conversation.interaction_type, conversation.participants,
-                conversation.date.strftime("%d %b %Y"), source_text,
-            )
+            _extract_and_store(client, conversation)
         except AIConfigError as exc:
             flash(str(exc), "error")
             break
@@ -157,8 +164,6 @@ def sync(slug):
             flash(f"Sync stopped after {len(processed_ids)} update(s): {exc}", "error")
             break
 
-        conversation.ai_extraction = result
-        conversation.extraction_status = "pending_review"
         processed_ids.append(conversation.id)
 
     if processed_ids:
@@ -174,6 +179,50 @@ def sync(slug):
         db.session.rollback()
 
     return redirect(url_for("conversations.list_conversations", slug=slug))
+
+
+@conversations_bp.route("/sync-history")
+@login_required
+def sync_history(slug):
+    client = get_client_or_404(slug)
+    conversations = (
+        Conversation.query.filter_by(client_id=client.id)
+        .order_by(Conversation.date.desc())
+        .all()
+    )
+    return render_template(
+        "conversation_sync_history.html", client=client, active_tab="sync_history",
+        conversations=conversations,
+    )
+
+
+@conversations_bp.route("/<int:conversation_id>/resync", methods=["POST"])
+@login_required
+def resync(slug, conversation_id):
+    """Re-runs AI extraction for one update on demand, regardless of its
+    current status - lets an advisor pick up edited notes, retry a discarded
+    update, or re-sync a confirmed one from Sync History without waiting for
+    the next bulk Sync."""
+    client = get_client_or_404(slug)
+    conversation = Conversation.query.filter_by(id=conversation_id, client_id=client.id).first_or_404()
+
+    if not (conversation.raw_notes or conversation.transcript or "").strip():
+        flash("This update has no notes or transcript to extract from.", "error")
+        return redirect(url_for("conversations.sync_history", slug=slug))
+
+    try:
+        _extract_and_store(client, conversation)
+    except AIConfigError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("conversations.sync_history", slug=slug))
+    except AIRequestError as exc:
+        flash(f"Sync failed: {exc}", "error")
+        return redirect(url_for("conversations.sync_history", slug=slug))
+
+    log_activity(current_user.id, client.id, "Update re-synced", "conversation", conversation.id)
+    db.session.commit()
+    flash("Synced — review the extracted details below.", "success")
+    return redirect(url_for("conversations.detail", slug=slug, conversation_id=conversation.id))
 
 
 @conversations_bp.route("/<int:conversation_id>")
@@ -300,7 +349,38 @@ def discard_extraction(slug, conversation_id):
     client = get_client_or_404(slug)
     conversation = Conversation.query.filter_by(id=conversation_id, client_id=client.id).first_or_404()
     conversation.ai_extraction = {}
-    conversation.extraction_status = "discarded"
-    log_activity(current_user.id, client.id, "AI extraction discarded", "conversation", conversation.id)
+    # Back to "none" rather than a terminal "discarded" state, so the update
+    # re-enters the Sync queue instead of being stuck needing a manual re-sync.
+    conversation.extraction_status = "none"
+    log_activity(
+        current_user.id, client.id, "AI extraction discarded — update returned to pending sync",
+        "conversation", conversation.id,
+    )
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@conversations_bp.route("/<int:conversation_id>/delete", methods=["POST"])
+@login_required
+def delete(slug, conversation_id):
+    client = get_client_or_404(slug)
+    conversation = Conversation.query.filter_by(id=conversation_id, client_id=client.id).first_or_404()
+
+    # Decisions/action items already confirmed from this update are permanent
+    # record in their own right - unlink rather than delete them. Documents
+    # were attached specifically to this update, so those go with it.
+    Decision.query.filter_by(conversation_id=conversation.id).update({"conversation_id": None})
+    ActionItem.query.filter_by(conversation_id=conversation.id).update({"conversation_id": None})
+
+    for doc in conversation.documents.all():
+        path = os.path.join(current_app.config["DOCUMENT_UPLOAD_FOLDER"], doc.stored_name)
+        if os.path.exists(path):
+            os.remove(path)
+        db.session.delete(doc)
+
+    label = f"{conversation.interaction_type} on {conversation.date.strftime('%d %b %Y')}"
+    log_activity(current_user.id, client.id, "Update deleted", "conversation", conversation.id, details=label)
+    db.session.delete(conversation)
+    db.session.commit()
+    flash("Update deleted.", "success")
+    return redirect(url_for("conversations.list_conversations", slug=slug))

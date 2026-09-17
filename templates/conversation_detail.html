@@ -9,7 +9,13 @@
     <h1>{{ conversation.interaction_type }}</h1>
     <div class="page-subtitle">{{ conversation.participants_display or 'No participants listed' }}</div>
   </div>
-  <a href="{{ url_for('conversations.edit', slug=client.slug, conversation_id=conversation.id) }}" class="btn btn-secondary btn-sm">Edit Details</a>
+  <div class="flex-gap">
+    <a href="{{ url_for('conversations.edit', slug=client.slug, conversation_id=conversation.id) }}" class="btn btn-secondary btn-sm">Edit Details</a>
+    <form method="POST" action="{{ url_for('conversations.delete', slug=client.slug, conversation_id=conversation.id) }}" onsubmit="return confirm('Delete this update? Confirmed decisions and action items from it are kept, but the notes/transcript and any attached documents will be gone for good.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-secondary btn-sm" style="color:var(--danger); border-color:var(--danger);">Delete</button>
+    </form>
+  </div>
 </div>
 
 <div class="two-col">
