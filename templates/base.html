@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   {% if current_user.is_authenticated %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
   <title>{% block title %}Scaalex Intelligence{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -12,7 +13,7 @@
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <div class="mark">Scaalex</div>
+        <img src="{{ url_for('static', filename='images/logo-white.png') }}" alt="Scaalex" class="brand-logo">
         <div class="sub">Project Intelligence</div>
       </div>
       <nav class="sidebar-nav">

@@ -3,7 +3,7 @@
 {% block auth_content %}
 <div class="auth-shell">
   <div class="auth-card">
-    <div class="auth-brand">Scaalex</div>
+    <img src="{{ url_for('static', filename='images/logo-black.png') }}" alt="Scaalex" class="auth-brand-logo">
     <div class="auth-sub">Client Project Intelligence &amp; Documentation</div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}

@@ -63,12 +63,10 @@ button { font-family: inherit; }
   border-bottom: 1px solid rgba(255,255,255,0.1);
   margin-bottom: 8px;
 }
-.sidebar-brand .mark {
-  font-family: 'Source Serif 4', serif;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--white);
-  letter-spacing: 0.02em;
+.sidebar-brand .brand-logo {
+  height: 20px;
+  width: auto;
+  display: block;
 }
 .sidebar-brand .sub { font-size: 11px; color: var(--grey-500); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
 .sidebar-section-label {
@@ -228,7 +226,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 /* ---------- Auth ---------- */
 .auth-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--grey-50); }
 .auth-card { width: 380px; padding: 40px 36px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); }
-.auth-brand { font-family: 'Source Serif 4', serif; font-size: 24px; text-align: center; margin-bottom: 4px; }
+.auth-brand-logo { height: 34px; width: auto; display: block; margin: 0 auto 8px; }
 .auth-sub { text-align: center; color: var(--grey-500); font-size: 12.5px; margin-bottom: 28px; }
 
 /* ---------- Flash ---------- */
