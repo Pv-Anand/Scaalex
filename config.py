@@ -26,6 +26,16 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # SQLite connections are single-thread by default, but gunicorn's
+    # --threads setting runs multiple request threads inside one process.
+    # Without this, a connection created on one thread gets handed to
+    # another thread by SQLAlchemy's pool and raises
+    # "SQLite objects created in a thread can only be used in that same
+    # thread" - which crashes the worker and shows up as an intermittent
+    # 502 at the proxy. This only applies to SQLite; Postgres doesn't need it.
+    if SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
+        SQLALCHEMY_ENGINE_OPTIONS = {"connect_args": {"check_same_thread": False}}
+
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
 
