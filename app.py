@@ -147,6 +147,15 @@ def _ensure_schema_migrations(app):
                 conn.execute(db.text(f"ALTER TABLE ai_overviews ADD COLUMN {column} DATE"))
                 conn.commit()
 
+        client_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(clients)"))}
+        for column, ddl_type in (
+            ("registered_name", "VARCHAR(300)"), ("address", "TEXT"),
+            ("website", "VARCHAR(300)"), ("gst_number", "VARCHAR(40)"),
+        ):
+            if column not in client_columns:
+                conn.execute(db.text(f"ALTER TABLE clients ADD COLUMN {column} {ddl_type}"))
+                conn.commit()
+
 
 app = create_app()
 

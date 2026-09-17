@@ -62,6 +62,17 @@ class Client(db.Model):
     created_at = db.Column(db.DateTime, default=_now)
     updated_at = db.Column(db.DateTime, default=_now, onupdate=_now)
 
+    # Client Profile fields
+    registered_name = db.Column(db.String(300))
+    address = db.Column(db.Text)
+    website = db.Column(db.String(300))
+    gst_number = db.Column(db.String(40))
+
+    contacts = db.relationship(
+        "ClientContact", backref="client", lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+
     conversations = db.relationship(
         "Conversation", backref="client", lazy="dynamic",
         cascade="all, delete-orphan", order_by="desc(Conversation.date)",
@@ -106,6 +117,25 @@ class Client(db.Model):
     @property
     def decision_count(self):
         return self.decisions.count()
+
+
+class ClientContact(db.Model):
+    """A point of contact on the client side. Any number can exist per
+    client; at most one is marked primary at a time (enforced in
+    routes/clients.py, not at the DB level, to keep this a plain flag)."""
+
+    __tablename__ = "client_contacts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False)
+
+    name = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(200))
+    phone = db.Column(db.String(40))
+    designation = db.Column(db.String(120))
+    is_primary = db.Column(db.Boolean, default=False)
+
+    created_at = db.Column(db.DateTime, default=_now)
 
 
 class Conversation(db.Model):
