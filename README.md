@@ -15,11 +15,11 @@ the spec:
   (Overview / Timeline / Conversations / Action Items / Decisions / Documents /
   AI Summary tabs), Add Update flow, timeline, decision log, action item
   management with filtering/sorting and overdue highlighting.
-- **Phase 2** — Voice recording upload (MP3/WAV/M4A/MP4), Whisper-based
-  transcription, editable transcript, AI structured extraction (summary,
-  decisions, action items, open questions, important context), and a
-  **confirmation workflow** — nothing the AI extracts becomes part of the
-  permanent record until an advisor reviews and confirms it.
+- **Phase 2** — Editable transcript (pasted manually or synced from
+  Fireflies), AI structured extraction (summary, decisions, action items,
+  open questions, important context), and a **confirmation workflow** —
+  nothing the AI extracts becomes part of the permanent record until an
+  advisor reviews and confirms it.
 - **Phase 3** — "Generate Leadership Overview" (executive summary, key
   actions, key decisions, risks labeled Documented Fact vs. Advisor
   Observation, "what leadership should know," suggested next steps, and
@@ -33,7 +33,7 @@ the spec:
   auto-matches them to a client by name where possible (feeding straight into
   the same AI extraction/decisions/overview pipeline as any other
   conversation), and routes anything unmatched into an **Uncategorized
-  Meetings** inbox for one-click manual assignment. See §10.
+  Meetings** inbox for one-click manual assignment. See §9.
 
 Two demo clients are seeded with realistic, clearly-attributable data:
 **Sravana** (Google Ads / budget discussion, matching the spec's own example
@@ -63,23 +63,23 @@ scaalex-intel/
 ├── seed.py                  # Demo data + login user
 ├── ai/
 │   ├── anthropic_client.py  # Shared Claude client, forces structured JSON via tool-use
-│   ├── transcribe.py        # /ai/transcribe — OpenAI Whisper
 │   ├── extract.py           # /ai/extract — per-conversation structured extraction
 │   ├── overview.py          # /ai/overview — leadership overview generation
-│   └── email_draft.py       # /ai/email — client follow-up email drafting
+│   ├── email_draft.py       # /ai/email — client follow-up email drafting
+│   └── fireflies_client.py  # Fireflies GraphQL API — meeting list/detail sync
 ├── routes/
 │   ├── home.py, clients.py, conversations.py, decisions.py,
-│   │   action_items.py, documents.py, ai_overview.py, search.py
-│   └── ai_api.py             # JSON endpoints: POST /ai/transcribe, /ai/extract
+│   │   action_items.py, documents.py, ai_overview.py, search.py, fireflies.py
+│   └── ai_api.py             # JSON endpoint: POST /ai/extract
 ├── templates/                # Server-rendered Jinja2 (premium B/W/charcoal design)
 ├── static/css/style.css       # Design system: Inter type, thin borders, no gradients
-├── static/js/app.js            # Voice upload, extraction review UI, email draft UI
-└── uploads/{audio,documents}/  # Local file storage (gitignored)
+├── static/js/app.js            # Extraction review UI, email draft UI
+└── uploads/documents/          # Local file storage (gitignored)
 ```
 
 **Why server-rendered Flask instead of a JS SPA:** no Node toolchain was
-available (see §2). Interactivity that needs it (voice upload + transcription,
-AI extraction review, email draft generation/regeneration, inline action-item
+available (see §2). Interactivity that needs it (AI extraction review,
+email draft generation/regeneration, inline action-item
 status changes) is implemented with small, targeted `fetch()` calls from
 vanilla JS against JSON endpoints — the rest is plain server-rendered pages.
 
@@ -100,12 +100,12 @@ vanilla JS against JSON endpoints — the rest is plain server-rendered pages.
   found, so URLs can't be walked across clients by guessing IDs on documents/
   action items without going through a client-scoped query first for the
   page views.
-- API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) live only in `.env` /
+- API keys (`ANTHROPIC_API_KEY`, `FIREFLIES_API_KEY`) live only in `.env` /
   environment variables, read server-side via `config.py`. They are never
   sent to the browser or embedded in any template or static asset.
 - Uploaded files are stored outside of static/, served through an
-  authenticated Flask route (`/documents/<id>/download`,
-  `/clients/<slug>/audio/<id>`) rather than a public static path.
+  authenticated Flask route (`/documents/<id>/download`) rather than a
+  public static path.
 - `AuditLog` records who did what and when: updates created/edited,
   transcripts edited, extractions confirmed/discarded, decisions recorded,
   action items created/completed, overviews and email drafts generated.
@@ -119,7 +119,7 @@ production — the ORM layer doesn't change).
 |---|---|
 | `users` | name, email, password_hash, role |
 | `clients` | name, slug, status, engagement_type, is_demo |
-| `conversations` | client_id, interaction_type, date, participants (JSON), raw_notes, audio_filename, transcript, transcript_status, ai_extraction (JSON, unconfirmed), extraction_status, summary, important_context, open_questions (JSON), source (`manual` / `fireflies`) |
+| `conversations` | client_id, interaction_type, date, participants (JSON), raw_notes, transcript, transcript_status, ai_extraction (JSON, unconfirmed), extraction_status, summary, important_context, open_questions (JSON), source (`manual` / `fireflies`) |
 | `decisions` | client_id, conversation_id, decision, context, date, owner, status (`Confirmed` / `Needs Confirmation`), source_label |
 | `action_items` | client_id, conversation_id, task, owner, due_date, priority, status, source_label, needs_confirmation |
 | `documents` | client_id, conversation_id, file_name, stored_name, file_type, file_size, uploaded_by_id |
@@ -136,15 +136,13 @@ without a separate staging table.
 
 ## 5. AI workflow
 
-Two providers, split by capability:
-
 - **Anthropic (Claude)** — extraction, leadership overviews, and email
   drafting. All three use `messages.create(..., tools=[...],
   tool_choice={"type": "tool", ...})` (`ai/anthropic_client.py`) so the model
   is forced to return a schema-validated JSON object — no prompt-based "please
   return JSON" guessing.
-- **OpenAI Whisper** — transcription only, since Claude models don't accept
-  raw audio. This is the one place a second provider is unavoidable.
+- **Fireflies** — supplies transcripts directly (§10), so there's no separate
+  transcription step or provider needed for meeting recordings.
 
 Every AI system prompt (`ai/extract.py`, `ai/overview.py`,
 `ai/email_draft.py`) explicitly instructs the model to:
@@ -176,9 +174,9 @@ checked are persisted as real `Decision` / `ActionItem` rows on **Confirm**;
 the app where AI output can become permanent record, and it's gated
 end-to-end.
 
-**Graceful degradation:** if `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` aren't
-set, every AI endpoint returns a clear, actionable error (no stack traces, no
-silent failures, nothing fabricated) and the rest of the app — manual
+**Graceful degradation:** if `ANTHROPIC_API_KEY` isn't set, every AI endpoint
+returns a clear, actionable error (no stack traces, no silent failures,
+nothing fabricated) and the rest of the app — manual
 conversation/decision/action item entry, timeline, documents — works fully
 without them. This was verified directly: the app runs, seeds, and is fully
 usable right now with both keys blank.
@@ -192,8 +190,6 @@ SECRET_KEY=                    # already generated for you in .env
 DATABASE_URL=                  # blank = local SQLite at instance/scaalex.db
 ANTHROPIC_API_KEY=             # required for extraction/overview/email
 ANTHROPIC_MODEL=claude-sonnet-5
-OPENAI_API_KEY=                # required for voice transcription
-OPENAI_TRANSCRIBE_MODEL=whisper-1
 FIREFLIES_API_KEY=             # required for meeting sync (Fireflies -> Settings -> Developer Settings)
 MAX_UPLOAD_MB=50
 ```
@@ -213,8 +209,8 @@ python3 app.py                    # serves on http://localhost:5050
 **Login:** `anand@scaalex.com` / `Scaalex@2026` (created by `seed.py` — change
 or rotate this before using with real client data).
 
-To enable AI features, add `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY` for
-transcription) to `.env` and restart the app.
+To enable AI features, add `ANTHROPIC_API_KEY` (and `FIREFLIES_API_KEY` for
+meeting sync) to `.env` and restart the app.
 
 ## 8. Deploying to Render
 
@@ -253,7 +249,6 @@ git push -u origin main
 (Settings → Environment) — these are marked `sync: false` in `render.yaml` so
 they're never committed to git:
    - `ANTHROPIC_API_KEY`
-   - `OPENAI_API_KEY` (optional, for transcription)
    - `FIREFLIES_API_KEY` (optional, for meeting sync)
 
    `DATA_DIR=/var/data` and `FORCE_HTTPS=true` are already set by
@@ -286,29 +281,15 @@ with app.app_context():
 Your team can then sign in at the `.onrender.com` URL Render gives you (or a
 custom domain you attach in Settings → Custom Domains).
 
-## 9. How voice transcription works
+## 9. Meeting sync (Fireflies)
 
-1. On a conversation's detail page, **Upload Voice Recording** sends the file
-   via `fetch()` to `POST /ai/transcribe` (multipart form).
-2. The file is saved to `uploads/audio/<uuid>.<ext>` (never inside `static/`,
-   so it isn't publicly servable without auth) and linked to the conversation.
-3. `ai/transcribe.py` posts it to OpenAI's `/v1/audio/transcriptions`
-   endpoint (Whisper) and returns the transcript text.
-4. The transcript is shown in an editable textarea — the advisor can correct
-   it before anything downstream happens.
-5. **Generate Structured Information** sends the (possibly edited) transcript
-   to `POST /ai/extract`, which runs the Claude extraction and renders the
-   confirm/edit/discard review UI described above.
-
-If `OPENAI_API_KEY` isn't set, the upload still stores the audio file (for
-playback) and the UI clearly states that transcription isn't configured,
-prompting manual transcript entry instead.
-
-## 10. Meeting sync (Fireflies)
-
-The **Fireflies** sidebar link (`/fireflies`) pulls meeting recordings/
-transcripts from [Fireflies.ai](https://fireflies.ai) directly into the
-app - no manual audio upload needed for meetings already recorded there.
+The **Fireflies** sidebar link (`/fireflies`) pulls meeting transcripts
+from [Fireflies.ai](https://fireflies.ai) directly into the app. There's
+no audio upload feature in the app itself - Fireflies records the meeting
+and does the transcription; the app's job is turning that transcript into
+institutional record (a transcript can also be pasted manually onto a
+conversation's Transcript field if it came from somewhere other than
+Fireflies).
 
 **How it works:**
 
@@ -323,8 +304,8 @@ app - no manual audio upload needed for meetings already recorded there.
    confident-sounding wrong answer.
 3. **Confidently matched** meetings become a real `Conversation` on that
    client immediately (`interaction_type="Video Call"`, transcript attached,
-   `source="fireflies"`), exactly as if someone had uploaded that recording
-   by hand. From there it's already wired into everything else: the advisor
+   `source="fireflies"`), exactly as if someone had pasted that transcript
+   in by hand. From there it's already wired into everything else: the advisor
    can click **Generate Structured Information** to run it through the same
    AI extraction / confirm-edit-discard workflow as any other conversation,
    and it will be included in future leadership overviews and decision logs
@@ -343,7 +324,7 @@ If `FIREFLIES_API_KEY` isn't set, **Sync Now** shows a clear configuration
 error and nothing else on the page is affected - meetings can still be
 documented manually as always.
 
-## 11. Known limitations
+## 10. Known limitations
 
 - **No Node/JS toolchain in this environment** — see §2. This is a deliberate
   adaptation, not an oversight; flagged explicitly rather than silently
@@ -360,9 +341,6 @@ documented manually as always.
   (`DATA_DIR` on a deployed host), not S3/object storage. Fine for a
   single-instance deployment with a persistent disk (see §8); would need a
   storage backend swap for a multi-instance deployment.
-- **Whisper transcription has no chunking** — very long recordings (beyond
-  OpenAI's per-request limits, ~25MB) will fail; there's no automatic
-  splitting yet.
 - **Search is per-client, substring-based** (SQL `ILIKE` + a Python-side pass
   for JSON participant fields), not fuzzy/semantic. It satisfies the spec's
   example searches but won't handle typos or paraphrases.
@@ -380,7 +358,7 @@ documented manually as always.
   sounding error - but it also means it requires no manual sync scheduling
   yet: sync only runs when someone clicks "Sync Now," not automatically.
 
-## 12. Recommended next development steps
+## 11. Recommended next development steps
 
 1. **Self-service password change / reset** — currently only a Shell script
    (§8 step 5); a real "Change Password" page should ship before wider use.
@@ -388,23 +366,21 @@ documented manually as always.
    can generate leadership overviews or edit engagement status.
 3. **Pagination + infinite scroll** on timeline/action items once client
    history grows.
-4. **Chunked/long-form transcription** for multi-hour recordings.
-5. **Postgres + S3-compatible storage** for a shared/production deployment
+4. **Postgres + S3-compatible storage** for a shared/production deployment
    (the code already reads `DATABASE_URL` from env and normalizes Render's
    `postgres://` scheme; only the file-storage layer in
-   `routes/documents.py` / `ai_api.py` would need an abstraction to move off
-   local disk).
-6. **Email sending integration** (not just drafting) — e.g. wire "Copy Email"
+   `routes/documents.py` would need an abstraction to move off local disk).
+5. **Email sending integration** (not just drafting) — e.g. wire "Copy Email"
    up to an actual send-via-Outlook/Gmail-API action once the firm decides
    that's wanted, with an explicit send confirmation step.
-7. **Team-wide visibility controls** if Scaalex wants some clients restricted
+6. **Team-wide visibility controls** if Scaalex wants some clients restricted
    to specific advisors.
-8. **Automated tests** — the app currently relies on manual + curl-based
+7. **Automated tests** — the app currently relies on manual + curl-based
    verification (documented above); a pytest suite covering the extraction
    confirm/discard workflow and AI graceful-degradation paths would catch
    regressions early, especially given how central the confirmation workflow
    is to data integrity.
-9. **Scheduled Fireflies sync** — currently manual (click "Sync Now"); a
+8. **Scheduled Fireflies sync** — currently manual (click "Sync Now"); a
    background job (Render Cron Job, or a simple APScheduler loop) hitting
    `POST /fireflies/sync` every 15-30 minutes would mean meetings show up
    without anyone remembering to trigger it.

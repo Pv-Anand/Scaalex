@@ -36,49 +36,6 @@ function setLoading(btn, loading, loadingLabel) {
   }
 }
 
-/* ---------------- Voice upload + transcription ---------------- */
-function initAudioUpload(conversationId) {
-  const input = document.getElementById('audio-input');
-  if (!input) return;
-
-  input.addEventListener('change', async () => {
-    const file = input.files[0];
-    if (!file) return;
-
-    const status = document.getElementById('transcribe-status');
-    const transcriptBox = document.getElementById('transcript-editor');
-    status.textContent = 'Uploading and transcribing… this can take a minute for longer recordings.';
-    status.className = 'form-hint';
-
-    const formData = new FormData();
-    formData.append('audio', file);
-    formData.append('conversation_id', conversationId);
-
-    try {
-      const res = await fetch('/ai/transcribe', {
-        method: 'POST',
-        headers: { 'X-CSRFToken': csrfToken() },
-        body: formData,
-      });
-      const data = await res.json();
-
-      if (data.error) {
-        status.textContent = data.error;
-        status.className = 'form-hint needs-confirmation-tag';
-        return;
-      }
-
-      transcriptBox.value = data.transcript || '';
-      status.textContent = 'Transcription complete. Review and edit below, then generate structured information.';
-      status.className = 'form-hint';
-      document.getElementById('extract-section').style.display = 'block';
-    } catch (err) {
-      status.textContent = 'Upload failed: ' + err.message;
-      status.className = 'form-hint needs-confirmation-tag';
-    }
-  });
-}
-
 /* ---------------- AI extraction ---------------- */
 async function runExtraction(conversationId, btn) {
   const transcriptBox = document.getElementById('transcript-editor');

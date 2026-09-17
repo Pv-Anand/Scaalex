@@ -21,10 +21,6 @@ services:
         sync: false
       - key: ANTHROPIC_MODEL
         value: claude-sonnet-5
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: OPENAI_TRANSCRIBE_MODEL
-        value: whisper-1
       - key: FIREFLIES_API_KEY
         sync: false
       - key: MAX_UPLOAD_MB

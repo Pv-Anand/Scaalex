@@ -20,7 +20,6 @@ def create_app(config_class=Config):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     os.makedirs(os.path.join(DATA_DIR, "instance"), exist_ok=True)
-    os.makedirs(app.config["AUDIO_UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.config["DOCUMENT_UPLOAD_FOLDER"], exist_ok=True)
 
     db.init_app(app)
@@ -104,6 +103,18 @@ def _ensure_schema_migrations(app):
         if "source" not in existing_columns:
             conn.execute(db.text("ALTER TABLE conversations ADD COLUMN source VARCHAR(20) DEFAULT 'manual'"))
             conn.commit()
+
+        # Voice upload/Whisper transcription was removed in favor of Fireflies
+        # sync; drop the columns that only existed for that flow. DROP COLUMN
+        # needs SQLite 3.35+ - skip quietly on anything older rather than
+        # crashing app startup over two now-harmless unused columns.
+        for column in ("audio_filename", "audio_original_name"):
+            if column in existing_columns:
+                try:
+                    conn.execute(db.text(f"ALTER TABLE conversations DROP COLUMN {column}"))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
 
 
 app = create_app()

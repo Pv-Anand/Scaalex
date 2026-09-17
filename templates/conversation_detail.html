@@ -23,34 +23,23 @@
     </div>
 
     <div class="section">
-      <h2 class="section-title">Voice Recording</h2>
+      <h2 class="section-title">Transcript</h2>
       <div class="card">
-        {% if conversation.audio_filename %}
-        <audio class="audio-player" controls src="{{ url_for('documents.audio', slug=client.slug, conversation_id=conversation.id) }}"></audio>
-        <div class="small muted mb-16">{{ conversation.audio_original_name }}</div>
+        {% if conversation.source == 'fireflies' %}
+        <p class="form-hint mb-16">Synced automatically from Fireflies. Edit below if needed.</p>
+        {% else %}
+        <p class="form-hint mb-16">Paste a transcript here (e.g. from Fireflies or another recorder) to run AI extraction on it.</p>
         {% endif %}
-
-        <label class="btn btn-secondary btn-sm" for="audio-input" style="cursor:pointer;">
-          {{ 'Replace Voice Recording' if conversation.audio_filename else 'Upload Voice Recording' }}
-        </label>
-        <input type="file" id="audio-input" accept=".mp3,.wav,.m4a,.mp4" style="display:none;">
-        <p id="transcribe-status" class="form-hint"></p>
-
-        {% if conversation.transcript or conversation.audio_filename %}
-        <div class="form-group mt-16">
-          <label>Transcript {% if conversation.transcript_status == 'pending' %}<span class="small muted">(processing…)</span>{% endif %}</label>
-          <textarea id="transcript-editor" rows="8">{{ conversation.transcript or '' }}</textarea>
+        <div class="form-group">
+          <textarea id="transcript-editor" rows="8" placeholder="No transcript yet.">{{ conversation.transcript or '' }}</textarea>
           <div class="flex-gap mt-8">
             <button class="btn btn-sm btn-secondary" onclick="document.getElementById('confirm-transcript-form').submit()">Save Transcript</button>
           </div>
         </div>
         <form id="confirm-transcript-form" method="POST" action="{{ url_for('conversations.save_transcript', slug=client.slug, conversation_id=conversation.id) }}" style="display:none;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="transcript" id="transcript-hidden">
         </form>
-        {% else %}
-        <textarea id="transcript-editor" style="display:none;"></textarea>
-        {% endif %}
       </div>
     </div>
 
@@ -157,7 +146,6 @@
 {% block scripts %}
 <script>
   window._clientSlug = "{{ client.slug }}";
-  initAudioUpload({{ conversation.id }});
   document.getElementById('confirm-transcript-form')?.addEventListener('submit', function() {
     document.getElementById('transcript-hidden').value = document.getElementById('transcript-editor').value;
   });

@@ -118,10 +118,8 @@ class Conversation(db.Model):
     participants = db.Column(JSONText, default=list)  # list[str]
     raw_notes = db.Column(db.Text, default="")
 
-    audio_filename = db.Column(db.String(300))
-    audio_original_name = db.Column(db.String(300))
     transcript = db.Column(db.Text)
-    transcript_status = db.Column(db.String(40), default="none")  # none, pending, ready, failed
+    transcript_status = db.Column(db.String(40), default="none")  # none, ready
 
     # AI extraction (unconfirmed) stored as JSON until advisor reviews it
     ai_extraction = db.Column(JSONText, default=dict)

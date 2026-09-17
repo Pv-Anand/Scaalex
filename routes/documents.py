@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -89,13 +89,3 @@ def download(doc_id):
         current_app.config["DOCUMENT_UPLOAD_FOLDER"], doc.stored_name,
         as_attachment=True, download_name=doc.file_name,
     )
-
-
-@documents_bp.route("/clients/<slug>/audio/<int:conversation_id>")
-@login_required
-def audio(slug, conversation_id):
-    client = get_client_or_404(slug)
-    conversation = Conversation.query.filter_by(id=conversation_id, client_id=client.id).first_or_404()
-    if not conversation.audio_filename:
-        abort(404)
-    return send_from_directory(current_app.config["AUDIO_UPLOAD_FOLDER"], conversation.audio_filename)
