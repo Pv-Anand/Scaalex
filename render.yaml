@@ -12,7 +12,7 @@ services:
       sizeGB: 1
     envVars:
       - key: SECRET_KEY
-        generateValue: true
+        sync: false
       - key: DATA_DIR
         value: /var/data
       - key: FORCE_HTTPS
