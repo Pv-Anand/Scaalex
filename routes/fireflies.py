@@ -176,18 +176,19 @@ def assign(meeting_id):
     meeting = FirefliesMeeting.query.get_or_404(meeting_id)
     raw_choice = request.form.get("client_id", "")
 
-    # "Sales Meetings" isn't a client - it's a category for meetings that
+    # "Others / Sales" isn't a client - it's a category for meetings that
     # don't belong to any client engagement, so there's no Conversation to
-    # create, just a status change.
+    # create, just a status change. Kept as "sales_meeting" internally even
+    # though the user-facing label is now "Others / Sales".
     if raw_choice == "sales_meeting":
         meeting.status = "sales_meeting"
         meeting.synced_by_id = current_user.id
         log_activity(
-            current_user.id, None, "Fireflies meeting categorized as Sales Meeting",
+            current_user.id, None, "Fireflies meeting categorized as Others / Sales",
             "fireflies_meeting", meeting.id, details=meeting.title,
         )
         db.session.commit()
-        flash(f'"{meeting.title}" moved to Sales Meetings.', "success")
+        flash(f'"{meeting.title}" moved to Others / Sales.', "success")
         return redirect(url_for("fireflies.inbox"))
 
     client_id = request.form.get("client_id", type=int)
