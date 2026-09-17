@@ -19,7 +19,7 @@
 {% if conversations %}
 <div class="table-wrap">
   <table class="table">
-    <thead><tr><th>Date</th><th>Type</th><th>Participants</th><th>Summary</th></tr></thead>
+    <thead><tr><th>Date</th><th>Type</th><th>Participants</th><th>Summary</th><th></th></tr></thead>
     <tbody>
       {% for c in conversations %}
       <tr onclick="window.location='{{ url_for('conversations.detail', slug=client.slug, conversation_id=c.id) }}'" style="cursor:pointer;">
@@ -27,6 +27,9 @@
         <td><span class="badge badge-type">{{ c.interaction_type }}</span></td>
         <td>{{ c.participants_display or '—' }}</td>
         <td>{{ (c.summary or c.raw_notes or '')[:120] }}{{ '…' if (c.summary or c.raw_notes or '')|length > 120 else '' }}</td>
+        <td style="white-space:nowrap;">
+          <a href="{{ url_for('conversations.edit', slug=client.slug, conversation_id=c.id) }}" class="small" onclick="event.stopPropagation()">Edit</a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

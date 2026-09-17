@@ -22,7 +22,7 @@
         <a href="{{ url_for('decisions.global_list') }}" class="{{ 'active' if request.endpoint == 'decisions.global_list' }}">Decisions</a>
         <a href="{{ url_for('documents.global_list') }}" class="{{ 'active' if request.endpoint == 'documents.global_list' }}">Documents</a>
         <a href="{{ url_for('fireflies.inbox') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('fireflies.') }}">
-          <span>Fireflies</span>
+          <span>Meetings</span>
           {% if fireflies_uncategorized_count %}<span class="nav-badge">{{ fireflies_uncategorized_count }}</span>{% endif %}
         </a>
       </nav>

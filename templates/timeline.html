@@ -53,8 +53,9 @@
       </ul>
       {% endif %}
 
-      <div class="mt-16">
+      <div class="mt-16 flex-gap">
         <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=c.id) }}" class="small">View full record →</a>
+        <a href="{{ url_for('conversations.edit', slug=client.slug, conversation_id=c.id) }}" class="small muted">Edit</a>
       </div>
     </div>
   </div>

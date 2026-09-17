@@ -29,6 +29,24 @@
       <label>Discussion / Notes</label>
       <textarea name="raw_notes" rows="8">{{ conversation.raw_notes }}</textarea>
     </div>
+
+    {% if conversation.extraction_status == 'confirmed' %}
+    <hr class="divider">
+    <div class="form-group">
+      <label>Confirmed Summary</label>
+      <textarea name="summary" rows="3">{{ conversation.summary or '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Important Context</label>
+      <textarea name="important_context" rows="3">{{ conversation.important_context or '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Open Questions</label>
+      <textarea name="open_questions" rows="3" placeholder="One per line">{{ conversation.open_questions|join('\n') }}</textarea>
+      <div class="form-hint">One question per line.</div>
+    </div>
+    {% endif %}
+
     <div class="form-actions">
       <button type="submit" class="btn">Save Changes</button>
       <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=conversation.id) }}" class="btn btn-secondary">Cancel</a>

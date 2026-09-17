@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Fireflies — Scaalex Intelligence{% endblock %}
+{% block title %}Meetings — Scaalex Intelligence{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
     <div class="page-eyebrow">Meeting Sync</div>
-    <h1>Fireflies</h1>
+    <h1>Meetings</h1>
     <div class="page-subtitle">Meetings recorded by Fireflies sync here automatically. Ones we can confidently match to a client become part of that client's record right away — anything else waits below for you to assign.</div>
   </div>
   <form method="POST" action="{{ url_for('fireflies.sync') }}">

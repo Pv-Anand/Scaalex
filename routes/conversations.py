@@ -145,6 +145,13 @@ def edit(slug, conversation_id):
                 pass
         conversation.participants = [p.strip() for p in request.form.get("participants", "").split(",") if p.strip()]
         conversation.raw_notes = request.form.get("raw_notes", "").strip()
+
+        if conversation.extraction_status == "confirmed":
+            conversation.summary = request.form.get("summary", "").strip()
+            conversation.important_context = request.form.get("important_context", "").strip()
+            open_questions_raw = request.form.get("open_questions", "")
+            conversation.open_questions = [q.strip() for q in open_questions_raw.splitlines() if q.strip()]
+
         log_activity(current_user.id, client.id, "Update edited", "conversation", conversation.id)
         db.session.commit()
         flash("Update saved.", "success")
