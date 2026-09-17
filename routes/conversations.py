@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 
-from extensions import db
+from extensions import db, limiter
 from models import Conversation, Decision, ActionItem, log_activity
 from routes.clients import get_client_or_404
 from ai.anthropic_client import AIConfigError, AIRequestError
@@ -137,6 +137,7 @@ def _extract_and_store(client, conversation):
 
 @conversations_bp.route("/sync", methods=["POST"])
 @login_required
+@limiter.limit("10 per minute")
 def sync(slug):
     """Runs AI extraction on every update since the last sync (extraction_status
     still "none") in one click, instead of opening each conversation and
@@ -198,6 +199,7 @@ def sync_history(slug):
 
 @conversations_bp.route("/<int:conversation_id>/resync", methods=["POST"])
 @login_required
+@limiter.limit("20 per minute")
 def resync(slug, conversation_id):
     """Re-runs AI extraction for one update on demand, regardless of its
     current status - lets an advisor pick up edited notes, retry a discarded

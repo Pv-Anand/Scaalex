@@ -3,7 +3,7 @@ from datetime import datetime, time
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 
-from extensions import db
+from extensions import db, limiter
 from models import Conversation, Decision, ActionItem, AIOverview, EmailDraft, log_activity
 from routes.clients import get_client_or_404
 from ai.anthropic_client import AIConfigError, AIRequestError
@@ -94,6 +94,7 @@ def ai_summary(slug):
 
 @ai_overview_bp.route("/ai-summary/generate", methods=["POST"])
 @login_required
+@limiter.limit("10 per minute")
 def generate(slug):
     client = get_client_or_404(slug)
 
@@ -176,6 +177,7 @@ def view_overview(slug, overview_id):
 
 @ai_overview_bp.route("/ai-summary/<int:overview_id>/email", methods=["POST"])
 @login_required
+@limiter.limit("20 per minute")
 def generate_email(slug, overview_id):
     client = get_client_or_404(slug)
     overview = AIOverview.query.filter_by(id=overview_id, client_id=client.id).first_or_404()

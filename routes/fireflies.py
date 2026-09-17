@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
-from extensions import db
+from extensions import db, limiter
 from models import Client, Conversation, FirefliesMeeting, CalendarConnection, log_activity
 from ai.fireflies_client import (
     FirefliesConfigError, FirefliesRequestError,
@@ -149,6 +149,7 @@ def inbox():
 
 @fireflies_bp.route("/sync", methods=["POST"])
 @login_required
+@limiter.limit("10 per minute")
 def sync():
     try:
         new_count, auto_matched = _sync_transcripts()

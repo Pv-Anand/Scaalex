@@ -7,7 +7,7 @@ rather than rendering a page itself.
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
-from extensions import db
+from extensions import db, limiter
 from models import Conversation, log_activity
 from ai.anthropic_client import AIConfigError, AIRequestError
 from ai.extract import extract_from_text
@@ -17,6 +17,7 @@ ai_api_bp = Blueprint("ai_api", __name__, url_prefix="/ai")
 
 @ai_api_bp.route("/extract", methods=["POST"])
 @login_required
+@limiter.limit("20 per minute")
 def extract():
     payload = request.get_json(force=True)
     conversation_id = payload.get("conversation_id")
