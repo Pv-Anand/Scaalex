@@ -65,6 +65,7 @@
   <div class="subnav" style="margin-bottom:20px;">
     <button type="button" class="tab-btn active" id="tab-pending-btn" onclick="switchMeetingTab('pending')">Pending{% if pending %} ({{ pending|length }}){% endif %}</button>
     <button type="button" class="tab-btn" id="tab-completed-btn" onclick="switchMeetingTab('completed')">Completed{% if completed %} ({{ completed|length }}){% endif %}</button>
+    <button type="button" class="tab-btn" id="tab-sales-btn" onclick="switchMeetingTab('sales')">Sales Meetings{% if sales_meetings %} ({{ sales_meetings|length }}){% endif %}</button>
   </div>
 
   <div id="tab-pending">
@@ -94,6 +95,7 @@
               {% for c in clients %}
               <option value="{{ c.id }}">{{ c.name }}</option>
               {% endfor %}
+              <option value="sales_meeting">Sales Meetings</option>
             </select>
           </div>
           <button type="submit" class="btn btn-sm">Move</button>
@@ -140,6 +142,31 @@
     </div>
     {% endif %}
   </div>
+
+  <div id="tab-sales" style="display:none;">
+    {% if sales_meetings %}
+    <ul>
+      {% for m in sales_meetings %}
+      <li class="list-item">
+        <div class="flex-between">
+          <span>{{ m.title }}</span>
+          <span class="badge badge-type">Sales Meeting</span>
+        </div>
+        <div class="small muted mt-8">
+          {{ m.meeting_date.strftime('%d %b %Y') if m.meeting_date else '' }}
+          {% if m.participants %} · {{ m.participants|join(', ') }}{% endif %}
+          {% if m.synced_by %} · Synced by {{ m.synced_by.name }}{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+      <h3>No sales meetings yet</h3>
+      <p>Meetings moved to "Sales Meetings" from Pending will show up here.</p>
+    </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}
@@ -147,8 +174,10 @@
 function switchMeetingTab(tab) {
   document.getElementById('tab-pending').style.display = tab === 'pending' ? '' : 'none';
   document.getElementById('tab-completed').style.display = tab === 'completed' ? '' : 'none';
+  document.getElementById('tab-sales').style.display = tab === 'sales' ? '' : 'none';
   document.getElementById('tab-pending-btn').classList.toggle('active', tab === 'pending');
   document.getElementById('tab-completed-btn').classList.toggle('active', tab === 'completed');
+  document.getElementById('tab-sales-btn').classList.toggle('active', tab === 'sales');
 }
 </script>
 {% endblock %}

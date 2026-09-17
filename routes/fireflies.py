@@ -117,6 +117,12 @@ def inbox():
         .limit(100)
         .all()
     )
+    sales_meetings = (
+        FirefliesMeeting.query.filter_by(status="sales_meeting")
+        .order_by(FirefliesMeeting.synced_at.desc())
+        .limit(100)
+        .all()
+    )
     clients = Client.query.order_by(Client.name).all()
 
     calendar_connection = CalendarConnection.query.first()
@@ -135,7 +141,7 @@ def inbox():
 
     return render_template(
         "fireflies_inbox.html",
-        pending=pending, completed=completed, clients=clients,
+        pending=pending, completed=completed, sales_meetings=sales_meetings, clients=clients,
         calendar_connection=calendar_connection, upcoming_events=upcoming_events,
         calendar_error=calendar_error,
     )
@@ -168,6 +174,22 @@ def sync():
 @login_required
 def assign(meeting_id):
     meeting = FirefliesMeeting.query.get_or_404(meeting_id)
+    raw_choice = request.form.get("client_id", "")
+
+    # "Sales Meetings" isn't a client - it's a category for meetings that
+    # don't belong to any client engagement, so there's no Conversation to
+    # create, just a status change.
+    if raw_choice == "sales_meeting":
+        meeting.status = "sales_meeting"
+        meeting.synced_by_id = current_user.id
+        log_activity(
+            current_user.id, None, "Fireflies meeting categorized as Sales Meeting",
+            "fireflies_meeting", meeting.id, details=meeting.title,
+        )
+        db.session.commit()
+        flash(f'"{meeting.title}" moved to Sales Meetings.', "success")
+        return redirect(url_for("fireflies.inbox"))
+
     client_id = request.form.get("client_id", type=int)
     if not client_id:
         flash("Choose a project to move this meeting to.", "error")
