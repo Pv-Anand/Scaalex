@@ -29,3 +29,9 @@ services:
         sync: false
       - key: MAX_UPLOAD_MB
         value: "50"
+      - key: PYTHONUTF8
+        value: "1"
+      - key: LANG
+        value: C.UTF-8
+      - key: LC_ALL
+        value: C.UTF-8
