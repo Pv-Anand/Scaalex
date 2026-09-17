@@ -83,6 +83,14 @@ vanilla JS against JSON endpoints — the rest is plain server-rendered pages.
   `@login_required`.
 - Passwords hashed with PBKDF2-SHA256 (via Werkzeug) — never stored or logged
   in plaintext.
+- CSRF protection (Flask-WTF) on every state-changing request — form posts
+  carry a hidden `csrf_token` field, and `fetch()`-based JS calls send it via
+  the `X-CSRFToken` header (see `static/js/app.js`'s `csrfToken()` helper).
+- Login is rate-limited (10 attempts/minute/IP via Flask-Limiter) to blunt
+  brute-force attempts.
+- Session cookies are `HttpOnly` + `SameSite=Lax` always, and `Secure`
+  (HTTPS-only) when `FORCE_HTTPS=true` — set that once the app is actually
+  served over HTTPS (see §8).
 - Every client-scoped route resolves the client by slug and 404s if not
   found, so URLs can't be walked across clients by guessing IDs on documents/
   action items without going through a client-scoped query first for the
@@ -201,7 +209,76 @@ or rotate this before using with real client data).
 To enable AI features, add `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY` for
 transcription) to `.env` and restart the app.
 
-## 8. How voice transcription works
+## 8. Deploying to Render
+
+The app is deployment-ready: CSRF protection, login rate limiting, secure
+cookies (via `ProxyFix` for Render's TLS-terminating proxy), `gunicorn`, a
+`Procfile`, and a `render.yaml` blueprint are already in place. **This is a
+confidential-data app** — don't skip the persistent-disk step, or client
+records will be wiped on every deploy/restart.
+
+**1. Push the code to GitHub** (this repo is already git-initialized locally
+with a first commit, and `.env` / the local database / uploads are gitignored
+— nothing sensitive will be pushed):
+
+```bash
+cd scaalex-intel
+git remote add origin <your-new-github-repo-url>
+git branch -M main
+git push -u origin main
+```
+
+**2. Create the Render service.** In the [Render dashboard](https://dashboard.render.com):
+   - **New → Blueprint**, connect the GitHub repo — Render will read
+     `render.yaml` and configure the service, a 1GB persistent disk mounted at
+     `/var/data`, and `SECRET_KEY` (auto-generated) for you.
+   - Alternatively, **New → Web Service** manually: Runtime = Python, Build
+     Command = `pip install -r requirements.txt`, Start Command =
+     `gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 180`.
+     Add a persistent disk yourself (Settings → Disks) mounted at `/var/data`.
+
+   **Pick at least the Starter plan** — Render's free tier has no persistent
+   disk, so the SQLite database and uploaded files would be wiped on every
+   restart or redeploy. That's not acceptable for institutional client
+   records.
+
+**3. Set the remaining environment variables** in the Render dashboard
+(Settings → Environment) — these are marked `sync: false` in `render.yaml` so
+they're never committed to git:
+   - `ANTHROPIC_API_KEY`
+   - `OPENAI_API_KEY` (optional, for transcription)
+
+   `DATA_DIR=/var/data` and `FORCE_HTTPS=true` are already set by
+   `render.yaml`.
+
+**4. Seed the database once**, using Render's Shell tab (Dashboard → your
+service → Shell):
+
+```bash
+python3 seed.py
+```
+
+**5. Change the default password** for every account before real client data
+goes in — there's no self-service password change screen yet (see §10), so
+do it via the Shell:
+
+```bash
+python3 -c "
+from app import create_app
+from extensions import db
+from models import User
+app = create_app()
+with app.app_context():
+    u = User.query.filter_by(email='anand@scaalex.com').first()
+    u.set_password('a-real-password-here')
+    db.session.commit()
+"
+```
+
+Your team can then sign in at the `.onrender.com` URL Render gives you (or a
+custom domain you attach in Settings → Custom Domains).
+
+## 9. How voice transcription works
 
 1. On a conversation's detail page, **Upload Voice Recording** sends the file
    via `fetch()` to `POST /ai/transcribe` (multipart form).
@@ -219,22 +296,23 @@ If `OPENAI_API_KEY` isn't set, the upload still stores the audio file (for
 playback) and the UI clearly states that transcription isn't configured,
 prompting manual transcript entry instead.
 
-## 9. Known limitations
+## 10. Known limitations
 
 - **No Node/JS toolchain in this environment** — see §2. This is a deliberate
   adaptation, not an oversight; flagged explicitly rather than silently
   built.
-- **Single shared login** — there's one seeded advisor account, not a
-  full team-management/roles system. The `role` field on `User` exists for
-  future use but isn't yet enforced anywhere (no admin-vs-advisor permission
-  differences).
-- **No CSRF token on forms** — acceptable for a local/internal single-tenant
-  tool behind normal network access controls, but should be added
-  (Flask-WTF or a manual token) before any multi-user or internet-facing
-  deployment.
-- **Local file storage only** — uploads live on disk under `uploads/`, not
-  S3/object storage. Fine for a single-server internal deployment; would need
-  a storage backend swap for multi-instance or cloud deployment.
+- **No self-service roles or password change** — accounts are created via
+  `seed.py` or a one-off script (see §8 step 5); the `role` field on `User`
+  exists for future use but isn't enforced anywhere yet (no admin-vs-advisor
+  permission differences), and there's no in-app "change my password" flow.
+- **Rate limiting is in-memory** (Flask-Limiter's default backend) — fine for
+  a single small deployment, but with multiple gunicorn workers each worker
+  tracks its own counts, so the login rate limit is approximate rather than
+  a hard global cap. A shared backend (Redis) would fix this if it matters.
+- **Local file storage only** — uploads live on disk under `uploads/`
+  (`DATA_DIR` on a deployed host), not S3/object storage. Fine for a
+  single-instance deployment with a persistent disk (see §8); would need a
+  storage backend swap for a multi-instance deployment.
 - **Whisper transcription has no chunking** — very long recordings (beyond
   OpenAI's per-request limits, ~25MB) will fail; there's no automatic
   splitting yet.
@@ -248,17 +326,20 @@ prompting manual transcript entry instead.
   model has less evidence to prioritize from, and its output will say so
   rather than guessing.
 
-## 10. Recommended next development steps
+## 11. Recommended next development steps
 
-1. **Add CSRF protection** (Flask-WTF) before any wider rollout.
+1. **Self-service password change / reset** — currently only a Shell script
+   (§8 step 5); a real "Change Password" page should ship before wider use.
 2. **Role-based access** — differentiate advisor vs. partner/admin, e.g. who
    can generate leadership overviews or edit engagement status.
 3. **Pagination + infinite scroll** on timeline/action items once client
    history grows.
 4. **Chunked/long-form transcription** for multi-hour recordings.
 5. **Postgres + S3-compatible storage** for a shared/production deployment
-   (the code already reads `DATABASE_URL` from env; only the file-storage
-   layer in `routes/documents.py` / `ai_api.py` would need an abstraction).
+   (the code already reads `DATABASE_URL` from env and normalizes Render's
+   `postgres://` scheme; only the file-storage layer in
+   `routes/documents.py` / `ai_api.py` would need an abstraction to move off
+   local disk).
 6. **Email sending integration** (not just drafting) — e.g. wire "Copy Email"
    up to an actual send-via-Outlook/Gmail-API action once the firm decides
    that's wanted, with an explicit send confirmation step.
