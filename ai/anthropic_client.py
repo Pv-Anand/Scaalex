@@ -7,13 +7,12 @@ Centralizing this here means every AI call:
   generation never has to hope the model emitted well-formed JSON in prose.
 """
 import json
-import traceback
 
 from flask import current_app
 
 
 class AIConfigError(Exception):
-    """Raised when a required API key is missing."""
+    """Raised when a required API key is missing or malformed."""
 
 
 class AIRequestError(Exception):
@@ -27,6 +26,21 @@ def _get_client():
             "ANTHROPIC_API_KEY is not configured. Add it to your .env file to enable "
             "AI extraction, leadership overviews, and email drafting."
         )
+    try:
+        api_key.encode("ascii")
+    except UnicodeEncodeError:
+        # API keys are sent as an HTTP header, which requires pure ASCII. A key
+        # that "looks right" but contains invisible non-ASCII characters (e.g.
+        # bullet placeholders accidentally copied from a masked dashboard
+        # display instead of the real value) fails deep inside the HTTP layer
+        # with a cryptic UnicodeEncodeError - catch it here with a clear,
+        # actionable message instead.
+        raise AIConfigError(
+            "ANTHROPIC_API_KEY contains invalid (non-ASCII) characters - it was likely "
+            "corrupted during copy/paste (e.g. copied from a masked/hidden display). "
+            "Delete and re-enter it from the original source."
+        )
+
     import anthropic
 
     return anthropic.Anthropic(api_key=api_key)
@@ -53,10 +67,7 @@ def call_structured(system_prompt: str, user_prompt: str, json_schema: dict, too
             messages=[{"role": "user", "content": user_prompt}],
         )
     except Exception as exc:  # noqa: BLE001 - surface any SDK/network error uniformly
-        # TEMP: full traceback in the error to diagnose a stubborn ascii-codec
-        # failure that doesn't reproduce locally - remove once root-caused.
-        tb = traceback.format_exc()
-        raise AIRequestError(f"Anthropic API request failed: {exc}\n---TRACEBACK---\n{tb}") from exc
+        raise AIRequestError(f"Anthropic API request failed: {exc}") from exc
 
     for block in response.content:
         if getattr(block, "type", None) == "tool_use" and block.name == tool_name:

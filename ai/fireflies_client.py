@@ -16,7 +16,7 @@ FIREFLIES_API_URL = "https://api.fireflies.ai/graphql"
 
 
 class FirefliesConfigError(Exception):
-    """Raised when FIREFLIES_API_KEY is not configured."""
+    """Raised when FIREFLIES_API_KEY is not configured or malformed."""
 
 
 class FirefliesRequestError(Exception):
@@ -29,6 +29,17 @@ def _get_api_key():
         raise FirefliesConfigError(
             "FIREFLIES_API_KEY is not configured. Add it to your .env file to enable "
             "meeting sync from Fireflies."
+        )
+    try:
+        api_key.encode("ascii")
+    except UnicodeEncodeError:
+        # API keys go into an HTTP header, which requires pure ASCII. A key with
+        # invisible non-ASCII characters (e.g. copied from a masked dashboard
+        # display instead of the real value) fails deep in the HTTP layer with
+        # a cryptic error - catch it here with something actionable instead.
+        raise FirefliesConfigError(
+            "FIREFLIES_API_KEY contains invalid (non-ASCII) characters - it was likely "
+            "corrupted during copy/paste. Delete and re-enter it from the original source."
         )
     return api_key
 

@@ -18,7 +18,7 @@ SCOPE = "https://www.googleapis.com/auth/calendar.readonly https://www.googleapi
 
 
 class CalendarConfigError(Exception):
-    """Raised when GOOGLE_CLIENT_ID/SECRET are not configured."""
+    """Raised when GOOGLE_CLIENT_ID/SECRET are not configured or malformed."""
 
 
 class CalendarRequestError(Exception):
@@ -32,6 +32,18 @@ def _get_credentials():
         raise CalendarConfigError(
             "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are not configured. Add them to your "
             ".env file to enable upcoming meetings from Google Calendar."
+        )
+    try:
+        client_id.encode("ascii")
+        client_secret.encode("ascii")
+    except UnicodeEncodeError:
+        # These go into an OAuth request; invisible non-ASCII characters (e.g.
+        # copied from a masked dashboard display instead of the real value)
+        # fail deep in the HTTP layer with a cryptic error - catch it here.
+        raise CalendarConfigError(
+            "GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET contains invalid (non-ASCII) "
+            "characters - likely corrupted during copy/paste. Delete and re-enter "
+            "from the original source."
         )
     return client_id, client_secret
 
