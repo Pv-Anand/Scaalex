@@ -298,6 +298,15 @@ def confirm_extraction(slug, conversation_id):
 
     source_label = f"{conversation.interaction_type} — {conversation.date.strftime('%d %b %Y')}"
 
+    # A conversation can be confirmed more than once (edit notes -> re-sync ->
+    # confirm again). conversation_id on Decision/ActionItem is only ever set
+    # here, never by the manual "Record Decision"/"New Action Item" forms, so
+    # it's safe to clear out whatever a previous confirmation of THIS
+    # conversation created before inserting the new set - otherwise every
+    # re-confirm would duplicate them.
+    Decision.query.filter_by(conversation_id=conversation.id).delete()
+    ActionItem.query.filter_by(conversation_id=conversation.id).delete()
+
     for d in payload.get("decisions", []):
         if not d.get("include"):
             continue
