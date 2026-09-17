@@ -1,3 +1,5 @@
+from datetime import datetime, time
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 
@@ -11,9 +13,23 @@ from ai.email_draft import draft_email
 ai_overview_bp = Blueprint("ai_overview", __name__, url_prefix="/clients/<slug>")
 
 
-def _build_history_text(client):
+def _build_history_text(client, date_from=None, date_to=None):
     lines = []
-    conversations = client.conversations.order_by(Conversation.date.asc()).all()
+    query = client.conversations
+    if date_from:
+        query = query.filter(Conversation.date >= datetime.combine(date_from, time.min))
+    if date_to:
+        query = query.filter(Conversation.date <= datetime.combine(date_to, time.max))
+    conversations = query.order_by(Conversation.date.asc()).all()
+
+    if date_from or date_to:
+        lines.append(
+            f"NOTE: This overview is scoped to conversations between "
+            f"{date_from.strftime('%d %b %Y') if date_from else 'the beginning of the record'} and "
+            f"{date_to.strftime('%d %b %Y') if date_to else 'today'}. "
+            f"Base the executive summary, key decisions, and changes-since-last strictly on that window."
+        )
+
     for c in conversations:
         lines.append(f"\n[{c.date.strftime('%d %b %Y')}] {c.interaction_type} — Participants: {c.participants_display or 'n/a'}")
         if c.summary:
@@ -40,7 +56,10 @@ def _build_history_text(client):
 
     all_actions = client.action_items.order_by(ActionItem.due_date.is_(None), ActionItem.due_date.asc()).all()
     if all_actions:
-        lines.append("\n--- Current status of all action items ---")
+        lines.append(
+            "\n--- Current status of all action items (live snapshot, not limited to the "
+            "period above) ---"
+        )
         for a in all_actions:
             lines.append(f"- {a.task} | owner: {a.owner} | due: {a.due_date or 'n/a'} | priority: {a.priority} | status: {a.status}")
 
@@ -82,8 +101,34 @@ def generate(slug):
         flash("Add at least one conversation before generating a leadership overview.", "error")
         return redirect(url_for("ai_overview.ai_summary", slug=slug))
 
+    def _parse_date(field):
+        raw = request.form.get(field, "").strip()
+        if not raw:
+            return None
+        try:
+            return datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            flash("That date range wasn't valid - generated for the full history instead.", "error")
+            return None
+
+    date_from = _parse_date("date_from")
+    date_to = _parse_date("date_to")
+
+    if date_from and date_to and date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    if date_from or date_to:
+        in_range = client.conversations
+        if date_from:
+            in_range = in_range.filter(Conversation.date >= datetime.combine(date_from, time.min))
+        if date_to:
+            in_range = in_range.filter(Conversation.date <= datetime.combine(date_to, time.max))
+        if in_range.count() == 0:
+            flash("No conversations fall within that date range.", "error")
+            return redirect(url_for("ai_overview.ai_summary", slug=slug))
+
     previous = client.overviews.order_by(AIOverview.generated_at.desc()).first()
-    history_text = _build_history_text(client)
+    history_text = _build_history_text(client, date_from, date_to)
     previous_text = _previous_overview_text(previous)
 
     try:
@@ -97,6 +142,8 @@ def generate(slug):
 
     overview = AIOverview(
         client_id=client.id,
+        period_start=date_from,
+        period_end=date_to,
         executive_summary=result.get("executive_summary", ""),
         key_actions=result.get("key_actions", []),
         key_decisions=result.get("key_decisions", []),

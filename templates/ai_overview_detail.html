@@ -8,6 +8,9 @@
     <div class="page-eyebrow">Leadership Overview</div>
     <h1>{{ client.name }}</h1>
     <div class="page-subtitle">Generated {{ overview.generated_at.strftime('%d %B %Y, %I:%M %p') }}{% if overview.generated_by %} by {{ overview.generated_by.name }}{% endif %}</div>
+    {% if overview.period_start or overview.period_end %}
+    <div class="page-subtitle">Covering {{ overview.period_start.strftime('%d %B %Y') if overview.period_start else 'the start of the record' }} – {{ overview.period_end.strftime('%d %B %Y') if overview.period_end else 'today' }}</div>
+    {% endif %}
   </div>
   <button class="btn" onclick="generateEmailDraft({{ overview.id }}, this)">Draft Client Email</button>
 </div>

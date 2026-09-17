@@ -213,6 +213,11 @@ class AIOverview(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False)
     generated_at = db.Column(db.DateTime, default=_now)
 
+    # Optional date range the overview was scoped to - null on either end
+    # means unbounded (full history on that side).
+    period_start = db.Column(db.Date)
+    period_end = db.Column(db.Date)
+
     executive_summary = db.Column(db.Text)
     key_actions = db.Column(JSONText, default=list)
     key_decisions = db.Column(JSONText, default=list)

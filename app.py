@@ -141,6 +141,12 @@ def _ensure_schema_migrations(app):
             conn.execute(db.text("ALTER TABLE fireflies_meetings ADD COLUMN synced_by_id INTEGER"))
             conn.commit()
 
+        overview_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(ai_overviews)"))}
+        for column in ("period_start", "period_end"):
+            if column not in overview_columns:
+                conn.execute(db.text(f"ALTER TABLE ai_overviews ADD COLUMN {column} DATE"))
+                conn.commit()
+
 
 app = create_app()
 
