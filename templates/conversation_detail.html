@@ -44,6 +44,9 @@
     </div>
 
     <div id="extract-section" class="section" style="{{ '' if conversation.transcript or conversation.raw_notes else 'display:none;' }}">
+      {% if conversation.extraction_status == 'pending_review' %}
+      <p class="small needs-confirmation-tag mb-16">Synced — AI extraction below is waiting for your review.</p>
+      {% endif %}
       <div class="flex-gap">
         <button class="btn" onclick="runExtraction({{ conversation.id }}, this)">Generate Structured Information</button>
         <span class="small muted">Extracts summary, decisions, action items, and open questions using AI. Nothing is saved until you confirm it.</span>
@@ -149,5 +152,8 @@
   document.getElementById('confirm-transcript-form')?.addEventListener('submit', function() {
     document.getElementById('transcript-hidden').value = document.getElementById('transcript-editor').value;
   });
+  {% if conversation.extraction_status == 'pending_review' and conversation.ai_extraction %}
+  renderExtraction({{ conversation.id }}, {{ conversation.ai_extraction | tojson }});
+  {% endif %}
 </script>
 {% endblock %}

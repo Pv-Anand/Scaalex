@@ -7,6 +7,12 @@
     <form action="{{ url_for('search.client_search', slug=client.slug) }}" method="GET">
       <input type="search" name="q" placeholder="Search this client…" style="width:220px;">
     </form>
+    <form method="POST" action="{{ url_for('conversations.sync', slug=client.slug) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-secondary" {{ 'disabled title="Nothing new to sync"' | safe if not sync_pending_count }}>
+        Sync{% if sync_pending_count %} ({{ sync_pending_count }}){% endif %}
+      </button>
+    </form>
     <a href="{{ url_for('conversations.new', slug=client.slug) }}" class="btn">+ Add Update</a>
   </div>
 </div>

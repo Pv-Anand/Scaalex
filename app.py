@@ -61,12 +61,30 @@ def create_app(config_class=Config):
 
     @app.context_processor
     def inject_globals():
-        from models import Client, FirefliesMeeting
+        from flask import request as _request
+        from models import Client, FirefliesMeeting, Conversation
+
         if not current_user.is_authenticated:
-            return {"sidebar_clients": [], "fireflies_uncategorized_count": 0}
+            return {"sidebar_clients": [], "fireflies_uncategorized_count": 0, "sync_pending_count": 0}
+
         sidebar_clients = Client.query.order_by(Client.name).all()
         uncategorized_count = FirefliesMeeting.query.filter_by(status="uncategorized").count()
-        return {"sidebar_clients": sidebar_clients, "fireflies_uncategorized_count": uncategorized_count}
+
+        sync_pending_count = 0
+        client_slug = (_request.view_args or {}).get("slug")
+        if client_slug:
+            client_for_count = next((c for c in sidebar_clients if c.slug == client_slug), None)
+            if client_for_count:
+                pending = Conversation.query.filter_by(
+                    client_id=client_for_count.id, extraction_status="none",
+                ).all()
+                sync_pending_count = sum(1 for c in pending if (c.raw_notes or c.transcript or "").strip())
+
+        return {
+            "sidebar_clients": sidebar_clients,
+            "fireflies_uncategorized_count": uncategorized_count,
+            "sync_pending_count": sync_pending_count,
+        }
 
     @app.errorhandler(CSRFError)
     def csrf_error(e):

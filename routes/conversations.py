@@ -6,6 +6,8 @@ from flask_login import login_required, current_user
 from extensions import db
 from models import Conversation, Decision, ActionItem, log_activity
 from routes.clients import get_client_or_404
+from ai.anthropic_client import AIConfigError, AIRequestError
+from ai.extract import extract_from_text
 
 conversations_bp = Blueprint("conversations", __name__, url_prefix="/clients/<slug>/conversations")
 
@@ -116,6 +118,62 @@ def new(slug):
         "conversation_new.html", client=client, active_tab="conversations",
         interaction_types=INTERACTION_TYPES, now=datetime.utcnow(),
     )
+
+
+@conversations_bp.route("/sync", methods=["POST"])
+@login_required
+def sync(slug):
+    """Runs AI extraction on every update since the last sync (extraction_status
+    still "none") in one click, instead of opening each conversation and
+    clicking Generate Structured Information individually. Nothing becomes
+    a permanent Decision/ActionItem here - each processed conversation lands
+    in the same pending_review state and confirm/edit/discard review as the
+    manual per-conversation flow, so extraction still can't silently become
+    record without an advisor looking at it."""
+    client = get_client_or_404(slug)
+    candidates = (
+        Conversation.query.filter_by(client_id=client.id, extraction_status="none")
+        .order_by(Conversation.date.asc())
+        .all()
+    )
+    candidates = [c for c in candidates if (c.raw_notes or c.transcript or "").strip()]
+
+    if not candidates:
+        flash("Nothing to sync — every update already has AI extraction generated or reviewed.", "info")
+        return redirect(url_for("clients.overview", slug=slug))
+
+    processed_ids = []
+    for conversation in candidates:
+        source_text = (conversation.transcript or conversation.raw_notes or "").strip()
+        try:
+            result = extract_from_text(
+                client.name, conversation.interaction_type, conversation.participants,
+                conversation.date.strftime("%d %b %Y"), source_text,
+            )
+        except AIConfigError as exc:
+            flash(str(exc), "error")
+            break
+        except AIRequestError as exc:
+            flash(f"Sync stopped after {len(processed_ids)} update(s): {exc}", "error")
+            break
+
+        conversation.ai_extraction = result
+        conversation.extraction_status = "pending_review"
+        processed_ids.append(conversation.id)
+
+    if processed_ids:
+        log_activity(
+            current_user.id, client.id, "Sync generated AI extraction for new updates",
+            details=f"{len(processed_ids)} update(s)",
+        )
+        db.session.commit()
+        flash(f"Synced {len(processed_ids)} update(s) — review the extracted details below.", "success")
+        if len(processed_ids) == 1:
+            return redirect(url_for("conversations.detail", slug=slug, conversation_id=processed_ids[0]))
+    else:
+        db.session.rollback()
+
+    return redirect(url_for("conversations.list_conversations", slug=slug))
 
 
 @conversations_bp.route("/<int:conversation_id>")

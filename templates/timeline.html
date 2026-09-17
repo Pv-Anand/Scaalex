@@ -26,6 +26,7 @@
     <div class="timeline-date-col">
       <div class="date">{{ c.date.strftime('%d %B %Y') }}</div>
       <div class="type">{{ c.interaction_type }}</div>
+      {% if c.extraction_status == 'pending_review' %}<div class="needs-confirmation-tag small mt-8">Needs Review</div>{% endif %}
     </div>
     <div class="timeline-body">
       <div class="timeline-participants">Participants: {{ c.participants_display or 'Not specified' }}</div>
