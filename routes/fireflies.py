@@ -226,6 +226,29 @@ def assign(meeting_id):
     return redirect(url_for("conversations.detail", slug=client.slug, conversation_id=conversation.id))
 
 
+@fireflies_bp.route("/<int:meeting_id>/revert", methods=["POST"])
+@login_required
+def revert(meeting_id):
+    """Moves an "Others / Sales" meeting back to Pending, e.g. if it was
+    filed there by mistake and actually belongs to a client. Only meaningful
+    for that status - a meeting already tied to a client/Conversation via
+    assign() isn't touched by this route."""
+    meeting = FirefliesMeeting.query.get_or_404(meeting_id)
+    if meeting.status != "sales_meeting":
+        flash("Only an Others / Sales meeting can be moved back to Pending.", "error")
+        return redirect(url_for("fireflies.inbox"))
+
+    meeting.status = "uncategorized"
+    meeting.synced_by_id = None
+    log_activity(
+        current_user.id, None, "Fireflies meeting moved back to Pending",
+        "fireflies_meeting", meeting.id, details=meeting.title,
+    )
+    db.session.commit()
+    flash(f'"{meeting.title}" moved back to Pending.', "success")
+    return redirect(url_for("fireflies.inbox"))
+
+
 @fireflies_bp.route("/<int:meeting_id>/ignore", methods=["POST"])
 @login_required
 def ignore(meeting_id):

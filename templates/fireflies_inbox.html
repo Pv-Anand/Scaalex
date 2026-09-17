@@ -157,6 +157,10 @@
           {% if m.participants %} · {{ m.participants|join(', ') }}{% endif %}
           {% if m.synced_by %} · Synced by {{ m.synced_by.name }}{% endif %}
         </div>
+        <form method="POST" action="{{ url_for('fireflies.revert', meeting_id=m.id) }}" class="mt-8">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="small link-btn">Move back to Pending</button>
+        </form>
       </li>
       {% endfor %}
     </ul>
