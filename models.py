@@ -273,6 +273,27 @@ class FirefliesMeeting(db.Model):
     assigned_conversation = db.relationship("Conversation")
 
 
+class CalendarConnection(db.Model):
+    """A connected Google Calendar account, used to show upcoming meetings.
+
+    This is a single shared connection for the firm (whoever connects it),
+    not per-advisor - matching how Fireflies sync also runs against one
+    shared workspace rather than per-user credentials.
+    """
+
+    __tablename__ = "calendar_connections"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(200))
+    access_token = db.Column(db.Text, nullable=False)
+    refresh_token = db.Column(db.Text, nullable=False)
+    token_expiry = db.Column(db.DateTime, nullable=False)
+    connected_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    connected_at = db.Column(db.DateTime, default=_now)
+
+    connected_by = db.relationship("User")
+
+
 class AuditLog(db.Model):
     __tablename__ = "audit_log"
 

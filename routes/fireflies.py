@@ -2,12 +2,14 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from extensions import db
-from models import Client, Conversation, FirefliesMeeting, log_activity
+from models import Client, Conversation, FirefliesMeeting, CalendarConnection, log_activity
 from ai.fireflies_client import (
     FirefliesConfigError, FirefliesRequestError,
     fetch_recent_transcripts, fetch_transcript_detail,
     parse_fireflies_date, extract_participant_names, build_transcript_text,
 )
+from ai.google_calendar_client import CalendarRequestError, fetch_upcoming_events, parse_event
+from routes.calendar import get_valid_access_token
 
 fireflies_bp = Blueprint("fireflies", __name__, url_prefix="/fireflies")
 
@@ -115,9 +117,26 @@ def inbox():
         .all()
     )
     clients = Client.query.order_by(Client.name).all()
+
+    calendar_connection = CalendarConnection.query.first()
+    upcoming_events = []
+    calendar_error = None
+    if calendar_connection:
+        access_token = get_valid_access_token()
+        if not access_token:
+            calendar_error = "Your Google Calendar connection has expired. Please reconnect."
+        else:
+            try:
+                raw_events = fetch_upcoming_events(access_token, max_results=10)
+                upcoming_events = [parse_event(e) for e in raw_events]
+            except CalendarRequestError as exc:
+                calendar_error = str(exc)
+
     return render_template(
         "fireflies_inbox.html",
         uncategorized=uncategorized, recent_assigned=recent_assigned, clients=clients,
+        calendar_connection=calendar_connection, upcoming_events=upcoming_events,
+        calendar_error=calendar_error,
     )
 
 

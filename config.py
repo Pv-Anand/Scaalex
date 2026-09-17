@@ -41,6 +41,9 @@ class Config:
 
     FIREFLIES_API_KEY = os.environ.get("FIREFLIES_API_KEY", "").strip()
 
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
+
     UPLOAD_FOLDER = os.path.join(DATA_DIR, "uploads")
     DOCUMENT_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "documents")
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_UPLOAD_MB", "50")) * 1024 * 1024

@@ -23,5 +23,9 @@ services:
         value: claude-sonnet-5
       - key: FIREFLIES_API_KEY
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
       - key: MAX_UPLOAD_MB
         value: "50"

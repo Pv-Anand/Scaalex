@@ -44,6 +44,7 @@ def create_app(config_class=Config):
     from routes.search import search_bp
     from routes.ai_api import ai_api_bp
     from routes.fireflies import fireflies_bp
+    from routes.calendar import calendar_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(home_bp)
@@ -56,6 +57,7 @@ def create_app(config_class=Config):
     app.register_blueprint(search_bp)
     app.register_blueprint(ai_api_bp)
     app.register_blueprint(fireflies_bp)
+    app.register_blueprint(calendar_bp)
 
     @app.context_processor
     def inject_globals():
