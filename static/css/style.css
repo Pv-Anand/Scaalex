@@ -178,7 +178,7 @@ button { font-family: inherit; }
 .table td { padding: 13px 14px; border-bottom: 1px solid var(--grey-100); font-size: 13.5px; vertical-align: top; }
 .table tr:hover td { background: var(--grey-50); }
 .table-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.table select { min-width: 152px; padding: 6px 8px; font-size: 12.5px; }
+.table select { min-width: 152px; padding: 6px 26px 6px 8px; background-position: right 8px center; font-size: 12.5px; }
 
 .list-item { padding: 14px 0; border-bottom: 1px solid var(--grey-100); }
 .list-item:last-child { border-bottom: none; }
@@ -212,9 +212,53 @@ input[type=text], input[type=email], input[type=password], input[type=date], inp
   font-family: inherit;
   background: var(--white);
   color: var(--black);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 textarea { resize: vertical; min-height: 120px; }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--black); }
+input[type=text]:hover, input[type=email]:hover, input[type=password]:hover,
+input[type=date]:hover, input[type=datetime-local]:hover, input[type=search]:hover,
+select:hover, textarea:hover { border-color: var(--grey-500); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--black);
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
+}
+
+/* Custom chevron in place of the native OS arrow, which looks inconsistent
+   across browsers next to our flat field chrome. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%230a0a0a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+select::-ms-expand { display: none; }
+select[disabled] { cursor: not-allowed; }
+
+/* Date/datetime pickers - the field chrome now matches everything else;
+   just tidy up the native calendar glyph's click target and hover state. */
+input[type=date], input[type=datetime-local] { cursor: pointer; }
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=datetime-local]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 3px;
+  margin-left: 4px;
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+input[type=date]:hover::-webkit-calendar-picker-indicator,
+input[type=datetime-local]:hover::-webkit-calendar-picker-indicator,
+input[type=date]::-webkit-calendar-picker-indicator:hover,
+input[type=datetime-local]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: var(--grey-100);
+}
+
 .form-row { display: flex; gap: 16px; }
 .form-row > * { flex: 1; }
 .form-actions { display: flex; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
@@ -262,6 +306,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .pill-link.active { background: var(--black); color: var(--white); border-color: var(--black); }
 .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; align-items: center; }
 .filter-bar select, .filter-bar input { width: auto; padding: 7px 10px; font-size: 12.5px; }
+.filter-bar select { padding-right: 30px; background-position: right 10px center; }
 .two-col { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; }
 .needs-confirmation-tag { color: var(--warn); font-weight: 500; }
 .transcript-box { white-space: pre-wrap; font-size: 13px; line-height: 1.7; background: var(--grey-50); padding: 18px; border-radius: var(--radius); border: 1px solid var(--line); }
