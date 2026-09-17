@@ -7,6 +7,7 @@ Centralizing this here means every AI call:
   generation never has to hope the model emitted well-formed JSON in prose.
 """
 import json
+import traceback
 
 from flask import current_app
 
@@ -52,7 +53,10 @@ def call_structured(system_prompt: str, user_prompt: str, json_schema: dict, too
             messages=[{"role": "user", "content": user_prompt}],
         )
     except Exception as exc:  # noqa: BLE001 - surface any SDK/network error uniformly
-        raise AIRequestError(f"Anthropic API request failed: {exc}") from exc
+        # TEMP: full traceback in the error to diagnose a stubborn ascii-codec
+        # failure that doesn't reproduce locally - remove once root-caused.
+        tb = traceback.format_exc()
+        raise AIRequestError(f"Anthropic API request failed: {exc}\n---TRACEBACK---\n{tb}") from exc
 
     for block in response.content:
         if getattr(block, "type", None) == "tool_use" and block.name == tool_name:
