@@ -178,6 +178,7 @@ button { font-family: inherit; }
 
 /* ---------- Tags/badges ---------- */
 .badge { font-size: 11px; padding: 2px 9px; border-radius: 20px; display: inline-flex; align-items: center; font-weight: 500; }
+.nav-badge { font-size: 10.5px; background: var(--white); color: var(--black); border-radius: 20px; padding: 1px 7px; font-weight: 600; }
 .badge-priority-High { background: var(--danger-bg); color: var(--danger); }
 .badge-priority-Medium { background: var(--warn-bg); color: var(--warn); }
 .badge-priority-Low { background: var(--grey-100); color: var(--grey-700); }

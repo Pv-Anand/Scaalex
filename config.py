@@ -42,6 +42,8 @@ class Config:
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
     OPENAI_TRANSCRIBE_MODEL = os.environ.get("OPENAI_TRANSCRIBE_MODEL", "whisper-1")
 
+    FIREFLIES_API_KEY = os.environ.get("FIREFLIES_API_KEY", "").strip()
+
     UPLOAD_FOLDER = os.path.join(DATA_DIR, "uploads")
     AUDIO_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "audio")
     DOCUMENT_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "documents")

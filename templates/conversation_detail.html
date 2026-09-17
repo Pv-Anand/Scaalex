@@ -146,6 +146,7 @@
       <div class="card small">
         <div class="flex-between mb-8"><span class="muted">Created</span><span>{{ conversation.created_at.strftime('%d %b %Y, %I:%M %p') }}</span></div>
         {% if conversation.created_by %}<div class="flex-between mb-8"><span class="muted">Recorded by</span><span>{{ conversation.created_by.name }}</span></div>{% endif %}
+        {% if conversation.source == 'fireflies' %}<div class="flex-between mb-8"><span class="muted">Source</span><span class="badge badge-type">Synced from Fireflies</span></div>{% endif %}
         <div class="flex-between"><span class="muted">Extraction Status</span><span>{{ conversation.extraction_status.replace('_', ' ').title() }}</span></div>
       </div>
     </div>

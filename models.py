@@ -133,6 +133,7 @@ class Conversation(db.Model):
 
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     is_demo = db.Column(db.Boolean, default=False)
+    source = db.Column(db.String(20), default="manual")  # manual, fireflies
     created_at = db.Column(db.DateTime, default=_now)
     updated_at = db.Column(db.DateTime, default=_now, onupdate=_now)
 
@@ -239,6 +240,39 @@ class EmailDraft(db.Model):
     subject = db.Column(db.String(300))
     body = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=_now)
+
+
+class FirefliesMeeting(db.Model):
+    """A meeting pulled from Fireflies, staged before it's linked to a client.
+
+    Sync (see ai/fireflies_client.py + routes/fireflies.py) attempts to
+    auto-match each meeting to a client by name; a confident match creates
+    the Conversation immediately (status="assigned"). Anything that can't
+    be matched lands here with status="uncategorized" for an advisor to
+    assign manually from the Fireflies inbox page.
+    """
+
+    __tablename__ = "fireflies_meetings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    fireflies_id = db.Column(db.String(120), unique=True, nullable=False)
+    title = db.Column(db.String(300))
+    meeting_date = db.Column(db.DateTime)
+    duration_minutes = db.Column(db.Float)
+    participants = db.Column(JSONText, default=list)
+    transcript = db.Column(db.Text)
+    fireflies_overview = db.Column(db.Text)  # Fireflies' own summary - a hint only, never treated as our record
+
+    status = db.Column(db.String(20), default="uncategorized")  # uncategorized, assigned, ignored
+    matched_client_id = db.Column(db.Integer, db.ForeignKey("clients.id"))  # auto-match suggestion
+    assigned_client_id = db.Column(db.Integer, db.ForeignKey("clients.id"))
+    assigned_conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"))
+
+    synced_at = db.Column(db.DateTime, default=_now)
+
+    matched_client = db.relationship("Client", foreign_keys=[matched_client_id])
+    assigned_client = db.relationship("Client", foreign_keys=[assigned_client_id])
+    assigned_conversation = db.relationship("Conversation")
 
 
 class AuditLog(db.Model):

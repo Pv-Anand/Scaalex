@@ -29,6 +29,11 @@ the spec:
   decisions/action items/participants, document upload & storage linked to
   clients and conversations, advanced filters on the timeline and action item
   views, and an audit trail (`AuditLog`) recording every material change.
+- **Fireflies meeting sync** — pulls recordings/transcripts from Fireflies.ai,
+  auto-matches them to a client by name where possible (feeding straight into
+  the same AI extraction/decisions/overview pipeline as any other
+  conversation), and routes anything unmatched into an **Uncategorized
+  Meetings** inbox for one-click manual assignment. See §10.
 
 Two demo clients are seeded with realistic, clearly-attributable data:
 **Sravana** (Google Ads / budget discussion, matching the spec's own example
@@ -114,13 +119,14 @@ production — the ORM layer doesn't change).
 |---|---|
 | `users` | name, email, password_hash, role |
 | `clients` | name, slug, status, engagement_type, is_demo |
-| `conversations` | client_id, interaction_type, date, participants (JSON), raw_notes, audio_filename, transcript, transcript_status, ai_extraction (JSON, unconfirmed), extraction_status, summary, important_context, open_questions (JSON) |
+| `conversations` | client_id, interaction_type, date, participants (JSON), raw_notes, audio_filename, transcript, transcript_status, ai_extraction (JSON, unconfirmed), extraction_status, summary, important_context, open_questions (JSON), source (`manual` / `fireflies`) |
 | `decisions` | client_id, conversation_id, decision, context, date, owner, status (`Confirmed` / `Needs Confirmation`), source_label |
 | `action_items` | client_id, conversation_id, task, owner, due_date, priority, status, source_label, needs_confirmation |
 | `documents` | client_id, conversation_id, file_name, stored_name, file_type, file_size, uploaded_by_id |
 | `ai_overviews` | client_id, executive_summary, key_actions (JSON), key_decisions (JSON), risks (JSON), leadership_notes, suggested_next_steps (JSON), changes_since_last |
 | `email_drafts` | client_id, overview_id, conversation_id, subject, body |
 | `audit_log` | user_id, client_id, action, entity_type, entity_id, details, created_at |
+| `fireflies_meetings` | fireflies_id (unique), title, meeting_date, duration_minutes, participants (JSON), transcript, fireflies_overview, status (`uncategorized` / `assigned` / `ignored`), matched_client_id, assigned_client_id, assigned_conversation_id |
 
 This matches the spec's data model directly, with one addition
 (`email_drafts`, `audit_log`) needed to support the email generator and audit
@@ -188,6 +194,7 @@ ANTHROPIC_API_KEY=             # required for extraction/overview/email
 ANTHROPIC_MODEL=claude-sonnet-5
 OPENAI_API_KEY=                # required for voice transcription
 OPENAI_TRANSCRIBE_MODEL=whisper-1
+FIREFLIES_API_KEY=             # required for meeting sync (Fireflies -> Settings -> Developer Settings)
 MAX_UPLOAD_MB=50
 ```
 
@@ -247,6 +254,7 @@ git push -u origin main
 they're never committed to git:
    - `ANTHROPIC_API_KEY`
    - `OPENAI_API_KEY` (optional, for transcription)
+   - `FIREFLIES_API_KEY` (optional, for meeting sync)
 
    `DATA_DIR=/var/data` and `FORCE_HTTPS=true` are already set by
    `render.yaml`.
@@ -296,7 +304,46 @@ If `OPENAI_API_KEY` isn't set, the upload still stores the audio file (for
 playback) and the UI clearly states that transcription isn't configured,
 prompting manual transcript entry instead.
 
-## 10. Known limitations
+## 10. Meeting sync (Fireflies)
+
+The **Fireflies** sidebar link (`/fireflies`) pulls meeting recordings/
+transcripts from [Fireflies.ai](https://fireflies.ai) directly into the
+app - no manual audio upload needed for meetings already recorded there.
+
+**How it works:**
+
+1. **Sync Now** (`POST /fireflies/sync`) calls Fireflies' own GraphQL API
+   (`ai/fireflies_client.py`) with your `FIREFLIES_API_KEY`, listing recent
+   meetings and fetching the full transcript for any not already synced
+   (deduplicated by Fireflies' meeting ID).
+2. For each new meeting, `routes/fireflies.py::guess_client_match()` checks
+   whether the meeting title or any participant's name contains a client's
+   name. This is a deliberately simple, explainable substring match - not
+   an AI guess - so a mismatch is obvious and easy to correct, never a
+   confident-sounding wrong answer.
+3. **Confidently matched** meetings become a real `Conversation` on that
+   client immediately (`interaction_type="Video Call"`, transcript attached,
+   `source="fireflies"`), exactly as if someone had uploaded that recording
+   by hand. From there it's already wired into everything else: the advisor
+   can click **Generate Structured Information** to run it through the same
+   AI extraction / confirm-edit-discard workflow as any other conversation,
+   and it will be included in future leadership overviews and decision logs
+   for that client.
+4. **Unmatched** meetings land in the **Uncategorized Meetings** section on
+   the Fireflies page, showing the title, date, participants, and Fireflies'
+   own short overview (labeled as such - it's a hint, never treated as our
+   own record). An advisor picks a client from a dropdown and clicks **Move**
+   to assign it (creating the Conversation the same way step 3 does), or
+   **Ignore** to dismiss a meeting that isn't client-related (e.g. an
+   internal standup).
+5. A badge on the sidebar "Fireflies" link shows the current uncategorized
+   count, so nothing sits unreviewed silently.
+
+If `FIREFLIES_API_KEY` isn't set, **Sync Now** shows a clear configuration
+error and nothing else on the page is affected - meetings can still be
+documented manually as always.
+
+## 11. Known limitations
 
 - **No Node/JS toolchain in this environment** — see §2. This is a deliberate
   adaptation, not an oversight; flagged explicitly rather than silently
@@ -325,8 +372,15 @@ prompting manual transcript entry instead.
   history** — if conversations are recorded sparsely or without dates, the
   model has less evidence to prioritize from, and its output will say so
   rather than guessing.
+- **Fireflies auto-matching is substring-based, not AI-based** — a meeting
+  titled or attended by someone whose name happens to contain a client's
+  name will match that client even if unrelated (rare in practice, but
+  possible with short client names). It's intentionally simple rather than
+  AI-guessed so a wrong match is obvious and easy to fix, not a confident-
+  sounding error - but it also means it requires no manual sync scheduling
+  yet: sync only runs when someone clicks "Sync Now," not automatically.
 
-## 11. Recommended next development steps
+## 12. Recommended next development steps
 
 1. **Self-service password change / reset** — currently only a Shell script
    (§8 step 5); a real "Change Password" page should ship before wider use.
@@ -350,3 +404,7 @@ prompting manual transcript entry instead.
    confirm/discard workflow and AI graceful-degradation paths would catch
    regressions early, especially given how central the confirmation workflow
    is to data integrity.
+9. **Scheduled Fireflies sync** — currently manual (click "Sync Now"); a
+   background job (Render Cron Job, or a simple APScheduler loop) hitting
+   `POST /fireflies/sync` every 15-30 minutes would mean meetings show up
+   without anyone remembering to trigger it.

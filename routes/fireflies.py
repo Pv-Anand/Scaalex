@@ -1,0 +1,196 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
+
+from extensions import db
+from models import Client, Conversation, FirefliesMeeting, log_activity
+from ai.fireflies_client import (
+    FirefliesConfigError, FirefliesRequestError,
+    fetch_recent_transcripts, fetch_transcript_detail,
+    parse_fireflies_date, extract_participant_names, build_transcript_text,
+)
+
+fireflies_bp = Blueprint("fireflies", __name__, url_prefix="/fireflies")
+
+
+def guess_client_match(title, participant_names):
+    """Substring-match the meeting title/participants against client names.
+
+    Deliberately simple and explainable rather than AI-based: a wrong
+    heuristic match just means a meeting stays "uncategorized" a bit too
+    eagerly or lands under the wrong client, either of which an advisor can
+    immediately see and correct - there's no room here for a confident-
+    sounding but fabricated match the way an AI guess could produce.
+    """
+    haystacks = [(title or "").lower()] + [p.lower() for p in participant_names]
+    for client in Client.query.all():
+        name_lower = client.name.lower()
+        if any(name_lower in h for h in haystacks):
+            return client
+    return None
+
+
+def _sync_transcripts():
+    meetings = fetch_recent_transcripts(limit=25)
+    existing_ids = {m.fireflies_id for m in FirefliesMeeting.query.all()}
+
+    new_count = 0
+    auto_matched_count = 0
+
+    for m in meetings:
+        fid = m.get("id")
+        if not fid or fid in existing_ids:
+            continue
+
+        detail = fetch_transcript_detail(fid)
+        title = detail.get("title") or "Untitled Meeting"
+        meeting_date = parse_fireflies_date(detail.get("date"))
+        attendees = detail.get("meeting_attendees") or []
+        participant_names = extract_participant_names(attendees)
+        transcript_text = build_transcript_text(detail.get("sentences"))
+        summary = detail.get("summary") or {}
+        overview = summary.get("short_overview") or ""
+
+        client = guess_client_match(title, participant_names)
+
+        record = FirefliesMeeting(
+            fireflies_id=fid,
+            title=title,
+            meeting_date=meeting_date,
+            duration_minutes=detail.get("duration"),
+            participants=participant_names,
+            transcript=transcript_text,
+            fireflies_overview=overview,
+            matched_client_id=client.id if client else None,
+        )
+        db.session.add(record)
+        db.session.flush()
+        new_count += 1
+
+        if client:
+            conversation = Conversation(
+                client_id=client.id,
+                interaction_type="Video Call",
+                date=meeting_date,
+                participants=participant_names,
+                raw_notes=overview,
+                transcript=transcript_text,
+                transcript_status="ready",
+                source="fireflies",
+                created_by_id=current_user.id,
+            )
+            db.session.add(conversation)
+            db.session.flush()
+
+            record.status = "assigned"
+            record.assigned_client_id = client.id
+            record.assigned_conversation_id = conversation.id
+            auto_matched_count += 1
+
+            log_activity(
+                current_user.id, client.id, "Meeting synced from Fireflies (auto-matched)",
+                "conversation", conversation.id, details=title,
+            )
+        else:
+            log_activity(
+                current_user.id, None, "Meeting synced from Fireflies (uncategorized)",
+                "fireflies_meeting", record.id, details=title,
+            )
+
+    db.session.commit()
+    return new_count, auto_matched_count
+
+
+@fireflies_bp.route("")
+@login_required
+def inbox():
+    uncategorized = (
+        FirefliesMeeting.query.filter_by(status="uncategorized")
+        .order_by(FirefliesMeeting.meeting_date.desc())
+        .all()
+    )
+    recent_assigned = (
+        FirefliesMeeting.query.filter_by(status="assigned")
+        .order_by(FirefliesMeeting.synced_at.desc())
+        .limit(10)
+        .all()
+    )
+    clients = Client.query.order_by(Client.name).all()
+    return render_template(
+        "fireflies_inbox.html",
+        uncategorized=uncategorized, recent_assigned=recent_assigned, clients=clients,
+    )
+
+
+@fireflies_bp.route("/sync", methods=["POST"])
+@login_required
+def sync():
+    try:
+        new_count, auto_matched = _sync_transcripts()
+    except FirefliesConfigError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("fireflies.inbox"))
+    except FirefliesRequestError as exc:
+        flash(f"Fireflies sync failed: {exc}", "error")
+        return redirect(url_for("fireflies.inbox"))
+
+    if new_count == 0:
+        flash("No new meetings found since the last sync.", "info")
+    else:
+        flash(
+            f"Synced {new_count} new meeting(s) - {auto_matched} auto-matched to a project, "
+            f"{new_count - auto_matched} need manual review below.",
+            "success",
+        )
+    return redirect(url_for("fireflies.inbox"))
+
+
+@fireflies_bp.route("/<int:meeting_id>/assign", methods=["POST"])
+@login_required
+def assign(meeting_id):
+    meeting = FirefliesMeeting.query.get_or_404(meeting_id)
+    client_id = request.form.get("client_id", type=int)
+    if not client_id:
+        flash("Choose a project to move this meeting to.", "error")
+        return redirect(url_for("fireflies.inbox"))
+    client = Client.query.get_or_404(client_id)
+
+    conversation = Conversation(
+        client_id=client.id,
+        interaction_type="Video Call",
+        date=meeting.meeting_date,
+        participants=meeting.participants,
+        raw_notes=meeting.fireflies_overview or "",
+        transcript=meeting.transcript,
+        transcript_status="ready",
+        source="fireflies",
+        created_by_id=current_user.id,
+    )
+    db.session.add(conversation)
+    db.session.flush()
+
+    meeting.status = "assigned"
+    meeting.assigned_client_id = client.id
+    meeting.assigned_conversation_id = conversation.id
+
+    log_activity(
+        current_user.id, client.id, "Fireflies meeting moved to project",
+        "conversation", conversation.id, details=meeting.title,
+    )
+    db.session.commit()
+
+    flash(f'"{meeting.title}" moved to {client.name}.', "success")
+    return redirect(url_for("conversations.detail", slug=client.slug, conversation_id=conversation.id))
+
+
+@fireflies_bp.route("/<int:meeting_id>/ignore", methods=["POST"])
+@login_required
+def ignore(meeting_id):
+    meeting = FirefliesMeeting.query.get_or_404(meeting_id)
+    meeting.status = "ignored"
+    log_activity(
+        current_user.id, None, "Fireflies meeting dismissed",
+        "fireflies_meeting", meeting.id, details=meeting.title,
+    )
+    db.session.commit()
+    flash("Meeting dismissed.", "success")
+    return redirect(url_for("fireflies.inbox"))

@@ -25,5 +25,7 @@ services:
         sync: false
       - key: OPENAI_TRANSCRIBE_MODEL
         value: whisper-1
+      - key: FIREFLIES_API_KEY
+        sync: false
       - key: MAX_UPLOAD_MB
         value: "50"
