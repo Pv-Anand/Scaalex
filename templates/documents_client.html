@@ -21,6 +21,39 @@
   </div>
 </div>
 
+<div class="card doc-upload-bar">
+  <form method="POST" action="{{ url_for('documents.upload', slug=client.slug) }}" enctype="multipart/form-data" style="display:flex; align-items:flex-end; gap:14px; width:100%;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>Link to Milestone (optional)</label>
+      <select name="milestone_id">
+        <option value="">None</option>
+        {% for m in milestones %}
+        <option value="{{ m.id }}">{{ m.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Link to Conversation (optional)</label>
+      <select name="conversation_id">
+        <option value="">None</option>
+        {% for c in conversations %}
+        <option value="{{ c.id }}">{{ c.date.strftime('%d %b %Y') }} — {{ c.interaction_type }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Upload File</label>
+      <label for="doc-upload-file" class="doc-upload-box">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="flex-shrink:0;"><path d="M12 16V4M12 4L7 9M12 4l5 5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" stroke-linecap="round"/></svg>
+        <span id="doc-upload-filename">Drop or click to browse</span>
+      </label>
+      <input type="file" name="file" id="doc-upload-file" required style="display:none;" onchange="updateDocUploadLabel(this)">
+    </div>
+    <button type="submit" class="btn">Upload</button>
+  </form>
+</div>
+
 <form class="filter-bar">
   <select name="source" onchange="this.form.submit()">
     <option value="">All Sources</option>
@@ -35,66 +68,55 @@
   </select>
 </form>
 
-<div class="two-col">
-  <div>
-    {% if documents %}
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>File</th><th>Date</th><th>Uploaded By</th><th>Why</th><th></th></tr></thead>
-        <tbody>
-          {% for d in documents %}
-          <tr>
-            <td>{{ d.file_name }}</td>
-            <td style="white-space:nowrap;">{{ d.uploaded_at.strftime('%d %b %Y') }}</td>
-            <td style="white-space:nowrap;">{{ d.uploader_name }} <span class="badge badge-type">{{ d.uploader_role }}</span></td>
-            <td class="small muted">
-              {% if d.milestone_id and d.milestone %}
-              <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=d.milestone_id) }}">{{ d.context_label }}</a>
-              {% elif d.conversation_id %}
-              <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=d.conversation_id) }}">{{ d.context_label }}</a>
+{% if documents %}
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>File</th><th>Date</th><th>Uploaded By</th><th>Why</th><th></th></tr></thead>
+    <tbody>
+      {% for d in documents %}
+      <tr>
+        <td>
+          <div class="doc-file-cell">
+            <div class="doc-file-icon">
+              {% if d.file_type in ['xlsx', 'xls', 'csv'] %}
+              <svg width="15" height="15" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="2.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 6.5h7M5.5 9h7M5.5 11.5h4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
               {% else %}
-              {{ d.context_label }}
+              <svg width="15" height="15" viewBox="0 0 18 18" fill="none"><path d="M6 2.5h4l3.5 3.5v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-11a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 2.5V6h3.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
               {% endif %}
-            </td>
-            <td><a href="{{ url_for('documents.download', doc_id=d.id) }}" class="small">Download</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="empty-state"><h3>No documents match this filter</h3></div>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h3 class="section-title">Upload File</h3>
-    <form method="POST" action="{{ url_for('documents.upload', slug=client.slug) }}" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-group">
-        <label>File</label>
-        <input type="file" name="file" required>
-      </div>
-      <div class="form-group">
-        <label>Link to Milestone (optional)</label>
-        <select name="milestone_id">
-          <option value="">None</option>
-          {% for m in milestones %}
-          <option value="{{ m.id }}">{{ m.title }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Link to Conversation (optional)</label>
-        <select name="conversation_id">
-          <option value="">None</option>
-          {% for c in conversations %}
-          <option value="{{ c.id }}">{{ c.date.strftime('%d %b %Y') }} — {{ c.interaction_type }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <button type="submit" class="btn">Upload</button>
-    </form>
-  </div>
+            </div>
+            <div style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ d.file_name }}</div>
+          </div>
+        </td>
+        <td style="white-space:nowrap;">{{ d.uploaded_at.strftime('%d %b %Y') }}</td>
+        <td style="white-space:nowrap;">{{ d.uploader_name }} <span class="badge badge-type">{{ d.uploader_role }}</span></td>
+        <td class="small muted">
+          {% if d.milestone_id and d.milestone %}
+          <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=d.milestone_id) }}" style="color:var(--black); font-weight:500;">{{ d.context_label }}</a>
+          {% elif d.conversation_id %}
+          <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=d.conversation_id) }}" style="color:var(--black); font-weight:500;">{{ d.context_label }}</a>
+          {% else %}
+          {{ d.context_label }}
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('documents.download', doc_id=d.id) }}" class="icon-btn" aria-label="Download" title="Download">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12M12 16l-4-4M12 16l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke-linecap="round"/></svg>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
+{% else %}
+<div class="empty-state"><h3>No documents match this filter</h3></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+function updateDocUploadLabel(input) {
+  const label = document.getElementById('doc-upload-filename');
+  label.textContent = input.files.length ? input.files[0].name : 'Drop or click to browse';
+}
+</script>
 {% endblock %}
