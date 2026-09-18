@@ -9,6 +9,58 @@
   <a href="{{ url_for('clients.new') }}" class="btn btn-secondary">+ Add Client</a>
 </div>
 
+<div class="stat-row">
+  <div class="stat-cell">
+    <div class="num">{{ active_clients_count }}</div>
+    <div class="label">Active Clients</div>
+  </div>
+  <div class="stat-cell">
+    <div class="num">{{ total_open_actions }}</div>
+    <div class="label">Open Actions</div>
+  </div>
+  <div class="stat-cell {{ 'alert' if overdue_count }}">
+    <div class="num">{{ overdue_count }}</div>
+    <div class="label">Overdue</div>
+  </div>
+  <div class="stat-cell {{ 'alert' if high_priority_count }}">
+    <div class="num">{{ high_priority_count }}</div>
+    <div class="label">High Priority</div>
+  </div>
+  <div class="stat-cell">
+    <div class="num">{{ decisions_this_month }}</div>
+    <div class="label">Decisions This Month</div>
+  </div>
+</div>
+
+{% if needs_attention %}
+<div class="attn-panel">
+  <div class="attn-header">
+    <div class="flex-gap" style="align-items:center;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+      <span style="font-size:13.5px; font-weight:600; color:var(--danger);">Needs Attention — overdue or high priority</span>
+    </div>
+    <a href="{{ url_for('action_items.global_list') }}" style="font-size:12.5px; color:var(--danger); font-weight:500;">View all Action Items →</a>
+  </div>
+  <div>
+    {% for a in needs_attention %}
+    <div class="attn-row">
+      <span class="attn-dot {{ 'is-overdue' if a.is_overdue }}"></span>
+      <div style="flex:1; min-width:0;">
+        <a href="{{ url_for('action_items.client_list', slug=a.client.slug) }}" style="font-size:13px; font-weight:500; color:var(--black);">{{ a.task }}</a>
+        <div class="small muted mt-4">
+          {{ a.client.name }} · {{ a.assignee or a.owner }} ·
+          {% if a.is_overdue %}<span style="color:var(--danger); font-weight:500;">Overdue since {{ a.due_date.strftime('%d %b') }}</span>
+          {% elif a.due_date %}Due {{ a.due_date.strftime('%d %b') }}
+          {% else %}No due date{% endif %}
+        </div>
+      </div>
+      <span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <div class="section">
   {% if clients %}
   <div class="grid grid-2">
@@ -17,7 +69,12 @@
       <div class="client-card-top">
         <div>
           <h3>{{ c.name }}</h3>
-          <span class="status-pill"><span class="status-dot {{ c.status }}"></span>{{ c.status }}</span>
+          <div class="flex-gap" style="align-items:center; margin-top:2px;">
+            <span class="status-pill"><span class="status-dot {{ c.status }}"></span>{{ c.status }}</span>
+            {% if overdue_by_client.get(c.id) %}
+            <span class="badge-overdue-chip">{{ overdue_by_client[c.id] }} overdue</span>
+            {% endif %}
+          </div>
         </div>
         <a href="{{ url_for('clients.overview', slug=c.slug) }}" class="btn btn-sm">Open Project</a>
       </div>
@@ -78,19 +135,24 @@
 
   <div>
     <div class="section">
-      <h2 class="section-title">Pending Actions ({{ total_open_actions }})</h2>
-      {% if pending_actions %}
-      <ul>
-        {% for a in pending_actions %}
-        <li class="list-item">
-          <div class="flex-between">
-            <span>{{ a.task }}</span>
-            <span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span>
+      <h2 class="section-title">Pending Actions by Priority</h2>
+      {% if total_open_actions %}
+      <div class="table-wrap">
+        {% for priority in ['High', 'Medium', 'Low'] %}
+        {% if pending_by_priority.get(priority) %}
+        <div class="priority-group-header priority-{{ priority }}">{{ priority }} · {{ pending_by_priority[priority]|length }}</div>
+        {% for a in pending_by_priority[priority] %}
+        <div class="list-item" style="padding:12px 16px;">
+          <div>{{ a.task }}</div>
+          <div class="small muted mt-4">
+            {{ a.client.name }} · {{ a.assignee or a.owner }}
+            {% if a.due_date %} · <span class="{{ 'overdue-text' if a.is_overdue }}">Due {{ a.due_date.strftime('%d %b') }}</span>{% endif %}
           </div>
-          <div class="small muted mt-8">{{ a.client.name }} · {{ a.owner }}{% if a.due_date %} · <span class="{{ 'overdue-text' if a.is_overdue }}">Due {{ a.due_date.strftime('%d %b') }}</span>{% endif %}</div>
-        </li>
+        </div>
         {% endfor %}
-      </ul>
+        {% endif %}
+        {% endfor %}
+      </div>
       {% else %}
       <p class="muted small">No pending actions.</p>
       {% endif %}

@@ -159,6 +159,20 @@ button { font-family: inherit; }
 .stat-cell:last-child { border-right: none; }
 .stat-cell .num { font-size: 26px; font-weight: 600; }
 .stat-cell .label { font-size: 11.5px; color: var(--grey-500); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+.stat-cell.alert .num { color: var(--danger); }
+
+/* ---------- Home: Needs Attention, priority groups ---------- */
+.attn-panel { border: 1px solid #f0d6d6; background: #fdf6f6; border-radius: var(--radius); margin-bottom: 28px; }
+.attn-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #f0d6d6; }
+.attn-row { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #f2dede; }
+.attn-row:last-child { border-bottom: none; }
+.attn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex-shrink: 0; }
+.attn-dot.is-overdue { background: var(--danger); }
+.badge-overdue-chip { font-size: 10.5px; padding: 2px 8px; border-radius: 20px; background: var(--danger-bg); color: var(--danger); font-weight: 500; }
+.priority-group-header { padding: 9px 16px; background: var(--grey-50); border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.priority-group-header.priority-High { color: var(--danger); }
+.priority-group-header.priority-Medium { color: var(--warn); }
+.priority-group-header.priority-Low { color: var(--grey-700); }
 
 /* ---------- Sub nav (client tabs) ---------- */
 .subnav { display: flex; gap: 0; justify-content: space-between; border-bottom: 1px solid var(--line); margin-bottom: 28px; flex-wrap: wrap; }
