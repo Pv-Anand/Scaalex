@@ -195,3 +195,102 @@ def download(portal_slug, client, contact, doc_id):
         current_app.config["DOCUMENT_UPLOAD_FOLDER"], doc.stored_name,
         as_attachment=True, download_name=doc.file_name,
     )
+
+
+# ---------------------------------------------------------------------------
+# Unified entry point - one memorable URL for every client, instead of each
+# needing their own project's link. Looks a contact up by email+password
+# across ALL clients (a contact row is still scoped to one client - this
+# just finds the right one instead of requiring the visitor to already know
+# which project's URL to use) and either drops them straight into their one
+# project or, in the rare case the same email/password combination matches
+# more than one, lets them pick. Everything downstream (timeline, set-
+# password, etc.) is still the same per-project portal_bp route, reached
+# via its own portal_slug - this only shortcuts finding that URL.
+# ---------------------------------------------------------------------------
+portal_hub_bp = Blueprint("portal_hub", __name__, url_prefix="/portal")
+
+
+def _accessible_contact():
+    contact = ClientContact.query.get(session.get("portal_contact_id") or 0)
+    if contact and contact.portal_access and contact.client and contact.client.portal_slug:
+        return contact
+    return None
+
+
+def _finish_hub_login(contact):
+    session.pop("portal_candidate_ids", None)
+    session["portal_contact_id"] = contact.id
+    contact.last_login_at = datetime.utcnow()
+    log_portal_activity(contact.id, contact.client_id, "Signed in", "client_contact", contact.id)
+    db.session.commit()
+    if contact.must_change_password:
+        return redirect(url_for("portal.set_password", portal_slug=contact.client.portal_slug))
+    return redirect(url_for("portal.timeline", portal_slug=contact.client.portal_slug))
+
+
+@portal_hub_bp.route("/")
+def hub_index():
+    contact = _accessible_contact()
+    if contact:
+        return redirect(url_for("portal.timeline", portal_slug=contact.client.portal_slug))
+    return redirect(url_for("portal_hub.login"))
+
+
+@portal_hub_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
+def login():
+    contact = _accessible_contact()
+    if contact:
+        return redirect(url_for("portal.timeline", portal_slug=contact.client.portal_slug))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "").strip()
+
+        candidates = ClientContact.query.filter(
+            ClientContact.portal_access.is_(True),
+            db.func.lower(ClientContact.email) == email,
+        ).all()
+        matches = [
+            c for c in candidates
+            if c.check_password(password) and c.client and c.client.portal_slug
+        ]
+
+        if not matches:
+            flash("Invalid email or mobile number.", "error")
+        elif len(matches) == 1:
+            return _finish_hub_login(matches[0])
+        else:
+            # Same person, portal access on more than one engagement - let
+            # them choose rather than guessing which one they meant.
+            session["portal_candidate_ids"] = [c.id for c in matches]
+            return redirect(url_for("portal_hub.choose"))
+
+    return render_template("portal_hub_login.html")
+
+
+@portal_hub_bp.route("/choose", methods=["GET", "POST"])
+def choose():
+    ids = session.get("portal_candidate_ids") or []
+    contacts = ClientContact.query.filter(ClientContact.id.in_(ids)).all() if ids else []
+    contacts = [c for c in contacts if c.portal_access and c.client and c.client.portal_slug]
+    if not contacts:
+        return redirect(url_for("portal_hub.login"))
+
+    if request.method == "POST":
+        chosen_id = request.form.get("contact_id", type=int)
+        contact = next((c for c in contacts if c.id == chosen_id), None)
+        if not contact:
+            flash("Choose one of your projects.", "error")
+            return redirect(url_for("portal_hub.choose"))
+        return _finish_hub_login(contact)
+
+    return render_template("portal_hub_choose.html", contacts=contacts)
+
+
+@portal_hub_bp.route("/logout")
+def hub_logout():
+    session.pop("portal_contact_id", None)
+    session.pop("portal_candidate_ids", None)
+    return redirect(url_for("portal_hub.login"))

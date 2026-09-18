@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choose a project — Scaalex Client Portal</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-card" style="width:440px;">
+      <img src="{{ url_for('static', filename='images/logo-black.png') }}" alt="Scaalex" class="auth-brand-logo">
+      <div class="auth-sub">Client Portal</div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <h2 style="font-size:16px; text-align:center; margin-bottom:6px;">Choose a project</h2>
+      <p class="small muted mb-24" style="text-align:center; line-height:1.6;">You have portal access on more than one engagement.</p>
+
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          {% for c in contacts %}
+          <button type="submit" name="contact_id" value="{{ c.id }}" class="btn-secondary" style="width:100%; text-align:left; padding:14px 16px; border-radius:var(--radius); border:1px solid var(--line-strong); background:var(--white); cursor:pointer; font-family:inherit;">
+            <div style="font-size:14px; font-weight:500; color:var(--black);">{{ c.client.name }}</div>
+            <div class="small muted mt-8">{{ c.client.engagement_type }}</div>
+          </button>
+          {% endfor %}
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

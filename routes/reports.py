@@ -28,8 +28,16 @@ MILESTONE_STATUSES = ["upcoming", "in_progress", "completed"]
 REQUEST_TYPES = [("data", "Data"), ("url", "URL"), ("document", "Document")]
 
 
+# These are routes on the unified portal_hub_bp (/portal/login, etc.) - a
+# client's portal_slug can never take one of these, or it would shadow that
+# route at /portal/<slug>.
+RESERVED_PORTAL_SLUGS = {"login", "choose", "logout", ""}
+
+
 def _slugify_portal(text, client_id=None):
     base = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-") or "client"
+    if base in RESERVED_PORTAL_SLUGS:
+        base = f"{base}-portal"
     slug = base
     i = 2
     while True:

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in — Scaalex Client Portal</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-card">
+      <img src="{{ url_for('static', filename='images/logo-black.png') }}" alt="Scaalex" class="auth-brand-logo">
+      <div class="auth-sub">Client Portal</div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" required autofocus>
+        </div>
+        <div class="form-group">
+          <label>Mobile Number</label>
+          <input type="password" name="password" required>
+          <div class="form-hint">The mobile number Scaalex has on file for you.</div>
+        </div>
+        <button type="submit" class="btn" style="width:100%; justify-content:center;">Sign In</button>
+      </form>
+
+      <div class="small muted mt-24" style="text-align:center; line-height:1.6;">
+        Trouble signing in? Contact your Scaalex relationship manager.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
