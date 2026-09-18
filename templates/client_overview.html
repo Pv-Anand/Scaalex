@@ -52,19 +52,11 @@
           — submitted by {{ req.fulfilled_by_contact.name if req.fulfilled_by_contact else 'client' }}, {{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}
         </div>
       </div>
-      <div style="flex-shrink:0;">
-        <div class="flex-gap">
-          <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=req.milestone_id) }}" class="btn btn-sm btn-secondary">View Milestone</a>
-          <button type="button" class="btn btn-sm btn-secondary" style="color:var(--danger); border-color:var(--danger);" onclick="toggleReject('{{ req.id }}')">Reject</button>
-          <form method="POST" action="{{ url_for('reports.accept_request', slug=client.slug, request_id=req.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm">Accept</button>
-          </form>
-        </div>
-        <form method="POST" action="{{ url_for('reports.reject_request', slug=client.slug, request_id=req.id) }}" id="reject-form-{{ req.id }}" style="display:none; margin-top:10px; width:260px;">
+      <div class="flex-gap" style="flex-shrink:0;">
+        <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=req.milestone_id) }}" class="btn btn-sm btn-secondary">View Milestone</a>
+        <form method="POST" action="{{ url_for('reports.accept_request', slug=client.slug, request_id=req.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <textarea name="comment" rows="2" placeholder="Why is this being rejected? (shown to the client)" required class="mb-8"></textarea>
-          <button type="submit" class="btn btn-sm" style="background:var(--danger); border-color:var(--danger);">Confirm Reject</button>
+          <button type="submit" class="btn btn-sm">Accept</button>
         </form>
       </div>
     </div>
@@ -145,12 +137,4 @@
     </div>
   </div>
 </div>
-{% endblock %}
-{% block scripts %}
-<script>
-function toggleReject(id) {
-  const form = document.getElementById('reject-form-' + id);
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-</script>
 {% endblock %}
