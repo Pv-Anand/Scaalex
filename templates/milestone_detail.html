@@ -105,6 +105,8 @@
         <span class="badge badge-type">{{ r.request_type|title }}</span>
         {% if r.status == 'received' %}
         <span class="badge badge-status-completed">Received</span>
+        {% elif r.status == 'rejected' %}
+        <span class="badge badge-overdue">Rejected</span>
         {% else %}
         <span class="badge badge-status-in-progress">Under Review</span>
         {% endif %}
@@ -120,8 +122,17 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-sm">Accept</button>
     </form>
+    <form method="POST" action="{{ url_for('reports.reject_request', slug=client.slug, request_id=r.id) }}" class="mt-8">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea name="comment" rows="2" placeholder="Why is this being rejected? (shown to the client)" required class="mb-8"></textarea>
+      <button type="submit" class="btn btn-sm btn-secondary" style="color:var(--danger); border-color:var(--danger);">Reject</button>
+    </form>
     {% elif r.status == 'received' %}
     <div class="small muted mt-8">Received {{ r.received_at.strftime('%d %b %Y') if r.received_at else '' }} by {{ r.received_by.name if r.received_by else '' }}</div>
+    {% elif r.status == 'rejected' %}
+    <div class="small mt-8" style="color:var(--danger); background:var(--danger-bg); display:inline-block; padding:6px 10px; border-radius:3px;">
+      Rejected {{ r.rejected_at.strftime('%d %b %Y') if r.rejected_at else '' }} by {{ r.rejected_by.name if r.rejected_by else '' }}: {{ r.rejection_comment }}
+    </div>
     {% endif %}
   </div>
   {% endfor %}

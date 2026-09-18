@@ -317,6 +317,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator:hover {
 .milestone-dot.completed { background: var(--success); }
 .milestone-dot.in-progress { background: var(--warn); }
 .milestone-dot.upcoming { background: var(--grey-300); border: 1.5px solid var(--grey-300); }
+.milestone-dot.rejected { background: var(--danger); }
 
 .portal-topbar { height: 64px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; }
 .portal-container { max-width: 780px; margin: 0 auto; padding: 44px 20px 80px; }

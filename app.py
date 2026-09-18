@@ -185,9 +185,12 @@ def _ensure_schema_migrations(app):
             conn.commit()
 
         request_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(milestone_requests)"))}
-        for column in ("received_by_id", "received_at"):
+        for column, ddl_type in (
+            ("received_by_id", "INTEGER"), ("received_at", "DATETIME"),
+            ("rejected_by_id", "INTEGER"), ("rejected_at", "DATETIME"),
+            ("rejection_comment", "TEXT"),
+        ):
             if column not in request_columns:
-                ddl_type = "DATETIME" if column == "received_at" else "INTEGER"
                 conn.execute(db.text(f"ALTER TABLE milestone_requests ADD COLUMN {column} {ddl_type}"))
                 conn.commit()
 

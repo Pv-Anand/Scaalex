@@ -299,9 +299,11 @@ class Milestone(db.Model):
 class MilestoneRequest(db.Model):
     """Something staff has asked the client for, tied to one milestone -
     shows as an action item on the client's portal until fulfilled, then as
-    "Under Review" on both sides until a staff member explicitly accepts
-    it, at which point it becomes "Received" - a real acknowledgment step
-    rather than the submission just disappearing once sent."""
+    "Under Review" on both sides until a staff member explicitly accepts or
+    rejects it. Accept -> "Received" is a terminal acknowledgment. Reject
+    -> "Rejected" is also terminal for THIS row (keeps the submission and
+    the reason on record), but automatically reopens the same ask as a
+    fresh awaiting request so the client sees why and can resubmit."""
 
     __tablename__ = "milestone_requests"
 
@@ -310,7 +312,7 @@ class MilestoneRequest(db.Model):
 
     request_type = db.Column(db.String(20), nullable=False)  # data, url, document
     message = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), default="awaiting")  # awaiting, fulfilled, received
+    status = db.Column(db.String(20), default="awaiting")  # awaiting, fulfilled, received, rejected
 
     response_text = db.Column(db.Text)
     response_url = db.Column(db.String(500))
@@ -322,10 +324,14 @@ class MilestoneRequest(db.Model):
     fulfilled_at = db.Column(db.DateTime)
     received_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     received_at = db.Column(db.DateTime)
+    rejected_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    rejected_at = db.Column(db.DateTime)
+    rejection_comment = db.Column(db.Text)
 
     requested_by = db.relationship("User", foreign_keys=[requested_by_id])
     fulfilled_by_contact = db.relationship("ClientContact")
     received_by = db.relationship("User", foreign_keys=[received_by_id])
+    rejected_by = db.relationship("User", foreign_keys=[rejected_by_id])
     response_document = db.relationship("Document", foreign_keys=[response_document_id])
 
 

@@ -181,7 +181,7 @@ def milestone_detail(slug, milestone_id):
     managers = User.query.order_by(User.name).all()
     deliverables = milestone.staff_deliverables
     past_requests = (
-        milestone.requests.filter(MilestoneRequest.status.in_(["fulfilled", "received"])).all()
+        milestone.requests.filter(MilestoneRequest.status.in_(["fulfilled", "received", "rejected"])).all()
     )
     return render_template(
         "milestone_detail.html", client=client, active_tab="reports",
@@ -264,6 +264,49 @@ def accept_request(slug, request_id):
     )
     db.session.commit()
     flash("Marked as received.", "success")
+    return redirect(request.referrer or url_for("clients.overview", slug=slug))
+
+
+@reports_bp.route("/reports/requests/<int:request_id>/reject", methods=["POST"])
+@login_required
+def reject_request(slug, request_id):
+    client = get_client_or_404(slug)
+    req = MilestoneRequest.query.join(Milestone).filter(
+        MilestoneRequest.id == request_id, Milestone.client_id == client.id,
+    ).first_or_404()
+
+    if req.status != "fulfilled":
+        flash("This request isn't awaiting review.", "error")
+        return redirect(request.referrer or url_for("clients.overview", slug=slug))
+
+    comment = request.form.get("comment", "").strip()
+    if not comment:
+        flash("Add a comment explaining what's needed, so the client knows what to fix.", "error")
+        return redirect(request.referrer or url_for("clients.overview", slug=slug))
+
+    req.status = "rejected"
+    req.rejection_comment = comment
+    req.rejected_by_id = current_user.id
+    req.rejected_at = datetime.utcnow()
+
+    # Reopen the same ask (unless one's already open again somehow) so it
+    # reappears as an action item for the client, now that they know what
+    # needs to change - rather than staff having to re-send it by hand.
+    # req.status is already "rejected" above, so active_request (which only
+    # matches "awaiting") can't be this same row.
+    if not req.milestone.active_request:
+        reopened = MilestoneRequest(
+            milestone_id=req.milestone_id, request_type=req.request_type, message=req.message,
+            requested_by_id=current_user.id,
+        )
+        db.session.add(reopened)
+
+    log_activity(
+        current_user.id, client.id, "Client submission rejected", "milestone_request", req.id,
+        details=f"{req.milestone.title}: {comment}",
+    )
+    db.session.commit()
+    flash("Rejected — the client will see your comment and can resubmit.", "success")
     return redirect(request.referrer or url_for("clients.overview", slug=slug))
 
 

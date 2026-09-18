@@ -94,12 +94,14 @@
       {% for req in under_review %}
       <div class="milestone-row">
         <div style="width:96px; flex-shrink:0;" class="small muted">{{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}</div>
-        <div class="milestone-dot {{ 'completed' if req.status == 'received' else 'in-progress' }}"></div>
+        <div class="milestone-dot {{ 'completed' if req.status == 'received' else ('rejected' if req.status == 'rejected' else 'in-progress') }}"></div>
         <div style="flex:1;">
           <div class="flex-gap">
             <span style="font-size:13.5px; font-weight:500;">{{ req.milestone.title }}</span>
             {% if req.status == 'received' %}
             <span class="badge badge-status-completed">Received</span>
+            {% elif req.status == 'rejected' %}
+            <span class="badge badge-overdue">Needs Changes</span>
             {% else %}
             <span class="badge badge-status-in-progress">Under Review</span>
             {% endif %}
@@ -110,6 +112,9 @@
             {% else %}Submitted: {{ req.response_text }}
             {% endif %}
           </div>
+          {% if req.status == 'rejected' %}
+          <div class="small mt-8" style="color:var(--danger); background:var(--danger-bg); display:inline-block; padding:4px 10px; border-radius:3px;">Scaalex needs changes: {{ req.rejection_comment }}</div>
+          {% endif %}
         </div>
       </div>
       {% endfor %}

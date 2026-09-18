@@ -77,7 +77,7 @@ def _build_overview_events(client, limit=40):
 
     requests_in_play = (
         MilestoneRequest.query.join(Milestone)
-        .filter(Milestone.client_id == client.id, MilestoneRequest.status.in_(["fulfilled", "received"]))
+        .filter(Milestone.client_id == client.id, MilestoneRequest.status.in_(["fulfilled", "received", "rejected"]))
         .all()
     )
     for req in requests_in_play:
@@ -86,6 +86,12 @@ def _build_overview_events(client, limit=40):
             events.append({
                 "date": req.received_at.date(), "kind": "Received", "kind_class": "badge-status-completed",
                 "title": f"{req.milestone.title} — response received", "detail": preview,
+                "url": url_for("reports.milestone_detail", slug=client.slug, milestone_id=req.milestone_id),
+            })
+        elif req.status == "rejected" and req.rejected_at:
+            events.append({
+                "date": req.rejected_at.date(), "kind": "Rejected", "kind_class": "badge-overdue",
+                "title": f"{req.milestone.title} — response rejected", "detail": req.rejection_comment or "",
                 "url": url_for("reports.milestone_detail", slug=client.slug, milestone_id=req.milestone_id),
             })
         elif req.fulfilled_at:

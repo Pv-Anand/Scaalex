@@ -153,7 +153,7 @@ def timeline(portal_slug, client, contact):
             Milestone.client_id == client.id,
             Milestone.visible_to_client.is_(True),
             Milestone.status != "completed",
-            MilestoneRequest.status.in_(["fulfilled", "received"]),
+            MilestoneRequest.status.in_(["fulfilled", "received", "rejected"]),
         )
         .order_by(MilestoneRequest.fulfilled_at.desc())
         .all()
