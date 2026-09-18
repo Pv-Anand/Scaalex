@@ -18,7 +18,7 @@ from extensions import db, limiter
 from models import Client, ClientContact, Milestone, MilestoneRequest, Document, log_portal_activity
 from routes.documents import _allowed
 
-portal_bp = Blueprint("portal", __name__, url_prefix="/portal/<portal_slug>")
+portal_bp = Blueprint("portal", __name__, url_prefix="/client-login/<portal_slug>")
 
 
 def _get_portal_client(portal_slug):
@@ -208,7 +208,7 @@ def download(portal_slug, client, contact, doc_id):
 # password, etc.) is still the same per-project portal_bp route, reached
 # via its own portal_slug - this only shortcuts finding that URL.
 # ---------------------------------------------------------------------------
-portal_hub_bp = Blueprint("portal_hub", __name__, url_prefix="/portal")
+portal_hub_bp = Blueprint("portal_hub", __name__, url_prefix="/client-login")
 
 
 def _accessible_contact():

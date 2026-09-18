@@ -8,10 +8,13 @@
   <p class="small muted" style="max-width:620px; line-height:1.55;">Give client contacts view-only access to their engagement timeline at a private URL.</p>
 </div>
 
-<div class="mt-24 small muted">Most clients can just use the single sign-in at <span style="font-family:monospace; color:var(--charcoal);">{{ request.host_url.rstrip('/') }}/portal/</span> — they'll land here automatically once they enter their email and mobile number. The link below still works too, for a direct invite to this project specifically.</div>
+<div class="mt-24 small muted">Most clients can just use the single sign-in at <span style="font-family:monospace; color:var(--charcoal);">{{ request.host_url.rstrip('/') }}{{ url_for('portal_hub.hub_index') }}</span> — they'll land here automatically once they enter their email and mobile number. The link below still works too, for a direct invite to this project specifically.</div>
 
 <div class="mt-8" style="padding:18px 20px; background:var(--grey-50); border:1px solid var(--line); border-radius:var(--radius); display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
-  <div style="font-size:13.5px; color:var(--charcoal); font-family:monospace;">{{ request.host_url.rstrip('/') }}/portal/{{ client.portal_slug }}</div>
+  <div class="flex-gap">
+    <span id="portal-url-text" style="font-size:13.5px; color:var(--charcoal); font-family:monospace;">{{ request.host_url.rstrip('/') }}{{ url_for('portal.timeline', portal_slug=client.portal_slug) }}</span>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="copyText('portal-url-text')">Copy URL</button>
+  </div>
   <form method="POST" action="{{ url_for('reports.edit_portal_url', slug=client.slug) }}" class="flex-gap">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="text" name="portal_slug" value="{{ client.portal_slug }}" style="width:220px;">
