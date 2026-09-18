@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}{{ milestone.title }} — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<a href="{{ url_for('reports.reports', slug=client.slug) }}" class="small muted">← Back to Reports</a>
+
+<div class="page-header mt-16" style="margin-bottom:20px;">
+  <div>
+    <div class="page-eyebrow">{{ client.name }} · Milestone</div>
+    <h1>{{ milestone.title }}</h1>
+  </div>
+  <span class="badge badge-status-{{ milestone.status.replace('_', '-') }}" style="font-size:12px; padding:5px 12px;">{{ milestone.status.replace('_', ' ')|title }}</span>
+</div>
+
+<div class="card" style="max-width:700px;">
+  <h3 style="font-size:14px; margin-bottom:16px;">Milestone Details</h3>
+  <form method="POST" action="{{ url_for('reports.edit_milestone', slug=client.slug, milestone_id=milestone.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" name="title" value="{{ milestone.title }}" required>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="upcoming" {{ 'selected' if milestone.status == 'upcoming' }}>Upcoming</option>
+          <option value="in_progress" {{ 'selected' if milestone.status == 'in_progress' }}>In Progress</option>
+          <option value="completed" {{ 'selected' if milestone.status == 'completed' }}>Completed</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Reporting Manager</label>
+        <select name="reporting_manager_id">
+          <option value="">Unassigned</option>
+          {% for m in managers %}
+          <option value="{{ m.id }}" {{ 'selected' if milestone.reporting_manager_id == m.id }}>{{ m.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Due Date</label>
+        <input type="date" name="due_date" value="{{ milestone.due_date.isoformat() if milestone.due_date else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Completion Date</label>
+        <input type="date" name="date" value="{{ milestone.date.isoformat() if milestone.date else '' }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+        <input type="checkbox" name="visible_to_client" value="1" {{ 'checked' if milestone.visible_to_client }}>
+        Visible to client on their portal
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-sm">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+<div class="mt-32" style="max-width:700px;">
+  <h2 class="section-title" style="margin-bottom:4px;">Request from Client</h2>
+  <p class="small muted mb-16">Ask for what you need to move this milestone forward. It shows up as an action item on their portal.</p>
+
+  {% if milestone.active_request %}
+  <div class="card">
+    <div class="flex-gap mb-8">
+      <span class="badge badge-type">{{ milestone.active_request.request_type|title }}</span>
+      <span class="badge badge-status-in-progress">Awaiting response</span>
+    </div>
+    <p>{{ milestone.active_request.message }}</p>
+    <div class="small muted mt-8">Requested on {{ milestone.active_request.requested_at.strftime('%d %b %Y') }} by {{ milestone.active_request.requested_by.name if milestone.active_request.requested_by else 'Scaalex' }}</div>
+  </div>
+  {% else %}
+  <form method="POST" action="{{ url_for('reports.send_request', slug=client.slug, milestone_id=milestone.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>Type</label>
+      <select name="request_type">
+        <option value="data">Data</option>
+        <option value="url">URL</option>
+        <option value="document">Document</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>What do you need? (shown to the client)</label>
+      <textarea name="message" rows="2" required placeholder="e.g. Latest TAM / SAM market sizing workbook, updated with Q3 assumptions"></textarea>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-sm">Send Request</button>
+    </div>
+  </form>
+  {% endif %}
+
+  {% set fulfilled = milestone.requests.filter_by(status='fulfilled').all() %}
+  {% if fulfilled %}
+  <h3 style="font-size:13px; margin-top:20px; margin-bottom:8px;">Past Requests</h3>
+  {% for r in fulfilled %}
+  <div class="list-item">
+    <div class="flex-between">
+      <span class="badge badge-type">{{ r.request_type|title }}</span>
+      <span class="small muted">Fulfilled {{ r.fulfilled_at.strftime('%d %b %Y') if r.fulfilled_at else '' }} by {{ r.fulfilled_by_contact.name if r.fulfilled_by_contact else '' }}</span>
+    </div>
+    <p class="small mt-8">{{ r.message }}</p>
+    {% if r.response_document %}<a href="{{ url_for('documents.download', doc_id=r.response_document_id) }}" class="small">↓ {{ r.response_document.file_name }}</a>{% endif %}
+    {% if r.response_url %}<a href="{{ r.response_url }}" class="small" target="_blank" rel="noopener">{{ r.response_url }}</a>{% endif %}
+    {% if r.response_text %}<p class="small muted">{{ r.response_text }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<div class="mt-32" style="max-width:700px;">
+  <h2 class="section-title" style="margin-bottom:4px;">Delivery to Client</h2>
+  <p class="small muted mb-16">Attach the finished output here — it becomes downloadable on their portal once this milestone is marked complete and visible.</p>
+
+  {% if deliverables %}
+  <ul class="mb-16">
+    {% for d in deliverables %}
+    <li class="list-item">
+      <a href="{{ url_for('documents.download', doc_id=d.id) }}">{{ d.file_name }}</a>
+      <span class="small muted"> — {{ d.uploaded_at.strftime('%d %b %Y') }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('reports.attach_deliverable', slug=client.slug, milestone_id=milestone.id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="dropzone">
+      <input type="file" name="file" required>
+      <div class="form-actions" style="justify-content:center; border-top:none; padding-top:14px;">
+        <button type="submit" class="btn btn-sm">Attach Deliverable</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="mt-32 mb-24" style="max-width:700px;">
+  <h2 class="section-title" style="margin-bottom:4px;">Client-Visible Preview</h2>
+  <p class="small muted mb-16">Exactly what {{ client.name }} sees on their portal right now.</p>
+  {% if milestone.visible_to_client %}
+  <div class="card" style="background:var(--grey-50);">
+    <div class="flex-gap">
+      <strong>{{ milestone.title }}</strong>
+      <span class="badge badge-status-{{ milestone.status.replace('_', '-') }}">{{ milestone.status.replace('_', ' ')|title }}</span>
+    </div>
+    <div class="small muted mt-8">
+      {% if milestone.due_date %}Due {{ milestone.due_date.strftime('%d %b %Y') }} · {% endif %}
+      Reporting Manager: {{ milestone.reporting_manager.name if milestone.reporting_manager else 'Unassigned' }}
+    </div>
+    {% if milestone.active_request %}
+    <div class="small mt-8" style="color:var(--warn); background:var(--warn-bg); display:inline-block; padding:3px 9px; border-radius:3px;">Action needed: {{ milestone.active_request.message }}</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="small muted">This milestone is hidden from the client's portal.</p>
+  {% endif %}
+</div>
+{% endblock %}

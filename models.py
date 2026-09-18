@@ -68,9 +68,16 @@ class Client(db.Model):
     website = db.Column(db.String(300))
     gst_number = db.Column(db.String(40))
 
+    # Client portal - a separate slug from `slug` above (which is the staff
+    # URL) so the client-facing link can be edited/rotated independently.
+    portal_slug = db.Column(db.String(200), unique=True)
+
     contacts = db.relationship(
         "ClientContact", backref="client", lazy="dynamic",
         cascade="all, delete-orphan",
+    )
+    milestones = db.relationship(
+        "Milestone", backref="client", lazy="dynamic", cascade="all, delete-orphan",
     )
 
     conversations = db.relationship(
@@ -122,7 +129,12 @@ class Client(db.Model):
 class ClientContact(db.Model):
     """A point of contact on the client side. Any number can exist per
     client; at most one is marked primary at a time (enforced in
-    routes/clients.py, not at the DB level, to keep this a plain flag)."""
+    routes/clients.py, not at the DB level, to keep this a plain flag).
+
+    Doubles as the client portal's login identity when portal_access is on -
+    deliberately not a second User-like table, since the portal only ever
+    needs to identify "this contact, for this one client", never roles or
+    cross-client access the way staff accounts do."""
 
     __tablename__ = "client_contacts"
 
@@ -135,7 +147,21 @@ class ClientContact(db.Model):
     designation = db.Column(db.String(120))
     is_primary = db.Column(db.Boolean, default=False)
 
+    # Portal access
+    portal_access = db.Column(db.Boolean, default=False)
+    password_hash = db.Column(db.String(255))
+    must_change_password = db.Column(db.Boolean, default=True)
+    last_login_at = db.Column(db.DateTime)
+
     created_at = db.Column(db.DateTime, default=_now)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password, method="pbkdf2:sha256")
+
+    def check_password(self, password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
 
 
 class Conversation(db.Model):
@@ -219,21 +245,97 @@ class ActionItem(db.Model):
         )
 
 
+class Milestone(db.Model):
+    """One step of the engagement timeline shown to the client on their
+    portal. Ordering is derived, not stored: completed ones sort by `date`
+    (most recent first), in-progress/upcoming ones sort by `due_date` -
+    matches how the timeline reads naturally without a manual reorder UI."""
+
+    __tablename__ = "milestones"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False)
+
+    title = db.Column(db.String(300), nullable=False)
+    status = db.Column(db.String(20), default="upcoming")  # upcoming, in_progress, completed
+    date = db.Column(db.Date)  # completion date, set when status becomes "completed"
+    due_date = db.Column(db.Date)  # target date while upcoming/in_progress
+
+    reporting_manager_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    visible_to_client = db.Column(db.Boolean, default=True)
+
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, default=_now)
+    updated_at = db.Column(db.DateTime, default=_now, onupdate=_now)
+
+    reporting_manager = db.relationship("User", foreign_keys=[reporting_manager_id])
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+    requests = db.relationship(
+        "MilestoneRequest", backref="milestone", lazy="dynamic",
+        cascade="all, delete-orphan", order_by="desc(MilestoneRequest.requested_at)",
+    )
+    deliverables = db.relationship(
+        "Document", backref="milestone", lazy="dynamic",
+        order_by="desc(Document.uploaded_at)",
+    )
+
+    @property
+    def active_request(self):
+        return self.requests.filter_by(status="awaiting").first()
+
+    @property
+    def display_date(self):
+        return self.date if self.status == "completed" else self.due_date
+
+
+class MilestoneRequest(db.Model):
+    """Something staff has asked the client for, tied to one milestone -
+    shows as an action item on the client's portal until fulfilled."""
+
+    __tablename__ = "milestone_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    milestone_id = db.Column(db.Integer, db.ForeignKey("milestones.id"), nullable=False)
+
+    request_type = db.Column(db.String(20), nullable=False)  # data, url, document
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default="awaiting")  # awaiting, fulfilled
+
+    response_text = db.Column(db.Text)
+    response_url = db.Column(db.String(500))
+    response_document_id = db.Column(db.Integer, db.ForeignKey("documents.id"))
+
+    requested_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    requested_at = db.Column(db.DateTime, default=_now)
+    fulfilled_by_contact_id = db.Column(db.Integer, db.ForeignKey("client_contacts.id"))
+    fulfilled_at = db.Column(db.DateTime)
+
+    requested_by = db.relationship("User")
+    fulfilled_by_contact = db.relationship("ClientContact")
+    response_document = db.relationship("Document", foreign_keys=[response_document_id])
+
+
 class Document(db.Model):
     __tablename__ = "documents"
 
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False)
     conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"))
+    milestone_id = db.Column(db.Integer, db.ForeignKey("milestones.id"))
 
     file_name = db.Column(db.String(300), nullable=False)
     stored_name = db.Column(db.String(300), nullable=False)
     file_type = db.Column(db.String(40))
     file_size = db.Column(db.Integer)
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    # Set instead of uploaded_by_id when a client contact uploads a file
+    # through the portal (responding to a request) rather than staff
+    # attaching a deliverable.
+    uploaded_by_contact_id = db.Column(db.Integer, db.ForeignKey("client_contacts.id"))
     uploaded_at = db.Column(db.DateTime, default=_now)
 
     uploaded_by = db.relationship("User")
+    uploaded_by_contact = db.relationship("ClientContact")
 
 
 class AIOverview(db.Model):
@@ -336,6 +438,10 @@ class AuditLog(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    # Set instead of user_id when the actor is a client contact on the
+    # portal (a sign-in, upload, or download), so the Logs tab can show one
+    # merged timeline of both staff and client activity.
+    client_contact_id = db.Column(db.Integer, db.ForeignKey("client_contacts.id"))
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"))
     action = db.Column(db.String(120), nullable=False)
     entity_type = db.Column(db.String(60))
@@ -344,11 +450,20 @@ class AuditLog(db.Model):
     created_at = db.Column(db.DateTime, default=_now)
 
     user = db.relationship("User")
+    client_contact = db.relationship("ClientContact")
 
 
 def log_activity(user_id, client_id, action, entity_type=None, entity_id=None, details=None):
     entry = AuditLog(
         user_id=user_id, client_id=client_id, action=action,
+        entity_type=entity_type, entity_id=entity_id, details=details,
+    )
+    db.session.add(entry)
+
+
+def log_portal_activity(client_contact_id, client_id, action, entity_type=None, entity_id=None, details=None):
+    entry = AuditLog(
+        client_contact_id=client_contact_id, client_id=client_id, action=action,
         entity_type=entity_type, entity_id=entity_id, details=details,
     )
     db.session.add(entry)

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Reports — {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<div style="margin-bottom:8px;">
+  <h2 class="section-title" style="margin-bottom:4px;">Client Portal Access</h2>
+  <p class="small muted" style="max-width:620px; line-height:1.55;">Give client contacts view-only access to their engagement timeline at a private URL.</p>
+</div>
+
+<div class="mt-24" style="padding:18px 20px; background:var(--grey-50); border:1px solid var(--line); border-radius:var(--radius); display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+  <div style="font-size:13.5px; color:var(--charcoal); font-family:monospace;">{{ request.host_url.rstrip('/') }}/portal/{{ client.portal_slug }}</div>
+  <form method="POST" action="{{ url_for('reports.edit_portal_url', slug=client.slug) }}" class="flex-gap">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="portal_slug" value="{{ client.portal_slug }}" style="width:220px;">
+    <button type="submit" class="btn btn-sm btn-secondary">Update URL</button>
+  </form>
+</div>
+
+<div class="mt-32 flex-between">
+  <div class="small" style="font-weight:500; color:var(--black);">Portal Access</div>
+  <a href="{{ url_for('clients.profile', slug=client.slug) }}" class="small" style="color:var(--grey-500);">Manage contacts on Client Profile →</a>
+</div>
+
+<div class="table-wrap mt-8">
+  <table class="table">
+    <thead><tr><th>Contact</th><th>Email</th><th>Phone</th><th>Portal Access</th><th></th></tr></thead>
+    <tbody>
+      {% for c in contacts %}
+      <tr>
+        <td>
+          {{ c.name }}
+          <div class="small muted">{{ c.designation or '' }}</div>
+        </td>
+        <td>{{ c.email or '—' }}</td>
+        <td>{{ c.phone or '—' }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('reports.toggle_access', slug=client.slug, contact_id=c.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="toggle-switch">
+              <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if c.portal_access }}>
+              <span class="toggle-track"><span class="toggle-knob"></span></span>
+            </label>
+          </form>
+        </td>
+        <td class="small muted">{% if c.portal_access %}{% if c.must_change_password %}Invited, not signed in yet{% else %}Active{% endif %}{% else %}No access{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted small">No contacts yet — add one on Client Profile first.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="small muted mt-8">Contact details (name, email, phone) come from Client Profile — add or edit people there. Flipping Portal Access here issues their first-time login: email as username, mobile number to sign in once, then they set their own password.</p>
+
+<div class="mt-32 flex-between">
+  <div>
+    <h2 class="section-title" style="margin-bottom:4px;">Engagement Milestones</h2>
+    <p class="small muted">This list — in this order — is what the client sees on their portal timeline.</p>
+  </div>
+  <a href="{{ url_for('reports.new_milestone', slug=client.slug) }}" class="btn btn-sm">+ Add Milestone</a>
+</div>
+
+<div class="mt-16">
+  {% for m in milestones %}
+  <div class="milestone-row">
+    <div style="width:108px; flex-shrink:0;" class="small muted">
+      {% if m.status == 'completed' %}{{ m.date.strftime('%d %b %Y') if m.date else '' }}
+      {% else %}{{ 'Due ' + m.due_date.strftime('%d %b %Y') if m.due_date else 'No due date' }}{% endif %}
+    </div>
+    <div class="milestone-dot {{ m.status.replace('_', '-') }}"></div>
+    <div style="flex:1; min-width:0;">
+      <div class="flex-gap" style="flex-wrap:wrap;">
+        <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=m.id) }}" style="font-size:14px; font-weight:500; color:var(--black);">{{ m.title }}</a>
+        <span class="badge badge-status-{{ m.status.replace('_', '-') }}">{{ m.status.replace('_', ' ')|title }}</span>
+        {% if not m.visible_to_client %}<span class="badge badge-type">Hidden from client</span>{% endif %}
+      </div>
+      <div class="small muted mt-8">Reporting Manager: {{ m.reporting_manager.name if m.reporting_manager else 'Unassigned' }}</div>
+      {% if m.active_request %}
+      <div class="small mt-8" style="color:var(--warn); background:var(--warn-bg); display:inline-block; padding:3px 9px; border-radius:3px;">Requested from client: {{ m.active_request.message }}</div>
+      {% endif %}
+      {% set first_deliverable = m.deliverables.first() %}
+      <div class="mt-8 flex-gap">
+        <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=m.id) }}" class="small" style="font-weight:500; color:var(--black);">Request from client →</a>
+        {% if first_deliverable %}
+        <span class="small" style="color:var(--success);">✓ {{ first_deliverable.file_name }}</span>
+        {% elif m.status == 'completed' %}
+        <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=m.id) }}" class="small muted">+ Attach deliverable</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <h3>No milestones yet</h3>
+    <p>Add the first milestone to start building this client's portal timeline.</p>
+    <a href="{{ url_for('reports.new_milestone', slug=client.slug) }}" class="btn">+ Add Milestone</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

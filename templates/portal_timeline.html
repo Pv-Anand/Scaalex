@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ client.name }} — Engagement Progress</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="portal-topbar">
+    <div class="portal-brand">
+      <img src="{{ url_for('static', filename='images/logo-black.png') }}" alt="Scaalex" style="height:20px; width:auto;">
+      <span style="color:var(--line-strong);">|</span>
+      <span style="font-weight:400; color:var(--grey-700);">{{ client.name }}</span>
+    </div>
+    <div class="flex-gap">
+      <span class="small muted">Signed in as <strong style="color:var(--charcoal);">{{ contact.name }}</strong></span>
+      <a href="{{ url_for('portal.logout', portal_slug=client.portal_slug) }}" class="small muted">Sign out</a>
+    </div>
+  </div>
+
+  <div class="portal-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="page-eyebrow">Engagement Progress</div>
+    <h1 style="margin-bottom:18px;">{{ client.engagement_type }}</h1>
+
+    <div class="flex-gap">
+      <div class="progress-track" style="flex:1;">
+        <div class="progress-fill" style="width:{{ (completed_count / total_visible * 100)|round|int if total_visible else 0 }}%;"></div>
+      </div>
+      <span class="small muted" style="white-space:nowrap;">{{ completed_count }} of {{ total_visible }} milestones complete</span>
+    </div>
+
+    {% if next_up %}
+    <div class="next-up-card mt-32">
+      <div class="flex-between">
+        <div class="page-eyebrow" style="margin-bottom:0;">Next Up</div>
+        <span class="badge badge-status-in-progress">In Progress</span>
+      </div>
+      <div style="font-size:18px; font-weight:600; margin-top:8px;">{{ next_up.title }}</div>
+      <div class="small mt-8" style="color:var(--grey-700);">
+        {% if next_up.due_date %}Due {{ next_up.due_date.strftime('%d %b %Y') }} · {% endif %}
+        Reporting Manager: {{ next_up.reporting_manager.name if next_up.reporting_manager else 'Scaalex' }}{% if next_up.reporting_manager and next_up.reporting_manager.email %}, {{ next_up.reporting_manager.email }}{% endif %}
+      </div>
+
+      {% set req = next_up.active_request %}
+      {% if req %}
+      <div class="mt-16" style="border-top:1px solid var(--line); padding-top:16px;">
+        <div class="small" style="font-weight:500; margin-bottom:4px;">Action needed from you</div>
+        <p class="small" style="color:var(--grey-700); margin-bottom:14px;">{{ req.message }}</p>
+        <form method="POST" action="{{ url_for('portal.respond_to_request', portal_slug=client.portal_slug, request_id=req.id) }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if req.request_type == 'document' %}
+          <input type="file" name="file">
+          {% elif req.request_type == 'url' %}
+          <input type="text" name="response_url" placeholder="https://…" style="margin-bottom:10px;">
+          {% else %}
+          <textarea name="response_text" rows="2" placeholder="Type your answer…" style="margin-bottom:10px;"></textarea>
+          {% endif %}
+          <button type="submit" class="btn btn-sm">Submit</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="mt-32">
+      <h2 class="section-title" style="margin-bottom:4px;">Recently Completed</h2>
+      <p class="small muted mb-16">The last {{ completed|length }} milestone{{ 's' if completed|length != 1 }} Scaalex has delivered on this engagement.</p>
+      {% for m in completed %}
+      <div class="milestone-row">
+        <div style="width:96px; flex-shrink:0;" class="small muted">{{ m.date.strftime('%d %b %Y') if m.date else '' }}</div>
+        <div class="milestone-dot completed"></div>
+        <div style="flex:1;">
+          <div style="font-size:14px; font-weight:500;">{{ m.title }}</div>
+          {% set d = m.deliverables.first() %}
+          {% if d %}
+          <a href="{{ url_for('portal.download', portal_slug=client.portal_slug, doc_id=d.id) }}" class="small muted">↓ {{ d.file_name }}</a>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <p class="small muted">Nothing completed yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="mt-32">
+      <h2 class="section-title" style="margin-bottom:4px;">What's Ahead</h2>
+      <p class="small muted mb-16">Key steps in the engagement, in order.</p>
+      {% for m in ahead %}
+      <div class="milestone-row" style="align-items:center;">
+        <div style="width:96px; flex-shrink:0;" class="small muted">{{ m.due_date.strftime('%d %b %Y') if m.due_date else 'TBC' }}</div>
+        <div class="milestone-dot upcoming"></div>
+        <div class="small" style="color:var(--grey-700);">{{ m.title }}</div>
+      </div>
+      {% else %}
+      <p class="small muted">Nothing scheduled yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="mt-32" style="padding-top:24px; border-top:1px solid var(--line); text-align:center;">
+      <div class="small muted">Questions about your engagement? Reach out to your Scaalex relationship manager.</div>
+      <div class="small" style="color:var(--grey-300); margin-top:10px;">© Scaalex Consulting — Private client portal</div>
+    </div>
+  </div>
+</body>
+</html>

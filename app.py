@@ -45,6 +45,8 @@ def create_app(config_class=Config):
     from routes.ai_api import ai_api_bp
     from routes.fireflies import fireflies_bp
     from routes.calendar import calendar_bp
+    from routes.reports import reports_bp
+    from routes.portal import portal_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(home_bp)
@@ -58,6 +60,8 @@ def create_app(config_class=Config):
     app.register_blueprint(ai_api_bp)
     app.register_blueprint(fireflies_bp)
     app.register_blueprint(calendar_bp)
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(portal_bp)
 
     @app.context_processor
     def inject_globals():
@@ -151,10 +155,33 @@ def _ensure_schema_migrations(app):
         for column, ddl_type in (
             ("registered_name", "VARCHAR(300)"), ("address", "TEXT"),
             ("website", "VARCHAR(300)"), ("gst_number", "VARCHAR(40)"),
+            ("portal_slug", "VARCHAR(200)"),
         ):
             if column not in client_columns:
                 conn.execute(db.text(f"ALTER TABLE clients ADD COLUMN {column} {ddl_type}"))
                 conn.commit()
+
+        contact_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(client_contacts)"))}
+        for column, ddl_type in (
+            ("portal_access", "BOOLEAN DEFAULT 0"), ("password_hash", "VARCHAR(255)"),
+            ("must_change_password", "BOOLEAN DEFAULT 1"), ("last_login_at", "DATETIME"),
+        ):
+            if column not in contact_columns:
+                conn.execute(db.text(f"ALTER TABLE client_contacts ADD COLUMN {column} {ddl_type}"))
+                conn.commit()
+
+        document_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(documents)"))}
+        for column, ddl_type in (
+            ("milestone_id", "INTEGER"), ("uploaded_by_contact_id", "INTEGER"),
+        ):
+            if column not in document_columns:
+                conn.execute(db.text(f"ALTER TABLE documents ADD COLUMN {column} {ddl_type}"))
+                conn.commit()
+
+        audit_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(audit_log)"))}
+        if "client_contact_id" not in audit_columns:
+            conn.execute(db.text("ALTER TABLE audit_log ADD COLUMN client_contact_id INTEGER"))
+            conn.commit()
 
 
 app = create_app()
