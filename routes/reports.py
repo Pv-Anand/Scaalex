@@ -87,6 +87,36 @@ def new_milestone(slug):
         db.session.add(milestone)
         db.session.flush()
         log_activity(current_user.id, client.id, "Milestone added", "milestone", milestone.id, details=title)
+
+        request_message = request.form.get("request_message", "").strip()
+        if request_message:
+            request_type = request.form.get("request_type", "data")
+            if request_type not in dict(REQUEST_TYPES):
+                request_type = "data"
+            req = MilestoneRequest(
+                milestone_id=milestone.id, request_type=request_type, message=request_message,
+                requested_by_id=current_user.id,
+            )
+            db.session.add(req)
+            db.session.flush()
+            log_activity(current_user.id, client.id, "Requested from client", "milestone_request", req.id, details=f"{title}: {request_message}")
+
+        deliverable = request.files.get("deliverable_file")
+        if deliverable and deliverable.filename and _allowed(deliverable.filename):
+            original_name = secure_filename(deliverable.filename)
+            ext = original_name.rsplit(".", 1)[-1].lower()
+            stored_name = f"{uuid.uuid4().hex}.{ext}"
+            path = os.path.join(current_app.config["DOCUMENT_UPLOAD_FOLDER"], stored_name)
+            deliverable.save(path)
+            doc = Document(
+                client_id=client.id, milestone_id=milestone.id,
+                file_name=original_name, stored_name=stored_name, file_type=ext,
+                file_size=os.path.getsize(path), uploaded_by_id=current_user.id,
+            )
+            db.session.add(doc)
+            db.session.flush()
+            log_activity(current_user.id, client.id, "Deliverable attached", "document", doc.id, details=f"{title}: {original_name}")
+
         db.session.commit()
         flash("Milestone added.", "success")
         return redirect(url_for("reports.reports", slug=slug))

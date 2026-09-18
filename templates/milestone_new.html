@@ -3,9 +3,13 @@
 {% block content %}
 {% include "_client_subnav.html" %}
 
-<div class="card" style="max-width:600px;">
-  <h2 class="section-title">New Milestone</h2>
-  <form method="POST">
+<div style="margin-bottom:16px;">
+  <h2 class="section-title" style="margin-bottom:4px;">New Milestone</h2>
+  <p class="small muted">Add a step to this client's engagement timeline. Optionally send a request or attach a file now.</p>
+</div>
+
+<div class="card" style="max-width:720px;">
+  <form method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label>Title</label>
@@ -40,12 +44,64 @@
         <input type="date" name="date">
       </div>
     </div>
-    <div class="form-group">
-      <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+    <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+      <label class="toggle-switch">
         <input type="checkbox" name="visible_to_client" value="1" checked>
-        Visible to client on their portal
+        <span class="toggle-track"><span class="toggle-knob"></span></span>
       </label>
+      <span class="small">Visible to client on their portal</span>
     </div>
+
+    <div class="milestone-optional-section">
+      <button type="button" class="reveal-link" id="request-trigger" onclick="toggleMilestoneSection('request')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Also send a request from the client now
+      </button>
+      <div id="request-section" style="display:none;">
+        <div class="flex-between mb-16">
+          <div class="small" style="font-weight:500; color:var(--black);">Request from Client</div>
+          <button type="button" class="link-btn small muted" onclick="toggleMilestoneSection('request')">Remove</button>
+        </div>
+        <div class="type-picker mb-16">
+          <label class="type-card selected">
+            <input type="radio" name="request_type" value="data" checked onchange="selectMilestoneType(this)">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="2.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 6.5h7M5.5 9h7M5.5 11.5h4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <div class="type-card-title">Data</div>
+            <div class="type-card-desc">A number or short input</div>
+          </label>
+          <label class="type-card">
+            <input type="radio" name="request_type" value="url" onchange="selectMilestoneType(this)">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M7.5 10.5L10.5 7.5M6.2 11.6L4.4 13.4a2.3 2.3 0 01-3.3-3.3l2.6-2.6a2.3 2.3 0 013.3 0M11.8 6.4l1.8-1.8a2.3 2.3 0 013.3 3.3l-2.6 2.6a2.3 2.3 0 01-3.3 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="type-card-title">URL</div>
+            <div class="type-card-desc">A link to a doc or sheet</div>
+          </label>
+          <label class="type-card">
+            <input type="radio" name="request_type" value="document" onchange="selectMilestoneType(this)">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 12V4M9 4L6 7M9 4l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12v1.5a1 1 0 001 1h9a1 1 0 001-1V12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <div class="type-card-title">Document</div>
+            <div class="type-card-desc">Ask them to upload a file</div>
+          </label>
+        </div>
+        <textarea name="request_message" rows="2" placeholder="e.g. Latest TAM / SAM market sizing workbook, updated with Q3 assumptions"></textarea>
+      </div>
+    </div>
+
+    <div class="milestone-optional-section">
+      <button type="button" class="reveal-link" id="deliverable-trigger" onclick="toggleMilestoneSection('deliverable')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Already have a file ready to attach?
+      </button>
+      <div id="deliverable-section" style="display:none;">
+        <div class="flex-between mb-16">
+          <div class="small" style="font-weight:500; color:var(--black);">Delivery to Client</div>
+          <button type="button" class="link-btn small muted" onclick="toggleMilestoneSection('deliverable')">Remove</button>
+        </div>
+        <div class="dropzone">
+          <input type="file" name="deliverable_file">
+        </div>
+      </div>
+    </div>
+
     <div class="form-actions">
       <button type="submit" class="btn">Save Milestone</button>
       <a href="{{ url_for('reports.reports', slug=client.slug) }}" class="btn btn-secondary">Cancel</a>
@@ -59,6 +115,17 @@ function toggleDateFields() {
   const completed = document.getElementById('status-select').value === 'completed';
   document.getElementById('date-group').style.display = completed ? '' : 'none';
   document.getElementById('due-date-group').style.display = completed ? 'none' : '';
+}
+function toggleMilestoneSection(name) {
+  const trigger = document.getElementById(name + '-trigger');
+  const section = document.getElementById(name + '-section');
+  const open = section.style.display !== 'none';
+  section.style.display = open ? 'none' : 'block';
+  trigger.style.display = open ? 'flex' : 'none';
+}
+function selectMilestoneType(radio) {
+  radio.closest('.type-picker').querySelectorAll('.type-card').forEach(function (c) { c.classList.remove('selected'); });
+  radio.closest('.type-card').classList.add('selected');
 }
 </script>
 {% endblock %}

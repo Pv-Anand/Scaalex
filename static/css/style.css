@@ -330,6 +330,10 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator:hover {
 .row-expand-btn .chevron { transition: transform 0.12s ease; }
 .row-expand-btn.open .chevron { transform: rotate(90deg); }
 
+.milestone-optional-section { border-top: 1px solid var(--grey-100); margin-top: 20px; padding-top: 20px; }
+.reveal-link { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--black); background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
+.reveal-link:hover { color: var(--grey-700); }
+
 .type-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .type-card { position: relative; display: block; border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: border-color 0.12s ease, background 0.12s ease; }
 .type-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
