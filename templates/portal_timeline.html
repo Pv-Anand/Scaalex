@@ -62,18 +62,51 @@
         <div class="page-eyebrow" style="margin-bottom:0;">{{ req.milestone.title }}</div>
         <div style="font-size:14px; font-weight:600; color:var(--black); margin-top:8px;">Action needed from you</div>
         <p class="small mt-8" style="color:var(--grey-700); margin-bottom:16px;">{{ req.message }}</p>
-        <form method="POST" action="{{ url_for('portal.respond_to_request', portal_slug=client.portal_slug, request_id=req.id) }}" enctype="multipart/form-data" id="req-form-{{ req.id }}">
+        <form method="POST" action="{{ url_for('portal.respond_to_request', portal_slug=client.portal_slug, request_id=req.id) }}" enctype="multipart/form-data" id="req-form-{{ req.id }}" onsubmit="return onReqSubmit('{{ req.id }}')">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="file" name="file" id="req-file-{{ req.id }}" style="display:none;" onchange="document.getElementById('req-form-{{ req.id }}').submit()">
-          <div id="req-text-row-{{ req.id }}" style="display:none; margin-bottom:10px;">
+          <input type="file" name="file" id="req-file-{{ req.id }}" style="display:none;" onchange="onReqFileChosen('{{ req.id }}')">
+
+          <div id="req-file-row-{{ req.id }}" style="display:none; align-items:center; gap:8px; margin-bottom:12px; font-size:13px; color:var(--charcoal);">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.25" stroke="#1f6b3f" stroke-width="1.2"/><path d="M4.3 7.1l1.7 1.7 3.7-3.7" stroke="#1f6b3f" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="req-file-name-{{ req.id }}"></span>
+            <button type="button" class="link-btn small" style="color:var(--grey-500);" onclick="clearReqFile('{{ req.id }}')">Change</button>
+          </div>
+
+          <div id="req-text-row-{{ req.id }}" style="display:none; margin-bottom:12px;">
             <input type="text" name="response_text" placeholder="Paste a link or type your answer…">
           </div>
-          <div class="flex-gap">
+
+          <div class="flex-gap" id="req-choices-{{ req.id }}">
             <label for="req-file-{{ req.id }}" class="btn btn-sm" style="cursor:pointer;">Upload File</label>
             <button type="button" class="btn btn-sm btn-secondary" onclick="showReqTextRow('{{ req.id }}')">Share a Link Instead</button>
-            <button type="submit" class="btn btn-sm" id="req-submit-{{ req.id }}" style="display:none;">Submit</button>
           </div>
+          <button type="submit" class="btn btn-sm mt-16" id="req-submit-{{ req.id }}" style="display:none;">Submit</button>
         </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if under_review %}
+    <div class="mt-32">
+      <h2 class="section-title" style="margin-bottom:4px;">Under Review</h2>
+      <p class="small muted mb-16">Sent to Scaalex — waiting on their next step.</p>
+      {% for req in under_review %}
+      <div class="milestone-row">
+        <div style="width:96px; flex-shrink:0;" class="small muted">{{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}</div>
+        <div class="milestone-dot in-progress"></div>
+        <div style="flex:1;">
+          <div class="flex-gap">
+            <span style="font-size:13.5px; font-weight:500;">{{ req.milestone.title }}</span>
+            <span class="badge badge-status-in-progress">Under Review</span>
+          </div>
+          <div class="small muted mt-8">
+            {% if req.response_document %}Submitted: {{ req.response_document.file_name }}
+            {% elif req.response_url %}Submitted: {{ req.response_url }}
+            {% else %}Submitted: {{ req.response_text }}
+            {% endif %}
+          </div>
+        </div>
       </div>
       {% endfor %}
     </div>
@@ -120,9 +153,38 @@
     </div>
   </div>
   <script>
+    function onReqFileChosen(id) {
+      const input = document.getElementById('req-file-' + id);
+      const file = input.files[0];
+      if (!file) return;
+      // Picking a file cancels an in-progress "share a link" choice, so the
+      // two never get submitted together.
+      document.getElementById('req-text-row-' + id).style.display = 'none';
+      const textField = document.querySelector('#req-text-row-' + id + ' input');
+      if (textField) textField.value = '';
+
+      document.getElementById('req-file-name-' + id).textContent = file.name;
+      document.getElementById('req-file-row-' + id).style.display = 'flex';
+      document.getElementById('req-submit-' + id).style.display = 'inline-flex';
+    }
+
+    function clearReqFile(id) {
+      document.getElementById('req-file-' + id).value = '';
+      document.getElementById('req-file-row-' + id).style.display = 'none';
+      document.getElementById('req-submit-' + id).style.display = 'none';
+    }
+
     function showReqTextRow(id) {
+      clearReqFile(id);
       document.getElementById('req-text-row-' + id).style.display = 'block';
       document.getElementById('req-submit-' + id).style.display = 'inline-flex';
+    }
+
+    function onReqSubmit(id) {
+      const btn = document.getElementById('req-submit-' + id);
+      btn.disabled = true;
+      btn.textContent = 'Submitting…';
+      return true;
     }
   </script>
 </body>

@@ -142,11 +142,26 @@ def timeline(portal_slug, client, contact):
         .all()
     )
 
+    # What they've just sent back, so it doesn't just vanish from the page -
+    # still visible until the milestone itself moves on (marked complete),
+    # so the client can see it was received and is waiting on Scaalex.
+    under_review = (
+        MilestoneRequest.query.join(Milestone)
+        .filter(
+            Milestone.client_id == client.id,
+            Milestone.visible_to_client.is_(True),
+            Milestone.status != "completed",
+            MilestoneRequest.status == "fulfilled",
+        )
+        .order_by(MilestoneRequest.fulfilled_at.desc())
+        .all()
+    )
+
     return render_template(
         "portal_timeline.html", client=client, contact=contact,
         completed=completed, next_up=next_up, ahead=ahead,
         total_visible=total_visible, completed_count=completed_count,
-        open_requests=open_requests,
+        open_requests=open_requests, under_review=under_review,
     )
 
 
@@ -202,7 +217,7 @@ def respond_to_request(portal_slug, client, contact, request_id):
     req.fulfilled_by_contact_id = contact.id
     req.fulfilled_at = datetime.utcnow()
     db.session.commit()
-    flash("Sent to Scaalex.", "success")
+    flash("Submitted — this is now under review by Scaalex.", "success")
     return redirect(url_for("portal.timeline", portal_slug=portal_slug))
 
 
