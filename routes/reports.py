@@ -1,12 +1,12 @@
 """Reports & Logs tabs - the internal side of the client portal.
 
-Reports controls what a client sees (portal access per contact, and the
-milestone timeline that drives their view); Logs shows what actually
-happened - both client-side portal activity and the staff actions that
-affect it - in one merged feed via AuditLog.
+Reports controls the milestone timeline that drives a client's portal view;
+Logs shows what actually happened - both client-side portal activity and the
+staff actions that affect it - in one merged feed via AuditLog. Portal access
+per contact lives on the Client Profile page (routes/clients.py) since that's
+also where team members are managed.
 """
 import os
-import re
 import uuid
 from datetime import datetime
 
@@ -16,10 +16,10 @@ from werkzeug.utils import secure_filename
 
 from extensions import db
 from models import (
-    Client, ClientContact, Milestone, MilestoneRequest, Document, User, AuditLog,
+    ClientContact, Milestone, MilestoneRequest, Document, User, AuditLog,
     log_activity,
 )
-from routes.clients import get_client_or_404
+from routes.clients import get_client_or_404, _ensure_portal_slug
 from routes.documents import _allowed
 
 reports_bp = Blueprint("reports", __name__, url_prefix="/clients/<slug>")
@@ -28,39 +28,11 @@ MILESTONE_STATUSES = ["upcoming", "in_progress", "completed"]
 REQUEST_TYPES = [("data", "Data"), ("url", "URL"), ("document", "Document")]
 
 
-# These are routes on the unified portal_hub_bp (/client-login/login, etc.) -
-# a client's portal_slug can never take one of these, or it would shadow that
-# route at /client-login/<slug>.
-RESERVED_PORTAL_SLUGS = {"login", "choose", "logout", ""}
-
-
-def _slugify_portal(text, client_id=None):
-    base = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-") or "client"
-    if base in RESERVED_PORTAL_SLUGS:
-        base = f"{base}-portal"
-    slug = base
-    i = 2
-    while True:
-        existing = Client.query.filter_by(portal_slug=slug).first()
-        if not existing or existing.id == client_id:
-            return slug
-        slug = f"{base}-{i}"
-        i += 1
-
-
-def _ensure_portal_slug(client):
-    if not client.portal_slug:
-        client.portal_slug = _slugify_portal(f"{client.slug}-{datetime.utcnow().year}", client.id)
-        db.session.commit()
-
-
 @reports_bp.route("/reports")
 @login_required
 def reports(slug):
     client = get_client_or_404(slug)
     _ensure_portal_slug(client)
-
-    contacts = client.contacts.order_by(ClientContact.is_primary.desc(), ClientContact.created_at.asc()).all()
 
     completed = (
         client.milestones.filter_by(status="completed")
@@ -78,50 +50,8 @@ def reports(slug):
 
     return render_template(
         "reports.html", client=client, active_tab="reports",
-        contacts=contacts, milestones=milestones,
+        milestones=milestones,
     )
-
-
-@reports_bp.route("/reports/portal-url", methods=["POST"])
-@login_required
-def edit_portal_url(slug):
-    client = get_client_or_404(slug)
-    raw = request.form.get("portal_slug", "").strip()
-    if not raw:
-        flash("Portal URL can't be empty.", "error")
-        return redirect(url_for("reports.reports", slug=slug))
-
-    new_slug = _slugify_portal(raw, client.id)
-    client.portal_slug = new_slug
-    log_activity(current_user.id, client.id, "Portal URL changed", "client", client.id, details=new_slug)
-    db.session.commit()
-    flash("Portal URL updated.", "success")
-    return redirect(url_for("reports.reports", slug=slug))
-
-
-@reports_bp.route("/reports/contacts/<int:contact_id>/access", methods=["POST"])
-@login_required
-def toggle_access(slug, contact_id):
-    client = get_client_or_404(slug)
-    contact = ClientContact.query.filter_by(id=contact_id, client_id=client.id).first_or_404()
-
-    turning_on = not contact.portal_access
-    if turning_on:
-        if not contact.email or not contact.phone:
-            flash(f"{contact.name} needs both an email and a phone number on Client Profile before granting portal access.", "error")
-            return redirect(url_for("reports.reports", slug=slug))
-        contact.set_password(contact.phone.strip())
-        contact.must_change_password = True
-        contact.portal_access = True
-        log_activity(current_user.id, client.id, "Portal access granted", "client_contact", contact.id, details=contact.name)
-        flash(f"Portal access granted to {contact.name}. They can sign in with their email and mobile number.", "success")
-    else:
-        contact.portal_access = False
-        log_activity(current_user.id, client.id, "Portal access revoked", "client_contact", contact.id, details=contact.name)
-        flash(f"Portal access revoked for {contact.name}.", "success")
-
-    db.session.commit()
-    return redirect(url_for("reports.reports", slug=slug))
 
 
 @reports_bp.route("/reports/milestones/new", methods=["GET", "POST"])

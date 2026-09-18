@@ -3,48 +3,7 @@
 {% block content %}
 {% include "_client_subnav.html" %}
 
-<div style="margin-bottom:8px;">
-  <h2 class="section-title" style="margin-bottom:4px;">Client Portal Access</h2>
-  <p class="small muted" style="max-width:620px; line-height:1.55;">Give client contacts view-only access to their engagement timeline at a private URL.</p>
-</div>
-
-<div class="mt-24 flex-between">
-  <div class="small" style="font-weight:500; color:var(--black);">Portal Access</div>
-  <a href="{{ url_for('clients.profile', slug=client.slug) }}" class="small" style="color:var(--grey-500);">Manage contacts on Client Profile →</a>
-</div>
-
-<div class="table-wrap mt-8">
-  <table class="table">
-    <thead><tr><th>Contact</th><th>Email</th><th>Phone</th><th>Portal Access</th><th></th></tr></thead>
-    <tbody>
-      {% for c in contacts %}
-      <tr>
-        <td>
-          {{ c.name }}
-          <div class="small muted">{{ c.designation or '' }}</div>
-        </td>
-        <td>{{ c.email or '—' }}</td>
-        <td>{{ c.phone or '—' }}</td>
-        <td>
-          <form method="POST" action="{{ url_for('reports.toggle_access', slug=client.slug, contact_id=c.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label class="toggle-switch">
-              <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if c.portal_access }}>
-              <span class="toggle-track"><span class="toggle-knob"></span></span>
-            </label>
-          </form>
-        </td>
-        <td class="small muted">{% if c.portal_access %}{% if c.must_change_password %}Invited, not signed in yet{% else %}Active{% endif %}{% else %}No access{% endif %}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="5" class="muted small">No contacts yet — add one on Client Profile first.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-<p class="small muted mt-8">Contact details (name, email, phone) come from Client Profile — add or edit people there. Flipping Portal Access here issues their first-time login: email as username, mobile number to sign in once, then they set their own password.</p>
-
-<div class="mt-32 flex-between">
+<div class="flex-between">
   <div>
     <h2 class="section-title" style="margin-bottom:4px;">Engagement Milestones</h2>
     <p class="small muted">This list — in this order — is what the client sees on their portal timeline.</p>

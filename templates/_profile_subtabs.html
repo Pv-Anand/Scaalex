@@ -1,0 +1,4 @@
+<div class="flex-gap mb-24">
+  <a href="{{ url_for('clients.profile', slug=client.slug, tab='access') }}" class="pill-link {{ 'active' if active_subtab == 'access' }}">Access Management</a>
+  <a href="{{ url_for('clients.profile', slug=client.slug, tab='billing') }}" class="pill-link {{ 'active' if active_subtab == 'billing' }}">Billing</a>
+</div>

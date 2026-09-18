@@ -157,6 +157,9 @@ def _ensure_schema_migrations(app):
             ("registered_name", "VARCHAR(300)"), ("address", "TEXT"),
             ("website", "VARCHAR(300)"), ("gst_number", "VARCHAR(40)"),
             ("portal_slug", "VARCHAR(200)"),
+            ("billing_contact", "VARCHAR(200)"), ("billing_email", "VARCHAR(200)"),
+            ("payment_terms", "VARCHAR(100)"), ("invoice_currency", "VARCHAR(10)"),
+            ("billing_address", "TEXT"),
         ):
             if column not in client_columns:
                 conn.execute(db.text(f"ALTER TABLE clients ADD COLUMN {column} {ddl_type}"))
