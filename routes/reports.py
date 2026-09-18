@@ -180,9 +180,13 @@ def milestone_detail(slug, milestone_id):
     milestone = Milestone.query.filter_by(id=milestone_id, client_id=client.id).first_or_404()
     managers = User.query.order_by(User.name).all()
     deliverables = milestone.staff_deliverables
+    past_requests = (
+        milestone.requests.filter(MilestoneRequest.status.in_(["fulfilled", "received"])).all()
+    )
     return render_template(
         "milestone_detail.html", client=client, active_tab="reports",
         milestone=milestone, managers=managers, deliverables=deliverables,
+        past_requests=past_requests,
     )
 
 
@@ -237,6 +241,30 @@ def send_request(slug, milestone_id):
     db.session.commit()
     flash("Request sent — it now shows on the client's portal.", "success")
     return redirect(url_for("reports.milestone_detail", slug=slug, milestone_id=milestone.id))
+
+
+@reports_bp.route("/reports/requests/<int:request_id>/accept", methods=["POST"])
+@login_required
+def accept_request(slug, request_id):
+    client = get_client_or_404(slug)
+    req = MilestoneRequest.query.join(Milestone).filter(
+        MilestoneRequest.id == request_id, Milestone.client_id == client.id,
+    ).first_or_404()
+
+    if req.status != "fulfilled":
+        flash("This request isn't awaiting acceptance.", "error")
+        return redirect(request.referrer or url_for("clients.overview", slug=slug))
+
+    req.status = "received"
+    req.received_by_id = current_user.id
+    req.received_at = datetime.utcnow()
+    log_activity(
+        current_user.id, client.id, "Client submission accepted", "milestone_request", req.id,
+        details=req.milestone.title,
+    )
+    db.session.commit()
+    flash("Marked as received.", "success")
+    return redirect(request.referrer or url_for("clients.overview", slug=slug))
 
 
 @reports_bp.route("/reports/milestones/<int:milestone_id>/deliverable", methods=["POST"])

@@ -144,14 +144,16 @@ def timeline(portal_slug, client, contact):
 
     # What they've just sent back, so it doesn't just vanish from the page -
     # still visible until the milestone itself moves on (marked complete),
-    # so the client can see it was received and is waiting on Scaalex.
+    # so the client can see it was received and is waiting on Scaalex. Stays
+    # visible (with an updated badge) once a staff member accepts it too,
+    # so the "Under Review" -> "Received" transition is visible, not silent.
     under_review = (
         MilestoneRequest.query.join(Milestone)
         .filter(
             Milestone.client_id == client.id,
             Milestone.visible_to_client.is_(True),
             Milestone.status != "completed",
-            MilestoneRequest.status == "fulfilled",
+            MilestoneRequest.status.in_(["fulfilled", "received"]),
         )
         .order_by(MilestoneRequest.fulfilled_at.desc())
         .all()

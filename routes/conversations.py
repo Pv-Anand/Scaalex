@@ -33,7 +33,7 @@ def list_conversations(slug):
         conversations = [c for c in conversations if any(person.lower() in p.lower() for p in (c.participants or []))]
 
     return render_template(
-        "conversations_list.html", client=client, active_tab="conversations",
+        "conversations_list.html", client=client, active_tab="overview", active_subtab="conversations",
         conversations=conversations, interaction_types=INTERACTION_TYPES,
         current_type=itype, current_person=person,
     )

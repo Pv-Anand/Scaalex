@@ -2,6 +2,7 @@
 {% block title %}Conversations — {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
+{% include "_overview_subtabs.html" %}
 
 <div class="filter-bar">
   <select onchange="window.location.href='{{ url_for('conversations.list_conversations', slug=client.slug) }}?type=' + this.value">

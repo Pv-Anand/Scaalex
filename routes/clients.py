@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 
 from extensions import db
-from models import Client, ClientContact, Conversation, Decision, ActionItem, log_activity
+from models import Client, ClientContact, Conversation, Decision, ActionItem, Milestone, MilestoneRequest, log_activity
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/clients")
 
@@ -47,11 +47,73 @@ def new():
     return render_template("client_new.html")
 
 
+def _response_preview(req):
+    if req.response_document:
+        return req.response_document.file_name
+    return req.response_url or req.response_text or ""
+
+
+def _build_overview_events(client, limit=40):
+    """One chronological feed mixing everything that's happened on this
+    engagement - milestone completions (exactly what's on the client's own
+    portal), their submissions and our acceptance of them, and a short
+    snippet of each conversation. Only events with a real "this happened on
+    this date" carry a date here - in-progress/upcoming milestones live in
+    Reports instead, since there's no natural date for "hasn't happened yet"."""
+    events = []
+
+    for m in client.milestones.filter_by(status="completed"):
+        if not m.date:
+            continue
+        deliverable = m.staff_deliverables[0] if m.staff_deliverables else None
+        detail = "Milestone completed"
+        if deliverable:
+            detail += f" · Deliverable: {deliverable.file_name}"
+        events.append({
+            "date": m.date, "kind": "Milestone", "kind_class": "badge-status-completed",
+            "title": m.title, "detail": detail,
+            "url": url_for("reports.milestone_detail", slug=client.slug, milestone_id=m.id),
+        })
+
+    requests_in_play = (
+        MilestoneRequest.query.join(Milestone)
+        .filter(Milestone.client_id == client.id, MilestoneRequest.status.in_(["fulfilled", "received"]))
+        .all()
+    )
+    for req in requests_in_play:
+        preview = _response_preview(req)
+        if req.status == "received" and req.received_at:
+            events.append({
+                "date": req.received_at.date(), "kind": "Received", "kind_class": "badge-status-completed",
+                "title": f"{req.milestone.title} — response received", "detail": preview,
+                "url": url_for("reports.milestone_detail", slug=client.slug, milestone_id=req.milestone_id),
+            })
+        elif req.fulfilled_at:
+            events.append({
+                "date": req.fulfilled_at.date(), "kind": "Under Review", "kind_class": "badge-status-in-progress",
+                "title": f"{req.milestone.title} — client responded", "detail": preview,
+                "url": url_for("reports.milestone_detail", slug=client.slug, milestone_id=req.milestone_id),
+            })
+
+    for c in client.conversations.order_by(Conversation.date.desc()).limit(30):
+        snippet = (c.summary or c.raw_notes or "").strip()
+        if len(snippet) > 90:
+            snippet = snippet[:90].rstrip() + "…"
+        events.append({
+            "date": c.date.date(), "kind": "Conversation", "kind_class": "badge-type",
+            "title": f"{c.interaction_type} — {c.date.strftime('%d %b %Y')}",
+            "detail": snippet or "No notes recorded.",
+            "url": url_for("conversations.detail", slug=client.slug, conversation_id=c.id),
+        })
+
+    events.sort(key=lambda e: e["date"], reverse=True)
+    return events[:limit]
+
+
 @clients_bp.route("/<slug>")
 @login_required
 def overview(slug):
     client = get_client_or_404(slug)
-    recent_conversations = client.conversations.order_by(Conversation.date.desc()).limit(5).all()
     open_actions = (
         client.action_items.filter(ActionItem.status != "Completed")
         .order_by(ActionItem.due_date.is_(None), ActionItem.due_date.asc())
@@ -60,13 +122,23 @@ def overview(slug):
     )
     recent_decisions = client.decisions.order_by(Decision.date.desc()).limit(5).all()
 
+    needs_review = (
+        MilestoneRequest.query.join(Milestone)
+        .filter(Milestone.client_id == client.id, MilestoneRequest.status == "fulfilled")
+        .order_by(MilestoneRequest.fulfilled_at.asc())
+        .all()
+    )
+    events = _build_overview_events(client)
+
     return render_template(
         "client_overview.html",
         client=client,
         active_tab="overview",
-        recent_conversations=recent_conversations,
+        active_subtab="timeline",
         open_actions=open_actions,
         recent_decisions=recent_decisions,
+        needs_review=needs_review,
+        events=events,
     )
 
 

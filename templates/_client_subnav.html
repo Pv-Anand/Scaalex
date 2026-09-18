@@ -18,8 +18,6 @@
 </div>
 <div class="subnav">
   <a href="{{ url_for('clients.overview', slug=client.slug) }}" class="{{ 'active' if active_tab == 'overview' }}">Overview</a>
-  <a href="{{ url_for('conversations.timeline', slug=client.slug) }}" class="{{ 'active' if active_tab == 'timeline' }}">Timeline</a>
-  <a href="{{ url_for('conversations.list_conversations', slug=client.slug) }}" class="{{ 'active' if active_tab == 'conversations' }}">Conversations</a>
   <a href="{{ url_for('action_items.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'action_items' }}">Action Items</a>
   <a href="{{ url_for('decisions.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'decisions' }}">Decisions</a>
   <a href="{{ url_for('documents.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'documents' }}">Documents</a>

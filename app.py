@@ -184,6 +184,13 @@ def _ensure_schema_migrations(app):
             conn.execute(db.text("ALTER TABLE audit_log ADD COLUMN client_contact_id INTEGER"))
             conn.commit()
 
+        request_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(milestone_requests)"))}
+        for column in ("received_by_id", "received_at"):
+            if column not in request_columns:
+                ddl_type = "DATETIME" if column == "received_at" else "INTEGER"
+                conn.execute(db.text(f"ALTER TABLE milestone_requests ADD COLUMN {column} {ddl_type}"))
+                conn.commit()
+
 
 app = create_app()
 

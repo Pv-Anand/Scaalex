@@ -96,19 +96,33 @@
   </form>
   {% endif %}
 
-  {% set fulfilled = milestone.requests.filter_by(status='fulfilled').all() %}
-  {% if fulfilled %}
+  {% if past_requests %}
   <h3 style="font-size:13px; margin-top:20px; margin-bottom:8px;">Past Requests</h3>
-  {% for r in fulfilled %}
+  {% for r in past_requests %}
   <div class="list-item">
     <div class="flex-between">
-      <span class="badge badge-type">{{ r.request_type|title }}</span>
-      <span class="small muted">Fulfilled {{ r.fulfilled_at.strftime('%d %b %Y') if r.fulfilled_at else '' }} by {{ r.fulfilled_by_contact.name if r.fulfilled_by_contact else '' }}</span>
+      <div class="flex-gap">
+        <span class="badge badge-type">{{ r.request_type|title }}</span>
+        {% if r.status == 'received' %}
+        <span class="badge badge-status-completed">Received</span>
+        {% else %}
+        <span class="badge badge-status-in-progress">Under Review</span>
+        {% endif %}
+      </div>
+      <span class="small muted">Submitted {{ r.fulfilled_at.strftime('%d %b %Y') if r.fulfilled_at else '' }} by {{ r.fulfilled_by_contact.name if r.fulfilled_by_contact else '' }}</span>
     </div>
     <p class="small mt-8">{{ r.message }}</p>
     {% if r.response_document %}<a href="{{ url_for('documents.download', doc_id=r.response_document_id) }}" class="small">↓ {{ r.response_document.file_name }}</a>{% endif %}
     {% if r.response_url %}<a href="{{ r.response_url }}" class="small" target="_blank" rel="noopener">{{ r.response_url }}</a>{% endif %}
     {% if r.response_text %}<p class="small muted">{{ r.response_text }}</p>{% endif %}
+    {% if r.status == 'fulfilled' %}
+    <form method="POST" action="{{ url_for('reports.accept_request', slug=client.slug, request_id=r.id) }}" class="mt-8">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm">Accept</button>
+    </form>
+    {% elif r.status == 'received' %}
+    <div class="small muted mt-8">Received {{ r.received_at.strftime('%d %b %Y') if r.received_at else '' }} by {{ r.received_by.name if r.received_by else '' }}</div>
+    {% endif %}
   </div>
   {% endfor %}
   {% endif %}

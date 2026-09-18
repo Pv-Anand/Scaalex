@@ -1,0 +1,4 @@
+<div class="flex-gap mb-24">
+  <a href="{{ url_for('clients.overview', slug=client.slug) }}" class="pill-link {{ 'active' if active_subtab == 'timeline' }}">Timeline</a>
+  <a href="{{ url_for('conversations.list_conversations', slug=client.slug) }}" class="pill-link {{ 'active' if active_subtab == 'conversations' }}">Conversations</a>
+</div>

@@ -2,6 +2,7 @@
 {% block title %}{{ client.name }} — Scaalex Intelligence{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
+{% include "_overview_subtabs.html" %}
 
 <div class="stat-row">
   <div class="stat-cell">
@@ -30,29 +31,61 @@
   <a href="{{ url_for('ai_overview.ai_summary', slug=client.slug) }}" class="btn btn-secondary">Generate Leadership Overview →</a>
 </div>
 
+{% if needs_review %}
+<div class="section">
+  <h2 class="section-title" style="margin-bottom:4px;">Needs Your Review</h2>
+  <p class="small muted mb-16">What the client has sent back — accept it to close the loop and let them know it's been received.</p>
+  {% for req in needs_review %}
+  <div class="card mb-16" style="background:var(--grey-50);">
+    <div class="flex-between" style="align-items:flex-start;">
+      <div style="min-width:0;">
+        <div class="flex-gap">
+          <span style="font-size:13.5px; font-weight:500; color:var(--black);">{{ req.milestone.title }}</span>
+          <span class="badge badge-status-in-progress">Under Review</span>
+        </div>
+        <div class="small muted mt-8">{{ req.message }}</div>
+        <div class="small mt-8" style="color:var(--charcoal);">
+          {% if req.response_document %}{{ req.response_document.file_name }}
+          {% elif req.response_url %}{{ req.response_url }}
+          {% else %}{{ req.response_text }}
+          {% endif %}
+          — submitted by {{ req.fulfilled_by_contact.name if req.fulfilled_by_contact else 'client' }}, {{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}
+        </div>
+      </div>
+      <div class="flex-gap" style="flex-shrink:0;">
+        <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=req.milestone_id) }}" class="btn btn-sm btn-secondary">View Milestone</a>
+        <form method="POST" action="{{ url_for('reports.accept_request', slug=client.slug, request_id=req.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm">Accept</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="two-col">
   <div>
     <div class="section">
-      <div class="flex-between mb-16">
-        <h2 class="section-title" style="margin-bottom:0;">Recent Conversations</h2>
-        <a href="{{ url_for('conversations.timeline', slug=client.slug) }}" class="small muted">View timeline →</a>
-      </div>
-      {% if recent_conversations %}
-      {% for c in recent_conversations %}
-      <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=c.id) }}" style="display:block;">
+      <h2 class="section-title" style="margin-bottom:4px;">Engagement Timeline</h2>
+      <p class="small muted mb-16">Everything that's happened, in order — milestones, client submissions, and conversations together.</p>
+      {% if events %}
+      {% for e in events %}
+      <a href="{{ e.url }}" style="display:block;">
         <div class="list-item">
-          <div class="flex-between">
-            <strong>{{ c.interaction_type }}</strong>
-            <span class="small muted">{{ c.date.strftime('%d %b %Y') }}</span>
+          <div class="flex-gap">
+            <span class="badge {{ e.kind_class }}">{{ e.kind }}</span>
+            <strong>{{ e.title }}</strong>
           </div>
-          <div class="small muted mt-8">{{ c.summary or (c.raw_notes[:160] ~ ('…' if c.raw_notes|length > 160 else '')) or 'No notes yet' }}</div>
+          <div class="small muted mt-8">{{ e.date.strftime('%d %b %Y') }} — {{ e.detail }}</div>
         </div>
       </a>
       {% endfor %}
       {% else %}
       <div class="empty-state">
-        <h3>No conversations yet</h3>
-        <p>Record your first update to begin this client's institutional record.</p>
+        <h3>Nothing recorded yet</h3>
+        <p>Record your first update, or add a milestone, to begin this client's institutional record.</p>
         <a href="{{ url_for('conversations.new', slug=client.slug) }}" class="btn">+ Add Update</a>
       </div>
       {% endif %}

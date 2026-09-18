@@ -94,11 +94,15 @@
       {% for req in under_review %}
       <div class="milestone-row">
         <div style="width:96px; flex-shrink:0;" class="small muted">{{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}</div>
-        <div class="milestone-dot in-progress"></div>
+        <div class="milestone-dot {{ 'completed' if req.status == 'received' else 'in-progress' }}"></div>
         <div style="flex:1;">
           <div class="flex-gap">
             <span style="font-size:13.5px; font-weight:500;">{{ req.milestone.title }}</span>
+            {% if req.status == 'received' %}
+            <span class="badge badge-status-completed">Received</span>
+            {% else %}
             <span class="badge badge-status-in-progress">Under Review</span>
+            {% endif %}
           </div>
           <div class="small muted mt-8">
             {% if req.response_document %}Submitted: {{ req.response_document.file_name }}
