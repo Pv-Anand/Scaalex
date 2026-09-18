@@ -68,13 +68,6 @@ class Client(db.Model):
     website = db.Column(db.String(300))
     gst_number = db.Column(db.String(40))
 
-    # Billing
-    billing_contact = db.Column(db.String(200))
-    billing_email = db.Column(db.String(200))
-    payment_terms = db.Column(db.String(100))
-    invoice_currency = db.Column(db.String(10))
-    billing_address = db.Column(db.Text)
-
     # Client portal - a separate slug from `slug` above (which is the staff
     # URL) so the client-facing link can be edited/rotated independently.
     portal_slug = db.Column(db.String(200), unique=True)

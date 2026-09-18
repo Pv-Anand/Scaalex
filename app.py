@@ -157,13 +157,23 @@ def _ensure_schema_migrations(app):
             ("registered_name", "VARCHAR(300)"), ("address", "TEXT"),
             ("website", "VARCHAR(300)"), ("gst_number", "VARCHAR(40)"),
             ("portal_slug", "VARCHAR(200)"),
-            ("billing_contact", "VARCHAR(200)"), ("billing_email", "VARCHAR(200)"),
-            ("payment_terms", "VARCHAR(100)"), ("invoice_currency", "VARCHAR(10)"),
-            ("billing_address", "TEXT"),
         ):
             if column not in client_columns:
                 conn.execute(db.text(f"ALTER TABLE clients ADD COLUMN {column} {ddl_type}"))
                 conn.commit()
+
+        # Billing was removed in favor of Client Details only; drop the
+        # columns it briefly added. Same SQLite 3.35+ caveat as above.
+        for column in (
+            "billing_contact", "billing_email", "payment_terms",
+            "invoice_currency", "billing_address",
+        ):
+            if column in client_columns:
+                try:
+                    conn.execute(db.text(f"ALTER TABLE clients DROP COLUMN {column}"))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
 
         contact_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(client_contacts)"))}
         for column, ddl_type in (

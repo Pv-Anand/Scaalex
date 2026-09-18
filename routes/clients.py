@@ -217,21 +217,6 @@ def profile(slug):
     )
 
 
-@clients_bp.route("/<slug>/profile/billing", methods=["POST"])
-@login_required
-def update_billing(slug):
-    client = get_client_or_404(slug)
-    client.billing_contact = request.form.get("billing_contact", "").strip() or None
-    client.billing_email = request.form.get("billing_email", "").strip() or None
-    client.payment_terms = request.form.get("payment_terms", "").strip() or None
-    client.invoice_currency = request.form.get("invoice_currency", "").strip() or None
-    client.billing_address = request.form.get("billing_address", "").strip() or None
-    log_activity(current_user.id, client.id, "Billing info updated", "client", client.id)
-    db.session.commit()
-    flash("Billing info updated.", "success")
-    return redirect(url_for("clients.profile", slug=slug, tab="billing"))
-
-
 @clients_bp.route("/<slug>/profile/portal-access/<int:contact_id>", methods=["POST"])
 @login_required
 def toggle_portal_access(slug, contact_id):
