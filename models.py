@@ -227,9 +227,11 @@ class ActionItem(db.Model):
 
     task = db.Column(db.String(500), nullable=False)
     owner = db.Column(db.String(200))
+    assignee = db.Column(db.String(200))
     due_date = db.Column(db.Date)
     priority = db.Column(db.String(20), default="Medium")  # High, Medium, Low
     status = db.Column(db.String(40), default="Not Started")
+    notes = db.Column(db.Text)
     source_label = db.Column(db.String(300))
     needs_confirmation = db.Column(db.Boolean, default=False)
 

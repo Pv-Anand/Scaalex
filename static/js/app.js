@@ -213,6 +213,15 @@ function toggleEditEmail() {
   body.readOnly = editing;
 }
 
+/* ---------------- Action item row expand/collapse ---------------- */
+function toggleActionItemRow(itemId) {
+  const editRow = document.getElementById(`action-item-edit-${itemId}`);
+  const toggleBtn = document.getElementById(`action-item-toggle-${itemId}`);
+  const open = editRow.style.display !== 'none';
+  editRow.style.display = open ? 'none' : 'table-row';
+  toggleBtn.classList.toggle('open', !open);
+}
+
 /* ---------------- Action item inline status ---------------- */
 async function updateActionStatus(itemId, status, selectEl) {
   const res = await fetch(`/action-items/${itemId}/status`, {

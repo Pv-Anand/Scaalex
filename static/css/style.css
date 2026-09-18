@@ -325,6 +325,11 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator:hover {
 .details-card[open] summary .chevron { transform: rotate(180deg); }
 .details-card .details-body { padding: 18px; }
 
+.row-expand-btn { background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; color: var(--grey-500); }
+.row-expand-btn:hover { color: var(--black); }
+.row-expand-btn .chevron { transition: transform 0.12s ease; }
+.row-expand-btn.open .chevron { transform: rotate(90deg); }
+
 .type-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .type-card { position: relative; display: block; border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: border-color 0.12s ease, background 0.12s ease; }
 .type-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }

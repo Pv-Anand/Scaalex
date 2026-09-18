@@ -17,21 +17,29 @@
     <option value="">All Priorities</option>
     {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if filters.get('priority') == p }}>{{ p }}</option>{% endfor %}
   </select>
+  <select name="assignee" onchange="this.form.submit()">
+    <option value="">All Assignees</option>
+    {% for p in people %}<option value="{{ p }}" {{ 'selected' if filters.get('assignee') == p }}>{{ p }}</option>{% endfor %}
+  </select>
   <select name="sort" onchange="this.form.submit()">
     <option value="due_date" {{ 'selected' if filters.get('sort', 'due_date') == 'due_date' }}>Sort: Due Date</option>
     <option value="priority" {{ 'selected' if filters.get('sort') == 'priority' }}>Sort: Priority</option>
   </select>
 </form>
 
+<datalist id="action-item-people">
+  {% for p in people %}<option value="{{ p }}"></option>{% endfor %}
+</datalist>
+
 {% if items %}
 <div class="table-wrap">
   <table class="table">
-    <thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th><th>Source</th></tr></thead>
+    <thead><tr><th style="width:36%;">Task</th><th>Assignee</th><th>Due</th><th>Priority</th><th>Status</th><th style="width:32px;"></th></tr></thead>
     <tbody>
       {% for a in items %}
-      <tr>
+      <tr id="action-item-row-{{ a.id }}">
         <td>{{ a.task }}{% if a.needs_confirmation %} <span class="needs-confirmation-tag small">Needs Confirmation</span>{% endif %}</td>
-        <td>{{ a.owner }}</td>
+        <td>{{ a.assignee or a.owner }}</td>
         <td class="{{ 'overdue-text' if a.is_overdue }}">{{ a.due_date.strftime('%d %b %Y') if a.due_date else '—' }}{% if a.is_overdue %} (Overdue){% endif %}</td>
         <td><span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span></td>
         <td>
@@ -41,8 +49,59 @@
             {% endfor %}
           </select>
         </td>
-        <td class="small muted">
-          {% if a.conversation_id %}<a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=a.conversation_id) }}">{{ a.source_label }}</a>{% else %}{{ a.source_label }}{% endif %}
+        <td>
+          <button type="button" id="action-item-toggle-{{ a.id }}" class="row-expand-btn" onclick="toggleActionItemRow({{ a.id }})" aria-label="Edit action item">
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </td>
+      </tr>
+      <tr id="action-item-edit-{{ a.id }}" style="display:none;">
+        <td colspan="6" style="background:var(--grey-50); padding:20px;">
+          <form method="POST" action="{{ url_for('action_items.edit', item_id=a.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Assignee</label>
+                <input type="text" name="assignee" value="{{ a.assignee or '' }}" list="action-item-people" placeholder="Select or write a name">
+              </div>
+              <div class="form-group">
+                <label>Task Owner</label>
+                <input type="text" name="owner" value="{{ a.owner or '' }}" list="action-item-people" placeholder="Select or write a name">
+              </div>
+              <div class="form-group">
+                <label>Priority</label>
+                <select name="priority">
+                  {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if p == a.priority }}>{{ p }}</option>{% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Due Date</label>
+                <input type="date" name="due_date" value="{{ a.due_date.strftime('%Y-%m-%d') if a.due_date else '' }}">
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select name="status">
+                  {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == a.status }}>{{ s }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Source</label>
+                <div class="small muted" style="padding-top:9px;">
+                  {% if a.conversation_id %}<a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=a.conversation_id) }}">{{ a.source_label }}</a>{% else %}{{ a.source_label or '—' }}{% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <textarea name="notes" rows="2" placeholder="Add context, blockers, or updates on this task">{{ a.notes or '' }}</textarea>
+            </div>
+            <div class="form-actions" style="justify-content:flex-end; gap:10px;">
+              <button type="button" class="link-btn small muted" onclick="toggleActionItemRow({{ a.id }})">Cancel</button>
+              <button type="submit" class="btn btn-sm">Save Changes</button>
+            </div>
+          </form>
         </td>
       </tr>
       {% endfor %}

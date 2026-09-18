@@ -23,6 +23,9 @@ def _apply_filters_and_sort(q, args):
     owner = args.get("owner", "").strip()
     if owner:
         q = q.filter(ActionItem.owner.ilike(f"%{owner}%"))
+    assignee = args.get("assignee", "").strip()
+    if assignee:
+        q = q.filter(ActionItem.assignee.ilike(f"%{assignee}%"))
 
     sort = args.get("sort", "due_date")
     if sort == "priority":
@@ -58,9 +61,17 @@ def client_list(slug):
     client = get_client_or_404(slug)
     q = client.action_items
     items = _apply_filters_and_sort(q, request.args)
+
+    people = set()
+    for a in client.action_items:
+        for name in (a.owner, a.assignee):
+            if name and name != "Unassigned":
+                people.add(name)
+
     return render_template(
         "action_items_client.html", client=client, active_tab="action_items",
         items=items, statuses=STATUSES, priorities=PRIORITIES, filters=request.args,
+        people=sorted(people),
     )
 
 
@@ -82,9 +93,11 @@ def new(slug):
             client_id=client.id,
             task=request.form.get("task", "").strip(),
             owner=request.form.get("owner", "").strip() or "Unassigned",
+            assignee=request.form.get("assignee", "").strip() or None,
             due_date=due_date,
             priority=request.form.get("priority", "Medium"),
             status=request.form.get("status", "Not Started"),
+            notes=request.form.get("notes", "").strip() or None,
             source_label=request.form.get("source_label", "").strip() or "Manually added",
         )
         db.session.add(item)
@@ -111,5 +124,31 @@ def update_status(item_id):
     db.session.commit()
     if request.headers.get("X-Requested-With") == "fetch":
         return {"ok": True, "status": new_status}
+    flash("Action item updated.", "success")
+    return redirect(request.referrer or url_for("action_items.global_list"))
+
+
+@action_items_bp.route("/action-items/<int:item_id>/edit", methods=["POST"])
+@login_required
+def edit(item_id):
+    item = ActionItem.query.get_or_404(item_id)
+
+    due_date = None
+    due_str = request.form.get("due_date")
+    if due_str:
+        try:
+            due_date = datetime.strptime(due_str, "%Y-%m-%d").date()
+        except ValueError:
+            due_date = None
+
+    item.assignee = request.form.get("assignee", "").strip() or None
+    item.owner = request.form.get("owner", "").strip() or "Unassigned"
+    item.priority = request.form.get("priority", item.priority)
+    item.due_date = due_date
+    item.status = request.form.get("status", item.status)
+    item.notes = request.form.get("notes", "").strip() or None
+
+    log_activity(current_user.id, item.client_id, "Action item updated", "action_item", item.id)
+    db.session.commit()
     flash("Action item updated.", "success")
     return redirect(request.referrer or url_for("action_items.global_list"))

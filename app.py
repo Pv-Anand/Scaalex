@@ -207,6 +207,12 @@ def _ensure_schema_migrations(app):
                 conn.execute(db.text(f"ALTER TABLE milestone_requests ADD COLUMN {column} {ddl_type}"))
                 conn.commit()
 
+        action_item_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(action_items)"))}
+        for column, ddl_type in (("assignee", "VARCHAR(200)"), ("notes", "TEXT")):
+            if column not in action_item_columns:
+                conn.execute(db.text(f"ALTER TABLE action_items ADD COLUMN {column} {ddl_type}"))
+                conn.commit()
+
 
 app = create_app()
 

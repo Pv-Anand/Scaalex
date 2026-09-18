@@ -32,12 +32,13 @@
 {% if items %}
 <div class="table-wrap">
   <table class="table">
-    <thead><tr><th>Task</th><th>Client</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead>
+    <thead><tr><th>Task</th><th>Client</th><th>Assignee</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead>
     <tbody>
       {% for a in items %}
       <tr>
         <td>{{ a.task }}{% if a.needs_confirmation %} <span class="needs-confirmation-tag small">Needs Confirmation</span>{% endif %}</td>
         <td><a href="{{ url_for('clients.overview', slug=a.client.slug) }}">{{ a.client.name }}</a></td>
+        <td>{{ a.assignee or '—' }}</td>
         <td>{{ a.owner }}</td>
         <td class="{{ 'overdue-text' if a.is_overdue }}">{{ a.due_date.strftime('%d %b %Y') if a.due_date else '—' }}{% if a.is_overdue %} (Overdue){% endif %}</td>
         <td><span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span></td>
