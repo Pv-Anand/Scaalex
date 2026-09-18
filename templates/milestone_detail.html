@@ -22,7 +22,7 @@
 <div class="milestone-layout">
   <div class="main-col">
 
-    <details class="details-card">
+    <details class="details-card" {{ 'open' if request.args.get('edit') }}>
       <summary>
         Milestone Details
         <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="var(--grey-500)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -72,6 +72,10 @@
           <div class="form-actions">
             <button type="submit" class="btn btn-sm">Save Changes</button>
           </div>
+        </form>
+        <form method="POST" action="{{ url_for('reports.delete_milestone', slug=client.slug, milestone_id=milestone.id) }}" style="margin-top:10px;" onsubmit="return confirm('Delete &quot;{{ milestone.title }}&quot;? This removes it from the client\'s portal timeline along with any requests on it.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-secondary" style="color:var(--danger); border-color:var(--danger);">Delete Milestone</button>
         </form>
       </div>
     </details>

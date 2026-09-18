@@ -173,6 +173,24 @@ def edit_milestone(slug, milestone_id):
     return redirect(url_for("reports.milestone_detail", slug=slug, milestone_id=milestone.id))
 
 
+@reports_bp.route("/reports/milestones/<int:milestone_id>/delete", methods=["POST"])
+@login_required
+def delete_milestone(slug, milestone_id):
+    client = get_client_or_404(slug)
+    milestone = Milestone.query.filter_by(id=milestone_id, client_id=client.id).first_or_404()
+    title = milestone.title
+
+    # Keep uploaded files on record rather than deleting them - just unlink
+    # them from the milestone that's going away.
+    Document.query.filter_by(milestone_id=milestone.id).update({"milestone_id": None})
+
+    log_activity(current_user.id, client.id, "Milestone deleted", "milestone", milestone.id, details=title)
+    db.session.delete(milestone)
+    db.session.commit()
+    flash(f'"{title}" deleted.', "success")
+    return redirect(url_for("reports.reports", slug=slug))
+
+
 @reports_bp.route("/reports/milestones/<int:milestone_id>/request", methods=["POST"])
 @login_required
 def send_request(slug, milestone_id):

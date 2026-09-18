@@ -39,6 +39,14 @@
         {% endif %}
       </div>
     </div>
+    <div class="small" style="flex-shrink:0; white-space:nowrap; color:var(--grey-500);">
+      <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=m.id) }}?edit=1" style="color:inherit;">Edit</a>
+      &middot;
+      <form method="POST" action="{{ url_for('reports.delete_milestone', slug=client.slug, milestone_id=m.id) }}" style="display:inline;" onsubmit="return confirm('Delete &quot;{{ m.title }}&quot;? This removes it from the client\'s portal timeline along with any requests on it.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="link-btn" style="color:var(--danger);">Delete</button>
+      </form>
+    </div>
   </div>
   {% else %}
   <div class="empty-state">
