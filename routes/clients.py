@@ -174,19 +174,16 @@ def overview(slug):
     )
 
 
-@clients_bp.route("/<slug>/settings", methods=["GET", "POST"])
+@clients_bp.route("/<slug>/profile/engagement", methods=["POST"])
 @login_required
-def settings(slug):
+def update_engagement(slug):
     client = get_client_or_404(slug)
-    if request.method == "POST":
-        client.status = request.form.get("status", client.status)
-        client.engagement_type = request.form.get("engagement_type", client.engagement_type)
-        log_activity(current_user.id, client.id, "Client settings updated", "client", client.id)
-        db.session.commit()
-        flash("Client settings updated.", "success")
-        return redirect(url_for("clients.settings", slug=slug))
-
-    return render_template("client_settings.html", client=client, active_tab="settings")
+    client.status = request.form.get("status", client.status)
+    client.engagement_type = request.form.get("engagement_type", client.engagement_type)
+    log_activity(current_user.id, client.id, "Engagement details updated", "client", client.id)
+    db.session.commit()
+    flash("Engagement details updated.", "success")
+    return redirect(url_for("clients.profile", slug=slug, tab="billing"))
 
 
 @clients_bp.route("/<slug>/profile", methods=["GET", "POST"])
