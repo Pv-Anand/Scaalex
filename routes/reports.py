@@ -179,7 +179,7 @@ def milestone_detail(slug, milestone_id):
     client = get_client_or_404(slug)
     milestone = Milestone.query.filter_by(id=milestone_id, client_id=client.id).first_or_404()
     managers = User.query.order_by(User.name).all()
-    deliverables = milestone.deliverables.all()
+    deliverables = milestone.staff_deliverables
     return render_template(
         "milestone_detail.html", client=client, active_tab="reports",
         milestone=milestone, managers=managers, deliverables=deliverables,

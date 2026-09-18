@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
 from extensions import db
-from models import Client, Document, Conversation, log_activity
+from models import Client, Document, Conversation, Milestone, log_activity
 from routes.clients import get_client_or_404
 
 documents_bp = Blueprint("documents", __name__)
@@ -33,11 +33,29 @@ def global_list():
 @login_required
 def client_list(slug):
     client = get_client_or_404(slug)
-    documents = client.documents.order_by(Document.uploaded_at.desc()).all()
+    all_documents = client.documents.order_by(Document.uploaded_at.desc()).all()
+
+    source = request.args.get("source")
+    milestone_id = request.args.get("milestone_id", type=int)
+    documents = all_documents
+    if source == "scaalex":
+        documents = [d for d in documents if d.uploader_role == "Scaalex"]
+    elif source == "client":
+        documents = [d for d in documents if d.uploader_role == "Client"]
+    if milestone_id:
+        documents = [d for d in documents if d.milestone_id == milestone_id]
+
     conversations = client.conversations.order_by(Conversation.date.desc()).all()
+    milestones = client.milestones.order_by(Milestone.title).all()
+
+    from_scaalex = sum(1 for d in all_documents if d.uploader_role == "Scaalex")
+    from_client = sum(1 for d in all_documents if d.uploader_role == "Client")
+
     return render_template(
         "documents_client.html", client=client, active_tab="documents",
-        documents=documents, conversations=conversations,
+        documents=documents, conversations=conversations, milestones=milestones,
+        total_count=len(all_documents), from_scaalex=from_scaalex, from_client=from_client,
+        current_source=source, current_milestone_id=milestone_id,
     )
 
 
@@ -60,10 +78,14 @@ def upload(slug):
     file.save(path)
 
     conversation_id = request.form.get("conversation_id", type=int)
+    milestone_id = request.form.get("milestone_id", type=int)
+    if milestone_id and not Milestone.query.filter_by(id=milestone_id, client_id=client.id).first():
+        milestone_id = None
 
     doc = Document(
         client_id=client.id,
         conversation_id=conversation_id or None,
+        milestone_id=milestone_id or None,
         file_name=original_name,
         stored_name=stored_name,
         file_type=ext,

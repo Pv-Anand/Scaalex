@@ -84,7 +84,7 @@
       {% if m.active_request %}
       <div class="small mt-8" style="color:var(--warn); background:var(--warn-bg); display:inline-block; padding:3px 9px; border-radius:3px;">Requested from client: {{ m.active_request.message }}</div>
       {% endif %}
-      {% set first_deliverable = m.deliverables.first() %}
+      {% set first_deliverable = m.staff_deliverables[0] if m.staff_deliverables else None %}
       <div class="mt-8 flex-gap">
         <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=m.id) }}" class="small" style="font-weight:500; color:var(--black);">Request from client →</a>
         {% if first_deliverable %}

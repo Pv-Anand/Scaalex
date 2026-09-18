@@ -50,12 +50,17 @@
         {% if next_up.due_date %}Due {{ next_up.due_date.strftime('%d %b %Y') }} · {% endif %}
         Reporting Manager: {{ next_up.reporting_manager.name if next_up.reporting_manager else 'Scaalex' }}{% if next_up.reporting_manager and next_up.reporting_manager.email %}, {{ next_up.reporting_manager.email }}{% endif %}
       </div>
+    </div>
+    {% endif %}
 
-      {% set req = next_up.active_request %}
-      {% if req %}
-      <div class="mt-16" style="border-top:1px solid var(--line); padding-top:16px;">
-        <div class="small" style="font-weight:500; margin-bottom:4px;">Action needed from you</div>
-        <p class="small" style="color:var(--grey-700); margin-bottom:14px;">{{ req.message }}</p>
+    {% if open_requests %}
+    <div class="mt-32">
+      <h2 class="section-title" style="margin-bottom:4px;">Action Needed</h2>
+      <p class="small muted mb-16">Scaalex needs the following from you to keep things moving.</p>
+      {% for req in open_requests %}
+      <div class="next-up-card mb-16">
+        <div class="small muted">{{ req.milestone.title }}</div>
+        <p class="small mt-8" style="color:var(--grey-700); margin-bottom:14px;">{{ req.message }}</p>
         <form method="POST" action="{{ url_for('portal.respond_to_request', portal_slug=client.portal_slug, request_id=req.id) }}" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           {% if req.request_type == 'document' %}
@@ -68,7 +73,7 @@
           <button type="submit" class="btn btn-sm">Submit</button>
         </form>
       </div>
-      {% endif %}
+      {% endfor %}
     </div>
     {% endif %}
 
@@ -81,7 +86,8 @@
         <div class="milestone-dot completed"></div>
         <div style="flex:1;">
           <div style="font-size:14px; font-weight:500;">{{ m.title }}</div>
-          {% set d = m.deliverables.first() %}
+          {% set staff_docs = m.staff_deliverables %}
+          {% set d = staff_docs[0] if staff_docs else None %}
           {% if d %}
           <a href="{{ url_for('portal.download', portal_slug=client.portal_slug, doc_id=d.id) }}" class="small muted">↓ {{ d.file_name }}</a>
           {% endif %}

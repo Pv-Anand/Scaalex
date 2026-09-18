@@ -127,10 +127,26 @@ def timeline(portal_slug, client, contact):
     total_visible = client.milestones.filter_by(visible_to_client=True).count()
     completed_count = client.milestones.filter_by(status="completed", visible_to_client=True).count()
 
+    # Every open request across every visible milestone, not just the one
+    # "Next Up" milestone - a request on an upcoming or already-completed
+    # milestone must still reach the client, not just one sent on whichever
+    # single milestone happens to be in progress right now.
+    open_requests = (
+        MilestoneRequest.query.join(Milestone)
+        .filter(
+            Milestone.client_id == client.id,
+            Milestone.visible_to_client.is_(True),
+            MilestoneRequest.status == "awaiting",
+        )
+        .order_by(MilestoneRequest.requested_at.asc())
+        .all()
+    )
+
     return render_template(
         "portal_timeline.html", client=client, contact=contact,
         completed=completed, next_up=next_up, ahead=ahead,
         total_visible=total_visible, completed_count=completed_count,
+        open_requests=open_requests,
     )
 
 

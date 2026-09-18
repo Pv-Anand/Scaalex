@@ -287,6 +287,14 @@ class Milestone(db.Model):
     def display_date(self):
         return self.date if self.status == "completed" else self.due_date
 
+    @property
+    def staff_deliverables(self):
+        """Files Scaalex has attached for the client to download - excludes
+        the client's own request responses, which live under `requests`
+        instead even though they share the same `deliverables` relationship
+        (both are just Documents with this milestone_id)."""
+        return self.deliverables.filter_by(uploaded_by_contact_id=None).all()
+
 
 class MilestoneRequest(db.Model):
     """Something staff has asked the client for, tied to one milestone -
@@ -336,6 +344,33 @@ class Document(db.Model):
 
     uploaded_by = db.relationship("User")
     uploaded_by_contact = db.relationship("ClientContact")
+
+    @property
+    def uploader_name(self):
+        if self.uploaded_by_contact:
+            return self.uploaded_by_contact.name
+        if self.uploaded_by:
+            return self.uploaded_by.name
+        return "Unknown"
+
+    @property
+    def uploader_role(self):
+        return "Client" if self.uploaded_by_contact_id else "Scaalex"
+
+    @property
+    def context_label(self):
+        """Human-readable reason this document exists, for the Documents
+        tab - a client's response to a specific request, a staff-attached
+        deliverable, a conversation attachment, or a plain manual upload."""
+        if self.milestone_id and self.milestone:
+            request = MilestoneRequest.query.filter_by(response_document_id=self.id).first()
+            if request:
+                return f'Response to request on "{self.milestone.title}": {request.message}'
+            return f"Deliverable for milestone: {self.milestone.title}"
+        if self.conversation_id and self.conversation:
+            c = self.conversation
+            return f"Attached to update: {c.interaction_type} — {c.date.strftime('%d %b %Y')}"
+        return "Manual upload"
 
 
 class AIOverview(db.Model):
