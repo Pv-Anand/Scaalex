@@ -24,6 +24,6 @@
   <a href="{{ url_for('conversations.sync_history', slug=client.slug) }}" class="{{ 'active' if active_tab == 'sync_history' }}">Sync History</a>
   <a href="{{ url_for('ai_overview.ai_summary', slug=client.slug) }}" class="{{ 'active' if active_tab == 'ai_summary' }}">AI Summary</a>
   <a href="{{ url_for('clients.profile', slug=client.slug) }}" class="{{ 'active' if active_tab == 'profile' }}">Client Profile</a>
-  <a href="{{ url_for('reports.reports', slug=client.slug) }}" class="{{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('reports.reports', slug=client.slug) }}" class="{{ 'active' if active_tab == 'reports' }}">Project Updates</a>
   <a href="{{ url_for('reports.logs', slug=client.slug) }}" class="{{ 'active' if active_tab == 'logs' }}">Logs</a>
 </div>

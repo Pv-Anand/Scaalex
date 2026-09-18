@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Reports — {{ client.name }}{% endblock %}
+{% block title %}Project Updates — {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 
@@ -8,7 +8,7 @@
     <h2 class="section-title" style="margin-bottom:4px;">Engagement Milestones</h2>
     <p class="small muted">This list — in this order — is what the client sees on their portal timeline.</p>
   </div>
-  <a href="{{ url_for('reports.new_milestone', slug=client.slug) }}" class="btn btn-sm">+ Add Milestone</a>
+  <a href="{{ url_for('reports.new_milestone', slug=client.slug) }}" class="btn btn-sm">+ Add Update</a>
 </div>
 
 <div class="mt-16">
@@ -44,7 +44,7 @@
   <div class="empty-state">
     <h3>No milestones yet</h3>
     <p>Add the first milestone to start building this client's portal timeline.</p>
-    <a href="{{ url_for('reports.new_milestone', slug=client.slug) }}" class="btn">+ Add Milestone</a>
+    <a href="{{ url_for('reports.new_milestone', slug=client.slug) }}" class="btn">+ Add Update</a>
   </div>
   {% endfor %}
 </div>
