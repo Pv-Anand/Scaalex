@@ -59,18 +59,20 @@
       <p class="small muted mb-16">Scaalex needs the following from you to keep things moving.</p>
       {% for req in open_requests %}
       <div class="next-up-card mb-16">
-        <div class="small muted">{{ req.milestone.title }}</div>
-        <p class="small mt-8" style="color:var(--grey-700); margin-bottom:14px;">{{ req.message }}</p>
-        <form method="POST" action="{{ url_for('portal.respond_to_request', portal_slug=client.portal_slug, request_id=req.id) }}" enctype="multipart/form-data">
+        <div class="page-eyebrow" style="margin-bottom:0;">{{ req.milestone.title }}</div>
+        <div style="font-size:14px; font-weight:600; color:var(--black); margin-top:8px;">Action needed from you</div>
+        <p class="small mt-8" style="color:var(--grey-700); margin-bottom:16px;">{{ req.message }}</p>
+        <form method="POST" action="{{ url_for('portal.respond_to_request', portal_slug=client.portal_slug, request_id=req.id) }}" enctype="multipart/form-data" id="req-form-{{ req.id }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          {% if req.request_type == 'document' %}
-          <input type="file" name="file">
-          {% elif req.request_type == 'url' %}
-          <input type="text" name="response_url" placeholder="https://…" style="margin-bottom:10px;">
-          {% else %}
-          <textarea name="response_text" rows="2" placeholder="Type your answer…" style="margin-bottom:10px;"></textarea>
-          {% endif %}
-          <button type="submit" class="btn btn-sm">Submit</button>
+          <input type="file" name="file" id="req-file-{{ req.id }}" style="display:none;" onchange="document.getElementById('req-form-{{ req.id }}').submit()">
+          <div id="req-text-row-{{ req.id }}" style="display:none; margin-bottom:10px;">
+            <input type="text" name="response_text" placeholder="Paste a link or type your answer…">
+          </div>
+          <div class="flex-gap">
+            <label for="req-file-{{ req.id }}" class="btn btn-sm" style="cursor:pointer;">Upload File</label>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="showReqTextRow('{{ req.id }}')">Share a Link Instead</button>
+            <button type="submit" class="btn btn-sm" id="req-submit-{{ req.id }}" style="display:none;">Submit</button>
+          </div>
         </form>
       </div>
       {% endfor %}
@@ -117,5 +119,11 @@
       <div class="small" style="color:var(--grey-300); margin-top:10px;">© Scaalex Consulting — Private client portal</div>
     </div>
   </div>
+  <script>
+    function showReqTextRow(id) {
+      document.getElementById('req-text-row-' + id).style.display = 'block';
+      document.getElementById('req-submit-' + id).style.display = 'inline-flex';
+    }
+  </script>
 </body>
 </html>

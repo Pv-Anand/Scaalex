@@ -161,8 +161,13 @@ def respond_to_request(portal_slug, client, contact, request_id):
         flash("This request has already been answered.", "info")
         return redirect(url_for("portal.timeline", portal_slug=portal_slug))
 
-    url_value = request.form.get("response_url", "").strip()
-    text_value = request.form.get("response_text", "").strip()
+    # One field on the client's side ("Share a Link Instead") covers both a
+    # URL and free text - simpler UI than asking them to pick which kind of
+    # box to fill in. Detect which it is here instead.
+    raw_value = request.form.get("response_text", "").strip()
+    is_url = raw_value.lower().startswith(("http://", "https://"))
+    url_value = raw_value if is_url else ""
+    text_value = raw_value if raw_value and not is_url else ""
     file = request.files.get("file")
 
     if file and file.filename:
