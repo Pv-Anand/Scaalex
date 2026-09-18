@@ -16,87 +16,6 @@
   </div>
 </div>
 
-<div class="mb-32">
-  <div class="flex-between mb-16">
-    <div>
-      <h2 class="section-title" style="margin-bottom:4px;">Client Details</h2>
-      <p class="small muted">Shown across the app. The project URL won't change.</p>
-    </div>
-    <button type="button" class="btn btn-secondary" onclick="toggleClientDetailsEdit()">Edit</button>
-  </div>
-
-  <div id="client-details-view" class="card">
-    <div class="form-row">
-      <div>
-        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Name</div>
-        <div style="font-size:13.5px;">{{ client.name }}</div>
-      </div>
-      <div>
-        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Registered Name</div>
-        <div style="font-size:13.5px;">{{ client.registered_name or '—' }}</div>
-      </div>
-    </div>
-    <div class="mt-16">
-      <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Address</div>
-      <div style="font-size:13.5px;">{{ client.address or '—' }}</div>
-    </div>
-    <div class="form-row mt-16">
-      <div>
-        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Website</div>
-        <div style="font-size:13.5px;">{{ client.website or '—' }}</div>
-      </div>
-      <div>
-        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">GST Number</div>
-        <div style="font-size:13.5px;">{{ client.gst_number or '—' }}</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="client-details-edit" class="card" style="display:none;">
-    <form method="POST" action="{{ url_for('clients.profile', slug=client.slug) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Name</label>
-          <input type="text" name="name" value="{{ client.name }}" required>
-        </div>
-        <div class="form-group">
-          <label>Registered Name</label>
-          <input type="text" name="registered_name" value="{{ client.registered_name or '' }}" placeholder="Legal entity name, if different from above">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Address</label>
-        <textarea name="address" rows="2">{{ client.address or '' }}</textarea>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Website</label>
-          <input type="text" name="website" value="{{ client.website or '' }}" placeholder="https://">
-        </div>
-        <div class="form-group">
-          <label>GST Number</label>
-          <input type="text" name="gst_number" value="{{ client.gst_number or '' }}">
-        </div>
-      </div>
-      <div class="form-actions" style="justify-content:flex-end; gap:10px; border-top:1px solid var(--grey-100); padding-top:18px; margin-top:4px;">
-        <button type="button" class="link-btn small muted" onclick="toggleClientDetailsEdit()">Cancel</button>
-        <button type="submit" class="btn">Save Changes</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script>
-function toggleClientDetailsEdit() {
-  var view = document.getElementById('client-details-view');
-  var edit = document.getElementById('client-details-edit');
-  var editing = edit.style.display !== 'none';
-  edit.style.display = editing ? 'none' : 'block';
-  view.style.display = editing ? '' : 'none';
-}
-</script>
-
 {% include "_profile_subtabs.html" %}
 
 {% if active_subtab == 'access' %}
@@ -221,6 +140,87 @@ function toggleAddContact() {
 }
 </script>
 {% else %}
+<div class="mb-32">
+  <div class="flex-between mb-16">
+    <div>
+      <h2 class="section-title" style="margin-bottom:4px;">Client Details</h2>
+      <p class="small muted">Shown across the app. The project URL won't change.</p>
+    </div>
+    <button type="button" class="btn btn-secondary" onclick="toggleClientDetailsEdit()">Edit</button>
+  </div>
+
+  <div id="client-details-view" class="card">
+    <div class="form-row">
+      <div>
+        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Name</div>
+        <div style="font-size:13.5px;">{{ client.name }}</div>
+      </div>
+      <div>
+        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Registered Name</div>
+        <div style="font-size:13.5px;">{{ client.registered_name or '—' }}</div>
+      </div>
+    </div>
+    <div class="mt-16">
+      <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Address</div>
+      <div style="font-size:13.5px;">{{ client.address or '—' }}</div>
+    </div>
+    <div class="form-row mt-16">
+      <div>
+        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Website</div>
+        <div style="font-size:13.5px;">{{ client.website or '—' }}</div>
+      </div>
+      <div>
+        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">GST Number</div>
+        <div style="font-size:13.5px;">{{ client.gst_number or '—' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="client-details-edit" class="card" style="display:none;">
+    <form method="POST" action="{{ url_for('clients.profile', slug=client.slug) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" name="name" value="{{ client.name }}" required>
+        </div>
+        <div class="form-group">
+          <label>Registered Name</label>
+          <input type="text" name="registered_name" value="{{ client.registered_name or '' }}" placeholder="Legal entity name, if different from above">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Address</label>
+        <textarea name="address" rows="2">{{ client.address or '' }}</textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Website</label>
+          <input type="text" name="website" value="{{ client.website or '' }}" placeholder="https://">
+        </div>
+        <div class="form-group">
+          <label>GST Number</label>
+          <input type="text" name="gst_number" value="{{ client.gst_number or '' }}">
+        </div>
+      </div>
+      <div class="form-actions" style="justify-content:flex-end; gap:10px; border-top:1px solid var(--grey-100); padding-top:18px; margin-top:4px;">
+        <button type="button" class="link-btn small muted" onclick="toggleClientDetailsEdit()">Cancel</button>
+        <button type="submit" class="btn">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleClientDetailsEdit() {
+  var view = document.getElementById('client-details-view');
+  var edit = document.getElementById('client-details-edit');
+  var editing = edit.style.display !== 'none';
+  edit.style.display = editing ? 'none' : 'block';
+  view.style.display = editing ? '' : 'none';
+}
+</script>
+
 <div class="section">
   <div class="flex-between mb-16">
     <div>
