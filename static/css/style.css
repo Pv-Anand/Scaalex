@@ -45,6 +45,9 @@ button { font-family: inherit; }
 
 .app-shell { display: flex; min-height: 100vh; }
 
+.mobile-topbar { display: none; }
+.sidebar-backdrop { display: none; }
+
 /* ---------- Sidebar ---------- */
 .sidebar {
   width: var(--sidebar-w);
@@ -179,7 +182,8 @@ button { font-family: inherit; }
 .role-badge.role-owner { background: var(--black); color: var(--white); }
 .role-badge.role-admin { background: var(--grey-100); color: var(--charcoal); }
 .role-badge.role-executive { background: var(--grey-50); color: var(--grey-500); border: 1px solid var(--line); }
-.access-grid { display: grid; grid-template-columns: 1fr repeat(3, 90px); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.access-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.access-grid { display: grid; grid-template-columns: 1fr repeat(3, 90px); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; min-width: 480px; }
 .access-grid > div { padding: 10px 12px; font-size: 12.5px; border-bottom: 1px solid var(--grey-100); display: flex; align-items: center; }
 .access-grid > div:nth-last-child(-n+4) { border-bottom: none; }
 .access-head { background: var(--grey-50); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-500); font-weight: 500; justify-content: center; }
@@ -233,7 +237,7 @@ button { font-family: inherit; }
 .table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--grey-500); font-weight: 500; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .table td { padding: 13px 14px; border-bottom: 1px solid var(--grey-100); font-size: 13.5px; vertical-align: top; }
 .table tr:hover td { background: var(--grey-50); }
-.table-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.table-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table select { min-width: 152px; padding: 6px 26px 6px 8px; background-position: right 8px center; font-size: 12.5px; }
 
 .list-item { padding: 14px 0; border-bottom: 1px solid var(--grey-100); }
@@ -505,11 +509,41 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator:hover {
 .copy-toast.show { opacity: 1; transform: translateY(0); }
 
 @media (max-width: 960px) {
-  .sidebar { position: fixed; transform: translateX(-100%); z-index: 20; transition: transform 0.2s ease; }
+  .mobile-topbar {
+    display: flex; align-items: center; gap: 14px;
+    height: 56px; padding: 0 20px; box-sizing: border-box;
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 15; background: var(--white);
+  }
+  .mobile-topbar .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+  .menu-toggle {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 36px; height: 36px; background: none; border: 1px solid var(--line-strong);
+    border-radius: var(--radius); color: var(--black); cursor: pointer; padding: 0;
+  }
+  .menu-toggle:hover { background: var(--grey-50); }
+
+  .sidebar { position: fixed; top: 0; transform: translateX(-100%); z-index: 20; transition: transform 0.2s ease; }
   .sidebar.open { transform: translateX(0); }
-  .main { padding: 24px 20px 60px; }
+
+  .sidebar-backdrop.show {
+    display: block; position: fixed; inset: 0; background: rgba(10,10,10,0.4); z-index: 19;
+  }
+
+  .app-shell { display: block; }
+  .main { padding: 24px 20px 60px; max-width: 100%; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .two-col { grid-template-columns: 1fr; }
   .stat-row { flex-wrap: wrap; }
   .stat-cell { flex: 1 1 50%; border-bottom: 1px solid var(--line); }
+
+  .page-header { flex-wrap: wrap; }
+  .page-header .flex-gap { flex-wrap: wrap; width: 100%; }
+  .page-header .flex-gap form,
+  .page-header .flex-gap input[type="search"],
+  .page-header .flex-gap input[type="text"] { width: 100% !important; }
+
+  .form-row { flex-direction: column; gap: 12px; }
+
+  .type-picker { grid-template-columns: 1fr; }
 }

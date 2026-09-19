@@ -1,5 +1,6 @@
 function toggleSidebar() {
   document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sidebarBackdrop')?.classList.toggle('show');
 }
 
 function csrfToken() {

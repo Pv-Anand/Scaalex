@@ -98,20 +98,22 @@
 
           <form method="POST" action="{{ url_for('auth.update_access', user_id=u.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="access-grid mb-16">
-              <div class="access-head">Client</div>
-              <div class="access-head">No Access</div>
-              <div class="access-head">View</div>
-              <div class="access-head">Edit</div>
-              {% for c in clients %}
-              {% set current_level = access_map.get((u.id, c.id), 'none') %}
-              <div>{{ c.name }}</div>
-              <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="none" {{ 'checked' if current_level == 'none' }}></div>
-              <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="view" {{ 'checked' if current_level == 'view' }}></div>
-              <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="edit" {{ 'checked' if current_level == 'edit' }}></div>
-              {% else %}
-              <div style="grid-column:1/-1; color:var(--grey-500);">No clients yet.</div>
-              {% endfor %}
+            <div class="access-grid-wrap mb-16">
+              <div class="access-grid">
+                <div class="access-head">Client</div>
+                <div class="access-head">No Access</div>
+                <div class="access-head">View</div>
+                <div class="access-head">Edit</div>
+                {% for c in clients %}
+                {% set current_level = access_map.get((u.id, c.id), 'none') %}
+                <div>{{ c.name }}</div>
+                <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="none" {{ 'checked' if current_level == 'none' }}></div>
+                <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="view" {{ 'checked' if current_level == 'view' }}></div>
+                <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="edit" {{ 'checked' if current_level == 'edit' }}></div>
+                {% else %}
+                <div style="grid-column:1/-1; color:var(--grey-500);">No clients yet.</div>
+                {% endfor %}
+              </div>
             </div>
             <div style="display:flex; gap:10px;">
               <button type="submit" class="btn btn-sm">Save Access</button>
