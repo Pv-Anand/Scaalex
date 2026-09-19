@@ -44,6 +44,18 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
 
+    # Daily off-host backup (database + uploaded documents) to Cloudflare R2.
+    # Backups are skipped entirely - no error, just a log line - when these
+    # aren't set, so local dev and any deploy that hasn't configured R2 yet
+    # both work fine without them.
+    R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID", "").strip()
+    R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID", "").strip()
+    R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "").strip()
+    R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "").strip()
+    R2_ENDPOINT_URL = os.environ.get("R2_ENDPOINT_URL", "").strip() or (
+        f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_ID else ""
+    )
+
     UPLOAD_FOLDER = os.path.join(DATA_DIR, "uploads")
     DOCUMENT_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "documents")
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_UPLOAD_MB", "50")) * 1024 * 1024

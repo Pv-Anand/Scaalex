@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 
+import backup
 from extensions import db, limiter
 from models import User, Client, ClientAccess, ROLES, ROLE_LABELS, log_activity
 from permissions import admin_required
@@ -68,7 +69,29 @@ def team():
     return render_template(
         "team.html", users=users, clients=clients, access_map=access_map,
         roles=ROLES, role_labels=ROLE_LABELS,
+        backup_status=backup.read_status(current_app._get_current_object()),
+        backup_configured=backup._is_configured(current_app._get_current_object()),
     )
+
+
+@auth_bp.route("/team/backup", methods=["POST"])
+@login_required
+@admin_required
+def run_backup_now():
+    app_obj = current_app._get_current_object()
+    if not backup._is_configured(app_obj):
+        flash("Backups aren't configured yet - set the R2_* environment variables first.", "error")
+        return redirect(url_for("auth.team"))
+
+    ok = backup.run_backup(app_obj)
+    if ok:
+        log_activity(current_user.id, None, "Backup run manually", "backup")
+        db.session.commit()
+        flash("Backup completed and uploaded to R2.", "success")
+    else:
+        status = backup.read_status(app_obj) or {}
+        flash(f"Backup failed: {status.get('last_error', 'unknown error')}", "error")
+    return redirect(url_for("auth.team"))
 
 
 @auth_bp.route("/team/new", methods=["POST"])

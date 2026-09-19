@@ -125,6 +125,48 @@
     </tbody>
   </table>
 </div>
+
+<div class="section mt-32">
+  <h2 class="section-title" style="margin-bottom:4px;">Backups</h2>
+  <p class="small muted mb-16">Database and uploaded documents, backed up off Render to Cloudflare R2 daily at 02:00 UTC. Daily copies are kept 30 days; the first of each month is kept indefinitely.</p>
+
+  <div class="card" style="max-width:640px;">
+    {% if not backup_configured %}
+    <div class="small" style="color:var(--warn);">R2 isn't configured yet - set <code>R2_ACCOUNT_ID</code>, <code>R2_ACCESS_KEY_ID</code>, <code>R2_SECRET_ACCESS_KEY</code>, and <code>R2_BUCKET_NAME</code> in the environment.</div>
+    {% elif backup_status %}
+    <div class="form-row">
+      <div>
+        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Last Run</div>
+        <div style="font-size:13.5px;">{{ backup_status.last_run_at[:19].replace('T', ' ') }} UTC</div>
+      </div>
+      <div>
+        <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Status</div>
+        <div style="font-size:13.5px;">
+          {% if backup_status.last_status == 'ok' %}
+          <span class="badge badge-status-Completed">OK</span>
+          {% else %}
+          <span class="badge badge-overdue">Failed</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% if backup_status.last_status == 'ok' %}
+    <div class="small muted mt-8">Database {{ (backup_status.db_bytes / 1024)|round(1) }} KB · Documents {{ (backup_status.documents_bytes / 1024)|round(1) }} KB{% if backup_status.pruned %} · {{ backup_status.pruned }} old file(s) pruned{% endif %}</div>
+    {% else %}
+    <div class="small mt-8" style="color:var(--danger);">{{ backup_status.last_error }}</div>
+    {% endif %}
+    {% else %}
+    <p class="muted small">No backup has run yet.</p>
+    {% endif %}
+
+    {% if backup_configured %}
+    <form method="POST" action="{{ url_for('auth.run_backup_now') }}" class="mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm btn-secondary">Run Backup Now</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>

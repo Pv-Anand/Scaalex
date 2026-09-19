@@ -120,6 +120,9 @@ def create_app(config_class=Config):
         db.create_all()
         _ensure_schema_migrations(app)
 
+    import backup
+    backup.start_scheduler(app)
+
     return app
 
 
