@@ -32,6 +32,7 @@ def global_list():
     return render_template(
         "decisions_global.html", decisions=decisions, clients=clients,
         current_client_id=client_id, current_status=status,
+        active_subtab="decisions",
     )
 
 
@@ -42,6 +43,7 @@ def client_list(slug):
     decisions = client.decisions.order_by(Decision.date.desc()).all()
     return render_template(
         "decisions_client.html", client=client, active_tab="decisions", decisions=decisions,
+        active_subtab="decisions",
     )
 
 

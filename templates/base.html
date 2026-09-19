@@ -18,8 +18,7 @@
       </div>
       <nav class="sidebar-nav">
         <a href="{{ url_for('home.index') }}" class="{{ 'active' if request.endpoint == 'home.index' }}">Home</a>
-        <a href="{{ url_for('action_items.global_list') }}" class="{{ 'active' if request.endpoint == 'action_items.global_list' }}">Action Items</a>
-        <a href="{{ url_for('decisions.global_list') }}" class="{{ 'active' if request.endpoint == 'decisions.global_list' }}">Decisions</a>
+        <a href="{{ url_for('action_items.global_list') }}" class="{{ 'active' if request.endpoint in ('action_items.global_list', 'decisions.global_list') }}">Tasks</a>
         <a href="{{ url_for('documents.global_list') }}" class="{{ 'active' if request.endpoint == 'documents.global_list' }}">Documents</a>
         <a href="{{ url_for('fireflies.inbox') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('fireflies.') }}">
           <span>Meetings</span>

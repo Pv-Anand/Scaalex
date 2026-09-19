@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Action Items — Scaalex Intelligence{% endblock %}
+{% block title %}Tasks — Scaalex Intelligence{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
     <div class="page-eyebrow">Institutional Record</div>
-    <h1>Action Items</h1>
+    <h1>Tasks</h1>
   </div>
 </div>
+{% include "_tasks_subtabs.html" %}
 
 <form class="filter-bar">
   <select name="client_id" onchange="this.form.submit()">

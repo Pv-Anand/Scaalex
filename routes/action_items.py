@@ -58,6 +58,7 @@ def global_list():
         "action_items_global.html", items=items, clients=clients,
         statuses=STATUSES, priorities=PRIORITIES,
         current_client_id=client_id, filters=request.args,
+        active_subtab="action",
     )
 
 
@@ -77,7 +78,7 @@ def client_list(slug):
     return render_template(
         "action_items_client.html", client=client, active_tab="action_items",
         items=items, statuses=STATUSES, priorities=PRIORITIES, filters=request.args,
-        people=sorted(people),
+        people=sorted(people), active_subtab="action",
     )
 
 
