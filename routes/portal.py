@@ -76,7 +76,7 @@ def login(portal_slug):
 
         flash("Invalid email or mobile number.", "error")
 
-    return render_template("portal_login.html", client=client)
+    return render_template("portal_login.html", client=client, current_year=datetime.utcnow().year)
 
 
 @portal_bp.route("/set-password", methods=["GET", "POST"])
@@ -305,7 +305,7 @@ def login():
             session["portal_candidate_ids"] = [c.id for c in matches]
             return redirect(url_for("portal_hub.choose"))
 
-    return render_template("portal_hub_login.html")
+    return render_template("portal_hub_login.html", current_year=datetime.utcnow().year)
 
 
 @portal_hub_bp.route("/choose", methods=["GET", "POST"])
