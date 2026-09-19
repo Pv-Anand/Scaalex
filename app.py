@@ -73,6 +73,8 @@ def create_app(config_class=Config):
             return {"sidebar_clients": [], "fireflies_uncategorized_count": 0, "sync_pending_count": 0}
 
         sidebar_clients = Client.query.order_by(Client.name).all()
+        if not current_user.is_admin:
+            sidebar_clients = [c for c in sidebar_clients if current_user.can_view_client(c.id)]
         uncategorized_count = FirefliesMeeting.query.filter_by(status="uncategorized").count()
 
         sync_pending_count = 0
@@ -95,6 +97,10 @@ def create_app(config_class=Config):
     def csrf_error(e):
         flash("Your session security token expired or was invalid. Please try again.", "error")
         return redirect(request.referrer or "/"), 302
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("error.html", code=403, message="You don't have access to this."), 403
 
     @app.errorhandler(404)
     def not_found(e):
@@ -212,6 +218,24 @@ def _ensure_schema_migrations(app):
             if column not in action_item_columns:
                 conn.execute(db.text(f"ALTER TABLE action_items ADD COLUMN {column} {ddl_type}"))
                 conn.commit()
+
+        # One-time role backfill for accounts that predate the Owner/
+        # Administrator/Executive system - everyone else defaults to
+        # "executive" (see User.role's column default) with no client
+        # access until an Admin grants it.
+        for email, role in (
+            ("anand@scaalex.com", "owner"),
+            ("sarfaraz@scaalex.com", "admin"),
+            ("sujith@scaalex.com", "admin"),
+        ):
+            conn.execute(
+                db.text(
+                    "UPDATE users SET role = :role WHERE email = :email "
+                    "AND (role IS NULL OR role NOT IN ('owner', 'admin', 'executive'))"
+                ),
+                {"role": role, "email": email},
+            )
+            conn.commit()
 
 
 app = create_app()

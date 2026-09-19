@@ -6,7 +6,9 @@
     <div class="page-eyebrow">Overview</div>
     <h1>What's happening across our clients</h1>
   </div>
+  {% if current_user.is_admin %}
   <a href="{{ url_for('clients.new') }}" class="btn btn-secondary">+ Add Client</a>
+  {% endif %}
 </div>
 
 <div class="stat-row">
@@ -98,11 +100,18 @@
     </div>
     {% endfor %}
   </div>
+  {% elif has_any_clients %}
+  <div class="empty-state">
+    <h3>No client access yet</h3>
+    <p>Ask an Administrator to grant you view or edit access on the Team page.</p>
+  </div>
   {% else %}
   <div class="empty-state">
     <h3>No clients yet</h3>
     <p>Add your first client to start building institutional memory.</p>
+    {% if current_user.is_admin %}
     <a href="{{ url_for('clients.new') }}" class="btn">+ Add Client</a>
+    {% endif %}
   </div>
   {% endif %}
 </div>

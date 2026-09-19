@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 
 from extensions import db
@@ -13,16 +13,22 @@ decisions_bp = Blueprint("decisions", __name__)
 @decisions_bp.route("/decisions")
 @login_required
 def global_list():
-    q = Decision.query
+    clients = Client.query.order_by(Client.name).all()
+    if not current_user.is_admin:
+        clients = [c for c in clients if current_user.can_view_client(c.id)]
+    accessible_ids = [c.id for c in clients]
+
+    q = Decision.query.filter(Decision.client_id.in_(accessible_ids))
     client_id = request.args.get("client_id", type=int)
-    if client_id:
+    if client_id and client_id in accessible_ids:
         q = q.filter_by(client_id=client_id)
+    else:
+        client_id = None
     status = request.args.get("status")
     if status:
         q = q.filter_by(status=status)
 
     decisions = q.order_by(Decision.date.desc()).all()
-    clients = Client.query.order_by(Client.name).all()
     return render_template(
         "decisions_global.html", decisions=decisions, clients=clients,
         current_client_id=client_id, current_status=status,
@@ -74,6 +80,8 @@ def new(slug):
 @login_required
 def update_status(decision_id):
     decision = Decision.query.get_or_404(decision_id)
+    if not current_user.can_edit_client(decision.client_id):
+        abort(403)
     decision.status = request.form.get("status", decision.status)
     log_activity(current_user.id, decision.client_id, "Decision status updated", "decision", decision.id)
     db.session.commit()

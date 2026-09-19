@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 
 from extensions import db
@@ -40,13 +40,19 @@ def _apply_filters_and_sort(q, args):
 @action_items_bp.route("/action-items")
 @login_required
 def global_list():
-    q = ActionItem.query
+    clients = Client.query.order_by(Client.name).all()
+    if not current_user.is_admin:
+        clients = [c for c in clients if current_user.can_view_client(c.id)]
+    accessible_ids = [c.id for c in clients]
+
+    q = ActionItem.query.filter(ActionItem.client_id.in_(accessible_ids))
     client_id = request.args.get("client_id", type=int)
-    if client_id:
+    if client_id and client_id in accessible_ids:
         q = q.filter_by(client_id=client_id)
+    else:
+        client_id = None
 
     items = _apply_filters_and_sort(q, request.args)
-    clients = Client.query.order_by(Client.name).all()
 
     return render_template(
         "action_items_global.html", items=items, clients=clients,
@@ -117,6 +123,8 @@ def new(slug):
 @login_required
 def update_status(item_id):
     item = ActionItem.query.get_or_404(item_id)
+    if not current_user.can_edit_client(item.client_id):
+        abort(403)
     new_status = request.form.get("status", item.status)
     item.status = new_status
     action = "Action item completed" if new_status == "Completed" else "Action item status updated"
@@ -132,6 +140,8 @@ def update_status(item_id):
 @login_required
 def edit(item_id):
     item = ActionItem.query.get_or_404(item_id)
+    if not current_user.can_edit_client(item.client_id):
+        abort(403)
 
     due_date = None
     due_str = request.form.get("due_date")

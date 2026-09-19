@@ -174,6 +174,18 @@ button { font-family: inherit; }
 .priority-group-header.priority-Medium { color: var(--warn); }
 .priority-group-header.priority-Low { color: var(--grey-700); }
 
+/* ---------- Team: roles & per-client access ---------- */
+.role-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; font-weight: 500; }
+.role-badge.role-owner { background: var(--black); color: var(--white); }
+.role-badge.role-admin { background: var(--grey-100); color: var(--charcoal); }
+.role-badge.role-executive { background: var(--grey-50); color: var(--grey-500); border: 1px solid var(--line); }
+.access-grid { display: grid; grid-template-columns: 1fr repeat(3, 90px); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.access-grid > div { padding: 10px 12px; font-size: 12.5px; border-bottom: 1px solid var(--grey-100); display: flex; align-items: center; }
+.access-grid > div:nth-last-child(-n+4) { border-bottom: none; }
+.access-head { background: var(--grey-50); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-500); font-weight: 500; justify-content: center; }
+.access-head:first-child { justify-content: flex-start; }
+.access-radio { justify-content: center; }
+
 /* ---------- Sub nav (client tabs) ---------- */
 .subnav { display: flex; gap: 0; justify-content: space-between; border-bottom: 1px solid var(--line); margin-bottom: 28px; flex-wrap: wrap; }
 .subnav a { padding: 9px 8px; font-size: 12px; color: var(--grey-500); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }

@@ -6,22 +6,65 @@
     <div class="page-eyebrow">Account</div>
     <h1>Team</h1>
   </div>
+  <button type="button" class="btn" onclick="toggleAddUser()">+ Add User</button>
+</div>
+<p class="small muted mb-24">Owners and Administrators manage the team and reset passwords. Executives only see the clients they're granted access to.</p>
+
+<div id="add-user-panel" class="card mb-24" style="display:none; background:var(--grey-50);">
+  <div style="font-size:13.5px; font-weight:600; margin-bottom:14px;">Add User</div>
+  <form method="POST" action="{{ url_for('auth.add_user') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" name="name" placeholder="Full name" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="name@scaalex.com" required>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select name="role">
+          <option value="executive">Executive</option>
+          <option value="admin">Administrator</option>
+          {% if current_user.is_owner %}
+          <option value="owner">Owner</option>
+          {% endif %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Initial Password</label>
+        <input type="text" name="password" placeholder="At least 8 characters" minlength="8" required>
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:4px; padding-top:0; border-top:none;">
+      <button type="submit" class="btn btn-sm">Create User</button>
+      <button type="button" class="link-btn small muted" onclick="toggleAddUser()">Cancel</button>
+    </div>
+  </form>
 </div>
 
-<div class="table-wrap" style="max-width:720px;">
+<div class="table-wrap">
   <table class="table">
-    <thead><tr><th>Name</th><th>Email</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th style="width:260px;"></th></tr></thead>
     <tbody>
       {% for u in users %}
       <tr>
-        <td>{{ u.name }}</td>
+        <td>{{ u.name }}{% if u.id == current_user.id %} <span class="small muted">(you)</span>{% endif %}</td>
         <td>{{ u.email }}</td>
+        <td><span class="role-badge role-{{ u.role }}">{{ u.role_label }}</span></td>
         <td style="white-space:nowrap;">
           <button type="button" class="link-btn small" onclick="toggleResetPassword({{ u.id }})">Reset Password</button>
+          {% if u.id != current_user.id %}
+          &middot;
+          <button type="button" class="link-btn small" onclick="toggleManage({{ u.id }})" style="font-weight:600;">Manage</button>
+          {% endif %}
         </td>
       </tr>
+
       <tr id="reset-password-row-{{ u.id }}" style="display:none;">
-        <td colspan="3" style="background:var(--grey-50); padding:18px;">
+        <td colspan="4" style="background:var(--grey-50); padding:18px;">
           <form method="POST" action="{{ url_for('auth.reset_password', user_id=u.id) }}" style="display:flex; align-items:flex-end; gap:12px;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group" style="flex:1; margin-bottom:0;">
@@ -33,6 +76,51 @@
           </form>
         </td>
       </tr>
+
+      {% if u.id != current_user.id %}
+      <tr id="manage-row-{{ u.id }}" style="display:none;">
+        <td colspan="4" style="background:var(--grey-50); padding:20px;">
+          <form method="POST" action="{{ url_for('auth.update_role', user_id=u.id) }}" style="display:flex; align-items:flex-end; gap:14px; margin-bottom:18px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Role</label>
+              <select name="role" style="width:200px;">
+                <option value="executive" {{ 'selected' if u.role == 'executive' }}>Executive</option>
+                <option value="admin" {{ 'selected' if u.role == 'admin' }}>Administrator</option>
+                {% if current_user.is_owner %}
+                <option value="owner" {{ 'selected' if u.role == 'owner' }}>Owner</option>
+                {% endif %}
+              </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-secondary">Update Role</button>
+            <div class="small muted" style="padding-bottom:9px;">Client access below only applies while the role is Executive.</div>
+          </form>
+
+          <form method="POST" action="{{ url_for('auth.update_access', user_id=u.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="access-grid mb-16">
+              <div class="access-head">Client</div>
+              <div class="access-head">No Access</div>
+              <div class="access-head">View</div>
+              <div class="access-head">Edit</div>
+              {% for c in clients %}
+              {% set current_level = access_map.get((u.id, c.id), 'none') %}
+              <div>{{ c.name }}</div>
+              <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="none" {{ 'checked' if current_level == 'none' }}></div>
+              <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="view" {{ 'checked' if current_level == 'view' }}></div>
+              <div class="access-radio"><input type="radio" name="access_{{ c.id }}" value="edit" {{ 'checked' if current_level == 'edit' }}></div>
+              {% else %}
+              <div style="grid-column:1/-1; color:var(--grey-500);">No clients yet.</div>
+              {% endfor %}
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button type="submit" class="btn btn-sm">Save Access</button>
+              <button type="button" class="link-btn small muted" onclick="toggleManage({{ u.id }})">Close</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% endif %}
       {% endfor %}
     </tbody>
   </table>
@@ -40,8 +128,16 @@
 {% endblock %}
 {% block scripts %}
 <script>
+function toggleAddUser() {
+  const panel = document.getElementById('add-user-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
 function toggleResetPassword(userId) {
   const row = document.getElementById('reset-password-row-' + userId);
+  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+function toggleManage(userId) {
+  const row = document.getElementById('manage-row-' + userId);
   row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
 }
 </script>

@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app, abort
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -20,12 +20,18 @@ def _allowed(filename):
 @documents_bp.route("/documents")
 @login_required
 def global_list():
-    q = Document.query
-    client_id = request.args.get("client_id", type=int)
-    if client_id:
-        q = q.filter_by(client_id=client_id)
-    documents = q.order_by(Document.uploaded_at.desc()).all()
     clients = Client.query.order_by(Client.name).all()
+    if not current_user.is_admin:
+        clients = [c for c in clients if current_user.can_view_client(c.id)]
+    accessible_ids = [c.id for c in clients]
+
+    q = Document.query.filter(Document.client_id.in_(accessible_ids))
+    client_id = request.args.get("client_id", type=int)
+    if client_id and client_id in accessible_ids:
+        q = q.filter_by(client_id=client_id)
+    else:
+        client_id = None
+    documents = q.order_by(Document.uploaded_at.desc()).all()
     return render_template("documents_global.html", documents=documents, clients=clients, current_client_id=client_id)
 
 
@@ -107,6 +113,8 @@ def upload(slug):
 @login_required
 def download(doc_id):
     doc = Document.query.get_or_404(doc_id)
+    if not current_user.can_view_client(doc.client_id):
+        abort(403)
     return send_from_directory(
         current_app.config["DOCUMENT_UPLOAD_FOLDER"], doc.stored_name,
         as_attachment=True, download_name=doc.file_name,

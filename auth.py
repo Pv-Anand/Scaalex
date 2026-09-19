@@ -4,7 +4,8 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_user, logout_user, login_required, current_user
 
 from extensions import db, limiter
-from models import User
+from models import User, Client, ClientAccess, ROLES, ROLE_LABELS, log_activity
+from permissions import admin_required
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -55,13 +56,58 @@ def account():
 
 @auth_bp.route("/team")
 @login_required
+@admin_required
 def team():
     users = User.query.order_by(User.name).all()
-    return render_template("team.html", users=users)
+    clients = Client.query.order_by(Client.name).all()
+
+    access_map = {}
+    for grant in ClientAccess.query.all():
+        access_map[(grant.user_id, grant.client_id)] = grant.access_level
+
+    return render_template(
+        "team.html", users=users, clients=clients, access_map=access_map,
+        roles=ROLES, role_labels=ROLE_LABELS,
+    )
+
+
+@auth_bp.route("/team/new", methods=["POST"])
+@login_required
+@admin_required
+def add_user():
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    role = request.form.get("role", "executive")
+    password = request.form.get("password", "")
+
+    if not name or not email:
+        flash("Name and email are required.", "error")
+        return redirect(url_for("auth.team"))
+    if role not in ROLES:
+        role = "executive"
+    if role == "owner" and not current_user.is_owner:
+        flash("Only the Owner can create another Owner account.", "error")
+        return redirect(url_for("auth.team"))
+    if len(password) < 8:
+        flash("Initial password must be at least 8 characters.", "error")
+        return redirect(url_for("auth.team"))
+    if User.query.filter_by(email=email).first():
+        flash(f"{email} is already in use.", "error")
+        return redirect(url_for("auth.team"))
+
+    user = User(name=name, email=email, role=role)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.flush()
+    log_activity(current_user.id, None, "User created", "user", user.id, details=f"{name} ({role})")
+    db.session.commit()
+    flash(f"{name} added as {user.role_label}.", "success")
+    return redirect(url_for("auth.team"))
 
 
 @auth_bp.route("/team/<int:user_id>/reset-password", methods=["POST"])
 @login_required
+@admin_required
 def reset_password(user_id):
     user = User.query.get_or_404(user_id)
     new_password = request.form.get("new_password", "")
@@ -69,6 +115,55 @@ def reset_password(user_id):
         flash("Password must be at least 8 characters.", "error")
         return redirect(url_for("auth.team"))
     user.set_password(new_password)
+    log_activity(current_user.id, None, "Password reset", "user", user.id, details=user.name)
     db.session.commit()
     flash(f"Password updated for {user.name}.", "success")
+    return redirect(url_for("auth.team"))
+
+
+@auth_bp.route("/team/<int:user_id>/role", methods=["POST"])
+@login_required
+@admin_required
+def update_role(user_id):
+    user = User.query.get_or_404(user_id)
+    new_role = request.form.get("role", "")
+
+    if user.id == current_user.id:
+        flash("You can't change your own role.", "error")
+        return redirect(url_for("auth.team"))
+    if new_role not in ROLES:
+        flash("Not a valid role.", "error")
+        return redirect(url_for("auth.team"))
+    if (new_role == "owner" or user.role == "owner") and not current_user.is_owner:
+        flash("Only the Owner can assign the Owner role or change another Owner.", "error")
+        return redirect(url_for("auth.team"))
+
+    user.role = new_role
+    log_activity(current_user.id, None, "Role changed", "user", user.id, details=f"{user.name} → {user.role_label}")
+    db.session.commit()
+    flash(f"{user.name} is now {user.role_label}.", "success")
+    return redirect(url_for("auth.team"))
+
+
+@auth_bp.route("/team/<int:user_id>/access", methods=["POST"])
+@login_required
+@admin_required
+def update_access(user_id):
+    user = User.query.get_or_404(user_id)
+    clients = Client.query.all()
+
+    for client in clients:
+        level = request.form.get(f"access_{client.id}", "none")
+        grant = ClientAccess.query.filter_by(user_id=user.id, client_id=client.id).first()
+        if level in ("view", "edit"):
+            if grant:
+                grant.access_level = level
+            else:
+                db.session.add(ClientAccess(user_id=user.id, client_id=client.id, access_level=level))
+        elif grant:
+            db.session.delete(grant)
+
+    log_activity(current_user.id, None, "Client access updated", "user", user.id, details=user.name)
+    db.session.commit()
+    flash(f"Client access updated for {user.name}.", "success")
     return redirect(url_for("auth.team"))

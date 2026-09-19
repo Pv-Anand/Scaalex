@@ -31,6 +31,10 @@ class JSONText(db.TypeDecorator):
             return []
 
 
+ROLES = ["owner", "admin", "executive"]
+ROLE_LABELS = {"owner": "Owner", "admin": "Administrator", "executive": "Executive"}
+
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
@@ -38,7 +42,7 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(200), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(40), default="advisor")
+    role = db.Column(db.String(40), default="executive")
     created_at = db.Column(db.DateTime, default=_now)
 
     def set_password(self, password):
@@ -48,6 +52,32 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def role_label(self):
+        return ROLE_LABELS.get(self.role, self.role)
+
+    @property
+    def is_owner(self):
+        return self.role == "owner"
+
+    @property
+    def is_admin(self):
+        # Owner is a superset of Administrator - both manage the team and
+        # bypass per-client access grants. Only Executives are scoped by
+        # ClientAccess rows.
+        return self.role in ("owner", "admin")
+
+    def can_view_client(self, client_id):
+        if self.is_admin:
+            return True
+        return ClientAccess.query.filter_by(user_id=self.id, client_id=client_id).first() is not None
+
+    def can_edit_client(self, client_id):
+        if self.is_admin:
+            return True
+        grant = ClientAccess.query.filter_by(user_id=self.id, client_id=client_id).first()
+        return grant is not None and grant.access_level == "edit"
 
 
 class Client(db.Model):
@@ -124,6 +154,24 @@ class Client(db.Model):
     @property
     def decision_count(self):
         return self.decisions.count()
+
+
+class ClientAccess(db.Model):
+    """Grants an Executive view or edit access to one client. Owners and
+    Administrators never need a row here - User.is_admin bypasses this
+    entirely, so this table only ever matters for role == "executive"."""
+
+    __tablename__ = "client_access"
+    __table_args__ = (db.UniqueConstraint("user_id", "client_id", name="uq_client_access_user_client"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False)
+    access_level = db.Column(db.String(10), nullable=False)  # view, edit
+    created_at = db.Column(db.DateTime, default=_now)
+
+    user = db.relationship("User", backref="client_access_grants")
+    client = db.relationship("Client")
 
 
 class ClientContact(db.Model):

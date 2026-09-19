@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 
 from extensions import db
 from models import Client, ClientContact, Conversation, Decision, ActionItem, Milestone, MilestoneRequest, log_activity
+from permissions import admin_required
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/clients")
 
@@ -29,6 +30,10 @@ def get_client_or_404(slug):
     client = Client.query.filter_by(slug=slug).first()
     if not client:
         abort(404)
+    if not current_user.can_view_client(client.id):
+        abort(403)
+    if request.method == "POST" and not current_user.can_edit_client(client.id):
+        abort(403)
     return client
 
 
@@ -54,6 +59,7 @@ def _ensure_portal_slug(client):
 
 @clients_bp.route("/new", methods=["GET", "POST"])
 @login_required
+@admin_required
 def new():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
