@@ -28,7 +28,11 @@
         <td><a href="{{ url_for('clients.overview', slug=d.client.slug) }}">{{ d.client.name }}</a></td>
         <td>{{ d.file_type|upper }}</td>
         <td>{{ d.uploaded_at.strftime('%d %b %Y') }}</td>
-        <td><a href="{{ url_for('documents.download', doc_id=d.id) }}" class="small">Download</a></td>
+        <td>
+          <a href="{{ url_for('documents.download', doc_id=d.id) }}" class="icon-btn" aria-label="Download" title="Download">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12M12 16l-4-4M12 16l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke-linecap="round"/></svg>
+          </a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
