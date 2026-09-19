@@ -198,21 +198,20 @@ button { font-family: inherit; }
 .dot-decision { background: var(--grey-700); }
 .dot-milestone { background: var(--success); }
 
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.cal-dow { background: var(--grey-50); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-500); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--grey-100); }
-.cal-dow:last-child { border-right: none; }
-.cal-cell { min-height: 108px; padding: 8px; border-right: 1px solid var(--grey-100); border-bottom: 1px solid var(--grey-100); cursor: pointer; display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: inherit; }
+.cal-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.cal-cell { min-height: 260px; min-width: 0; padding: 12px; border-right: 1px solid var(--grey-100); cursor: pointer; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; }
+.cal-cell:last-child { border-right: none; }
 .cal-cell:hover { background: var(--grey-50); }
-.cal-cell.out { color: var(--grey-300); background: #fcfcfc; }
 .cal-cell.today { background: var(--grey-50); }
 .cal-cell.selected { outline: 2px solid var(--black); outline-offset: -2px; }
 .cal-cell.has-overdue { border-left: 3px solid var(--danger); }
-.cal-daynum { font-size: 12px; font-weight: 500; }
-.cal-daynum-today { width: 20px; height: 20px; border-radius: 999px; background: var(--black); color: var(--white); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.cal-strip-dow { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-500); font-weight: 600; }
+.cal-daynum { font-size: 15px; font-weight: 600; }
+.cal-daynum-today { width: 26px; height: 26px; border-radius: 999px; background: var(--black); color: var(--white); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 .cal-type-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .cal-type-count { display: flex; align-items: center; gap: 2px; font-size: 9.5px; font-weight: 600; color: var(--grey-700); }
 .cal-type-count .legend-dot { margin-right: 0; }
-.cal-chip { font-size: 10.5px; padding: 3px 6px; border-radius: 3px; display: flex; align-items: center; gap: 6px; background: var(--grey-50); color: var(--charcoal); }
+.cal-chip { font-size: 10.5px; padding: 3px 6px; border-radius: 3px; display: flex; align-items: center; gap: 6px; background: var(--grey-50); color: var(--charcoal); min-width: 0; }
 .cal-chip-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; flex: 1; }
 .cal-chip-count { flex-shrink: 0; font-size: 10px; font-weight: 600; color: var(--grey-700); background: var(--white); border: 1px solid var(--line); border-radius: 20px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
 .cal-more { font-size: 10px; color: var(--grey-500); padding-left: 6px; }

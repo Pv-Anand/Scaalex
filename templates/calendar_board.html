@@ -8,8 +8,7 @@
   </div>
   <div class="flex-gap" style="align-items:center;">
     <form method="GET">
-      <input type="hidden" name="year" value="{{ year }}">
-      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="start" value="{{ window_start.isoformat() }}">
       <select name="client_id" onchange="this.form.submit()">
         <option value="">All Clients</option>
         {% for c in clients %}
@@ -24,11 +23,11 @@
 
 <div class="flex-between mb-16">
   <div class="flex-gap" style="align-items:center; gap:12px;">
-    <a href="{{ url_for('calendar_board.board', year=prev_year, month=prev_month, client_id=current_client_id) }}" class="icon-btn" aria-label="Previous month">
+    <a href="{{ url_for('calendar_board.board', start=prev_start.isoformat(), client_id=current_client_id) }}" class="icon-btn" aria-label="Previous 5 days">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
-    <div style="font-size:15px; font-weight:600; width:150px; text-align:center;">{{ month_label }}</div>
-    <a href="{{ url_for('calendar_board.board', year=next_year, month=next_month, client_id=current_client_id) }}" class="icon-btn" aria-label="Next month">
+    <div style="font-size:15px; font-weight:600; text-align:center;">{{ window_label }}</div>
+    <a href="{{ url_for('calendar_board.board', start=next_start.isoformat(), client_id=current_client_id) }}" class="icon-btn" aria-label="Next 5 days">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
   </div>
@@ -43,15 +42,13 @@
 
 <div style="display:grid; grid-template-columns: 1fr 340px; gap:28px; align-items:start;">
 
-  <div class="cal-grid">
-    <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div><div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div>
-
-    {% for week in weeks %}
-    {% for d in week %}
+  <div class="cal-strip">
+    {% for d in days %}
     {% set day_clients = clients_by_day.get(d, []) %}
     {% set t = type_summary_by_day.get(d) %}
-    <a href="{{ url_for('calendar_board.board', year=d.year, month=d.month, date=d.isoformat(), client_id=current_client_id) }}"
-       class="cal-cell {{ 'out' if d.month != month }} {{ 'today' if d == today }} {{ 'selected' if d == selected }} {{ 'has-overdue' if t and t.overdue }}">
+    <a href="{{ url_for('calendar_board.board', start=window_start.isoformat(), date=d.isoformat(), client_id=current_client_id) }}"
+       class="cal-cell {{ 'today' if d == today }} {{ 'selected' if d == selected }} {{ 'has-overdue' if t and t.overdue }}">
+      <div class="cal-strip-dow">{{ d.strftime('%a') }}</div>
       {% if d == today %}
       <div class="cal-daynum-today">{{ d.day }}</div>
       {% else %}
@@ -66,14 +63,13 @@
         {% if t.milestone %}<span class="cal-type-count"><span class="legend-dot dot-milestone"></span>{{ t.milestone }}</span>{% endif %}
       </div>
       {% endif %}
-      {% for client, count in day_clients[:2] %}
+      {% for client, count in day_clients[:4] %}
       <div class="cal-chip"><span class="cal-chip-name">{{ client.name }}</span></div>
       {% endfor %}
-      {% if day_clients|length > 2 %}
-      <div class="cal-more">+{{ day_clients|length - 2 }} more</div>
+      {% if day_clients|length > 4 %}
+      <div class="cal-more">+{{ day_clients|length - 4 }} more</div>
       {% endif %}
     </a>
-    {% endfor %}
     {% endfor %}
   </div>
 

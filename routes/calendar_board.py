@@ -1,8 +1,7 @@
-"""Calendar / Activity Board - a cross-client month view over everything
-with a date: conversations held, action item due dates, decisions made,
-and milestone deadlines. Read-only aggregation over existing models, no
-new tables."""
-import calendar as calendar_module
+"""Calendar / Activity Board - a cross-client rolling day-strip view over
+everything with a date: conversations held, action item due dates,
+decisions made, and milestone deadlines. Read-only aggregation over
+existing models, no new tables."""
 from datetime import date, datetime, timedelta
 
 from flask import Blueprint, render_template, request, url_for
@@ -11,6 +10,8 @@ from flask_login import login_required, current_user
 from models import Client, Conversation, ActionItem, Decision, Milestone
 
 calendar_board_bp = Blueprint("calendar_board", __name__)
+
+WINDOW_DAYS = 5
 
 
 def _accessible_clients():
@@ -24,10 +25,16 @@ def _accessible_clients():
 @login_required
 def board():
     today = date.today()
-    year = request.args.get("year", type=int) or today.year
-    month = request.args.get("month", type=int) or today.month
-    if month < 1 or month > 12:
-        year, month = today.year, today.month
+    start_str = request.args.get("start")
+    try:
+        window_start = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else today
+    except ValueError:
+        window_start = today
+
+    days = [window_start + timedelta(days=i) for i in range(WINDOW_DAYS)]
+    window_end = days[-1]
+    prev_start = window_start - timedelta(days=WINDOW_DAYS)
+    next_start = window_start + timedelta(days=WINDOW_DAYS)
 
     client_id = request.args.get("client_id", type=int)
     selected_str = request.args.get("date")
@@ -46,11 +53,16 @@ def board():
         client_id = None
         filter_ids = accessible_ids
 
-    cal = calendar_module.Calendar(firstweekday=6)  # Sunday-start weeks
-    month_days = list(cal.itermonthdates(year, month))
-    range_start, range_end = month_days[0], month_days[-1]
+    # "This Week" (Sun-Sat around today) is always reported regardless of
+    # which days are currently in view, so the query range covers the union
+    # of the visible window and that week.
+    week_start = today - timedelta(days=(today.weekday() + 1) % 7)  # back up to Sunday
+    week_end = week_start + timedelta(days=6)
+    range_start = min(window_start, week_start)
+    range_end = max(window_end, week_end)
+    all_days = [range_start + timedelta(days=i) for i in range((range_end - range_start).days + 1)]
 
-    activities_by_day = {d: [] for d in month_days}
+    activities_by_day = {d: [] for d in all_days}
 
     def add(day, item):
         if day in activities_by_day:
@@ -156,8 +168,6 @@ def board():
                 counts[it["type"]] += 1
         type_summary_by_day[d] = counts
 
-    week_start = today - timedelta(days=(today.weekday() + 1) % 7)  # back up to Sunday
-    week_end = week_start + timedelta(days=6)
     week_counts = {"meeting": 0, "action": 0, "milestone": 0, "decision": 0}
     for d, items in activities_by_day.items():
         if week_start <= d <= week_end:
@@ -167,17 +177,19 @@ def board():
     selected_items = activities_by_day.get(selected, [])
     selected_clients = {it["client"].id for it in selected_items}
 
-    prev_month, prev_year = (12, year - 1) if month == 1 else (month - 1, year)
-    next_month, next_year = (1, year + 1) if month == 12 else (month + 1, year)
-    weeks = [month_days[i:i + 7] for i in range(0, len(month_days), 7)]
+    if window_start.year == window_end.year and window_start.month == window_end.month:
+        window_label = f"{window_start.day} – {window_end.strftime('%d %b %Y')}"
+    elif window_start.year == window_end.year:
+        window_label = f"{window_start.strftime('%d %b')} – {window_end.strftime('%d %b %Y')}"
+    else:
+        window_label = f"{window_start.strftime('%d %b %Y')} – {window_end.strftime('%d %b %Y')}"
 
     return render_template(
         "calendar_board.html",
         clients=clients, current_client_id=client_id,
-        year=year, month=month, month_label=date(year, month, 1).strftime("%B %Y"),
-        prev_year=prev_year, prev_month=prev_month,
-        next_year=next_year, next_month=next_month,
-        weeks=weeks, today=today, selected=selected,
+        window_start=window_start, window_label=window_label,
+        prev_start=prev_start, next_start=next_start,
+        days=days, today=today, selected=selected,
         activities_by_day=activities_by_day, clients_by_day=clients_by_day,
         type_summary_by_day=type_summary_by_day,
         selected_items=selected_items, selected_client_count=len(selected_clients),
