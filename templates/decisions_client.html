@@ -12,14 +12,14 @@
 {% if decisions %}
 
   {% if needs_confirmation %}
-  <div class="flex-between mb-4">
+  <div class="flex-gap mb-4" style="gap:10px;">
     <h3 class="section-title" style="margin-bottom:0; font-size:14px;">Needs Confirmation</h3>
     <span class="badge badge-needs-confirmation">{{ needs_confirmation|length }}</span>
   </div>
   <p class="small muted mb-16">Logged from a conversation or meeting — confirm to lock these in as final.</p>
   {% for d in needs_confirmation %}
   <div class="decision-card decision-card-pending mb-12">
-    <div class="flex-between" style="align-items:flex-start; gap:16px;">
+    <div class="flex-between decision-pending-row" style="align-items:flex-start; gap:16px;">
       <div style="flex:1; min-width:0;">
         <div class="decision-title">{{ d.decision }}</div>
         <div class="decision-chips">

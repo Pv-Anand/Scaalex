@@ -198,8 +198,9 @@ button { font-family: inherit; }
 .dot-decision { background: var(--grey-700); }
 .dot-milestone { background: var(--success); }
 
+.calendar-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start; }
 .cal-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.cal-cell { min-height: 260px; min-width: 0; padding: 12px; border-right: 1px solid var(--grey-100); cursor: pointer; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; }
+.cal-cell { min-height: 150px; min-width: 0; padding: 12px; border-right: 1px solid var(--grey-100); cursor: pointer; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; }
 .cal-cell:last-child { border-right: none; }
 .cal-cell:hover { background: var(--grey-50); }
 .cal-cell.today { background: var(--grey-50); }
@@ -618,4 +619,12 @@ a.auth-submit { justify-content: center; text-decoration: none; margin-top: 16px
   .form-row { flex-direction: column; gap: 12px; }
 
   .type-picker { grid-template-columns: 1fr; }
+
+  .calendar-layout { grid-template-columns: 1fr; }
+  .cal-strip { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(130px, 1fr); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cal-cell { min-height: 130px; }
+
+  .decision-pending-row { flex-direction: column; align-items: stretch; }
+  .decision-pending-row form { width: 100%; }
+  .decision-pending-row form button { width: 100%; justify-content: center; }
 }
