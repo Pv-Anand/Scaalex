@@ -240,6 +240,25 @@ button { font-family: inherit; }
 .table-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table select { min-width: 152px; padding: 6px 26px 6px 8px; background-position: right 8px center; font-size: 12.5px; }
 
+/* ---------- Action items table: fixed columns, dividers, zebra rows ---------- */
+.action-table { table-layout: fixed; min-width: 900px; }
+.action-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.action-table .col-task { width: 36%; }
+.action-table .col-client { width: 11%; }
+.action-table .col-assignee { width: 9%; }
+.action-table .col-owner { width: 9%; }
+.action-table .col-due { width: 10%; }
+.action-table .col-priority { width: 8%; }
+.action-table .col-status { width: 17%; }
+.action-table th, .action-table td { border-left: 1px solid var(--grey-100); }
+.action-table th:first-child, .action-table td:first-child { border-left: none; }
+.action-table tbody tr:nth-child(even) td { background: var(--grey-50); }
+.action-table tbody tr:hover td { background: var(--grey-100); }
+.action-table-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.45; }
+.action-table-empty { color: var(--grey-300); }
+.needs-confirmation-badge { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; background: var(--warn-bg); color: var(--warn); }
+.status-pill-select { border-radius: 20px; width: 100%; }
+
 .list-item { padding: 14px 0; border-bottom: 1px solid var(--grey-100); }
 .list-item:last-child { border-bottom: none; }
 

@@ -32,19 +32,25 @@
 
 {% if items %}
 <div class="table-wrap">
-  <table class="table">
+  <table class="table action-table">
+    <colgroup>
+      <col class="col-task"><col class="col-client"><col class="col-assignee"><col class="col-owner"><col class="col-due"><col class="col-priority"><col class="col-status">
+    </colgroup>
     <thead><tr><th>Task</th><th>Client</th><th>Assignee</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead>
     <tbody>
       {% for a in items %}
       <tr>
-        <td>{{ a.task }}{% if a.needs_confirmation %} <span class="needs-confirmation-tag small">Needs Confirmation</span>{% endif %}</td>
+        <td>
+          <div class="action-table-clamp">{{ a.task }}</div>
+          {% if a.needs_confirmation %}<span class="needs-confirmation-badge">Needs Confirmation</span>{% endif %}
+        </td>
         <td><a href="{{ url_for('clients.overview', slug=a.client.slug) }}">{{ a.client.name }}</a></td>
-        <td>{{ a.assignee or '—' }}</td>
+        <td>{% if a.assignee %}{{ a.assignee }}{% else %}<span class="action-table-empty">—</span>{% endif %}</td>
         <td>{{ a.owner }}</td>
-        <td class="{{ 'overdue-text' if a.is_overdue }}">{{ a.due_date.strftime('%d %b %Y') if a.due_date else '—' }}{% if a.is_overdue %} (Overdue){% endif %}</td>
+        <td class="{{ 'overdue-text' if a.is_overdue }}">{% if a.due_date %}{{ a.due_date.strftime('%d %b %Y') }}{% if a.is_overdue %} (Overdue){% endif %}{% else %}<span class="action-table-empty">—</span>{% endif %}</td>
         <td><span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span></td>
         <td>
-          <select onchange="updateActionStatus({{ a.id }}, this.value, this)">
+          <select class="status-pill-select" onchange="updateActionStatus({{ a.id }}, this.value, this)">
             {% for s in statuses %}
             <option value="{{ s }}" {{ 'selected' if s == a.status }}>{{ s }}</option>
             {% endfor %}
