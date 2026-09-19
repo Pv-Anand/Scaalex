@@ -144,6 +144,18 @@ def board():
             counts[c.id] += 1
         clients_by_day[d] = [(c, counts[c.id]) for c in order]
 
+    # Per-day counts by type (plus a separate overdue bucket), used to render
+    # composition dots on each cell instead of a bare client/count chip.
+    type_summary_by_day = {}
+    for d, items in activities_by_day.items():
+        counts = {"meeting": 0, "action": 0, "overdue": 0, "decision": 0, "milestone": 0}
+        for it in items:
+            if it["type"] == "action" and it.get("meta_danger"):
+                counts["overdue"] += 1
+            else:
+                counts[it["type"]] += 1
+        type_summary_by_day[d] = counts
+
     week_start = today - timedelta(days=(today.weekday() + 1) % 7)  # back up to Sunday
     week_end = week_start + timedelta(days=6)
     week_counts = {"meeting": 0, "action": 0, "milestone": 0, "decision": 0}
@@ -167,6 +179,7 @@ def board():
         next_year=next_year, next_month=next_month,
         weeks=weeks, today=today, selected=selected,
         activities_by_day=activities_by_day, clients_by_day=clients_by_day,
+        type_summary_by_day=type_summary_by_day,
         selected_items=selected_items, selected_client_count=len(selected_clients),
         week_counts=week_counts,
     )

@@ -35,6 +35,7 @@
   <div class="flex-gap" style="gap:16px; font-size:11.5px; color:var(--grey-700);">
     <span><span class="legend-dot dot-meeting"></span>Meeting</span>
     <span><span class="legend-dot dot-action"></span>Action Due</span>
+    <span><span class="legend-dot dot-action overdue"></span>Overdue</span>
     <span><span class="legend-dot dot-decision"></span>Decision</span>
     <span><span class="legend-dot dot-milestone"></span>Milestone</span>
   </div>
@@ -48,14 +49,28 @@
     {% for week in weeks %}
     {% for d in week %}
     {% set day_clients = clients_by_day.get(d, []) %}
+    {% set t = type_summary_by_day.get(d) %}
     <a href="{{ url_for('calendar_board.board', year=d.year, month=d.month, date=d.isoformat(), client_id=current_client_id) }}"
-       class="cal-cell {{ 'out' if d.month != month }} {{ 'today' if d == today }} {{ 'selected' if d == selected }}">
+       class="cal-cell {{ 'out' if d.month != month }} {{ 'today' if d == today }} {{ 'selected' if d == selected }} {{ 'has-overdue' if t and t.overdue }}">
+      {% if d == today %}
+      <div class="cal-daynum-today">{{ d.day }}</div>
+      {% else %}
       <div class="cal-daynum">{{ d.day }}</div>
-      {% for client, count in day_clients[:3] %}
-      <div class="cal-chip"><span class="cal-chip-name">{{ client.name }}</span><span class="cal-chip-count">{{ count }}</span></div>
+      {% endif %}
+      {% if t and (t.meeting or t.action or t.overdue or t.decision or t.milestone) %}
+      <div class="cal-type-row">
+        {% if t.meeting %}<span class="cal-type-count"><span class="legend-dot dot-meeting"></span>{{ t.meeting }}</span>{% endif %}
+        {% if t.action %}<span class="cal-type-count"><span class="legend-dot dot-action"></span>{{ t.action }}</span>{% endif %}
+        {% if t.overdue %}<span class="cal-type-count"><span class="legend-dot dot-action overdue"></span>{{ t.overdue }}</span>{% endif %}
+        {% if t.decision %}<span class="cal-type-count"><span class="legend-dot dot-decision"></span>{{ t.decision }}</span>{% endif %}
+        {% if t.milestone %}<span class="cal-type-count"><span class="legend-dot dot-milestone"></span>{{ t.milestone }}</span>{% endif %}
+      </div>
+      {% endif %}
+      {% for client, count in day_clients[:2] %}
+      <div class="cal-chip"><span class="cal-chip-name">{{ client.name }}</span></div>
       {% endfor %}
-      {% if day_clients|length > 3 %}
-      <div class="cal-more">+{{ day_clients|length - 3 }} more</div>
+      {% if day_clients|length > 2 %}
+      <div class="cal-more">+{{ day_clients|length - 2 }} more</div>
       {% endif %}
     </a>
     {% endfor %}
@@ -64,7 +79,7 @@
 
   <div>
     <div class="card">
-      <div style="font-size:13.5px; font-weight:600; margin-bottom:2px;">Activity — {{ selected.strftime('%d %b %Y') }}</div>
+      <div style="font-size:13.5px; font-weight:600; margin-bottom:2px;">{% if selected == today %}Today — {% endif %}{{ selected.strftime('%a, %d %b %Y') }}</div>
       <div class="small muted mb-16">{{ selected_items|length }} item{{ 's' if selected_items|length != 1 }}{% if selected_client_count %} across {{ selected_client_count }} client{{ 's' if selected_client_count != 1 }}{% endif %}</div>
 
       {% if selected_items %}
@@ -86,12 +101,14 @@
       {% endif %}
     </div>
 
-    <div class="card mt-20">
+    <div class="mt-20">
       <div style="font-size:13.5px; font-weight:600; margin-bottom:12px;">This Week</div>
-      <div class="flex-between" style="font-size:12.5px; padding:6px 0;"><span>Meetings held</span><strong>{{ week_counts.meeting }}</strong></div>
-      <div class="flex-between" style="font-size:12.5px; padding:6px 0;"><span>Action items due</span><strong>{{ week_counts.action }}</strong></div>
-      <div class="flex-between" style="font-size:12.5px; padding:6px 0;"><span>Milestones due</span><strong>{{ week_counts.milestone }}</strong></div>
-      <div class="flex-between" style="font-size:12.5px; padding:6px 0;"><span>Decisions made</span><strong>{{ week_counts.decision }}</strong></div>
+      <div class="week-stat-grid">
+        <div class="week-stat-cell"><div class="num {{ 'is-zero' if not week_counts.meeting }}">{{ week_counts.meeting }}</div><div class="label">Meetings Held</div></div>
+        <div class="week-stat-cell"><div class="num {{ 'is-zero' if not week_counts.action }}">{{ week_counts.action }}</div><div class="label">Actions Due</div></div>
+        <div class="week-stat-cell"><div class="num {{ 'is-zero' if not week_counts.milestone }}">{{ week_counts.milestone }}</div><div class="label">Milestones Due</div></div>
+        <div class="week-stat-cell"><div class="num {{ 'is-zero' if not week_counts.decision }}">{{ week_counts.decision }}</div><div class="label">Decisions Made</div></div>
+      </div>
     </div>
   </div>
 </div>
