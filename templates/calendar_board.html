@@ -47,15 +47,15 @@
 
     {% for week in weeks %}
     {% for d in week %}
-    {% set items = activities_by_day.get(d, []) %}
+    {% set day_clients = clients_by_day.get(d, []) %}
     <a href="{{ url_for('calendar_board.board', year=d.year, month=d.month, date=d.isoformat(), client_id=current_client_id) }}"
        class="cal-cell {{ 'out' if d.month != month }} {{ 'today' if d == today }} {{ 'selected' if d == selected }}">
       <div class="cal-daynum">{{ d.day }}</div>
-      {% for item in items[:3] %}
-      <div class="cal-chip"><span class="legend-dot {{ item.dot }}" style="margin:0;"></span>{{ item.client.name }}: {{ item.title }}</div>
+      {% for client, count in day_clients[:3] %}
+      <div class="cal-chip"><span class="cal-chip-name">{{ client.name }}</span><span class="cal-chip-count">{{ count }}</span></div>
       {% endfor %}
-      {% if items|length > 3 %}
-      <div class="cal-more">+{{ items|length - 3 }} more</div>
+      {% if day_clients|length > 3 %}
+      <div class="cal-more">+{{ day_clients|length - 3 }} more</div>
       {% endif %}
     </a>
     {% endfor %}

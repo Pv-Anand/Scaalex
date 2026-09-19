@@ -76,6 +76,7 @@ def board():
 
         action_items = ActionItem.query.filter(
             ActionItem.client_id.in_(filter_ids),
+            ActionItem.status != "Completed",
             ActionItem.due_date.isnot(None),
             ActionItem.due_date >= range_start,
             ActionItem.due_date <= range_end,
@@ -109,15 +110,18 @@ def board():
                 "sort": dec.date,
             })
 
-        milestones = Milestone.query.filter(Milestone.client_id.in_(filter_ids)).all()
+        milestones = Milestone.query.filter(
+            Milestone.client_id.in_(filter_ids),
+            Milestone.status != "completed",
+        ).all()
         for m in milestones:
-            d = m.display_date
+            d = m.due_date
             if not d or d < range_start or d > range_end:
                 continue
             client = client_map[m.client_id]
             add(d, {
                 "type": "milestone", "dot": "dot-milestone",
-                "title": f"{m.title} — {'completed' if m.status == 'completed' else 'due'}",
+                "title": f"{m.title} — due",
                 "client": client,
                 "owner": m.reporting_manager.name if m.reporting_manager else None,
                 "meta": m.status.replace("_", " ").title(), "meta_danger": False,
@@ -127,6 +131,18 @@ def board():
 
     for day_items in activities_by_day.values():
         day_items.sort(key=lambda i: (0 if i.get("meta_danger") else 1, i["sort"]))
+
+    clients_by_day = {}
+    for d, items in activities_by_day.items():
+        counts = {}
+        order = []
+        for it in items:
+            c = it["client"]
+            if c.id not in counts:
+                counts[c.id] = 0
+                order.append(c)
+            counts[c.id] += 1
+        clients_by_day[d] = [(c, counts[c.id]) for c in order]
 
     week_start = today - timedelta(days=(today.weekday() + 1) % 7)  # back up to Sunday
     week_end = week_start + timedelta(days=6)
@@ -150,7 +166,7 @@ def board():
         prev_year=prev_year, prev_month=prev_month,
         next_year=next_year, next_month=next_month,
         weeks=weeks, today=today, selected=selected,
-        activities_by_day=activities_by_day,
+        activities_by_day=activities_by_day, clients_by_day=clients_by_day,
         selected_items=selected_items, selected_client_count=len(selected_clients),
         week_counts=week_counts,
     )
