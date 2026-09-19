@@ -21,7 +21,18 @@ set "needs_confirmation": true.
 "Scaalex", "Client"). If unclear, use "Unassigned" and set needs_confirmation true.
 - Due dates must be explicit in the text (e.g. "by Friday", "next week") - resolve relative \
 dates only if a reference date is given; otherwise leave due_date null and flag needs_confirmation.
-- Keep the summary factual and concise, written for a senior advisor, not a transcript recap.
+
+Be as brief as possible everywhere. A senior advisor should be able to scan the whole \
+record in seconds, not read it like a transcript recap:
+- Every action item's "task" is ONE short line - what to do, stated plainly (e.g. "Send \
+signed NDA to legal", not "The team discussed that it would be important to eventually \
+follow up on sending the signed NDA over to the legal department"). Never a sentence with \
+sub-clauses; never restate context that belongs in "important_context" instead.
+- Every decision's "decision" is ONE short line stating what was decided, not why (the \
+reasoning goes in its own "context" field, also kept brief - one short sentence at most).
+- "summary" is a short bullet-point list of what was discussed, written as plain lines \
+separated by newlines, each starting with "- " (e.g. "- Reviewed Q3 pipeline\\n- Agreed to \
+push renewal call to next week"). 3-6 bullets, each one short line. Never a paragraph.
 """
 
 EXTRACTION_SCHEMA = {
@@ -29,15 +40,16 @@ EXTRACTION_SCHEMA = {
     "properties": {
         "summary": {
             "type": "string",
-            "description": "Concise factual summary of what was discussed (2-5 sentences).",
+            "description": "3-6 short bullet lines of what was discussed, each starting with "
+                            "\"- \" and separated by newlines. No paragraphs.",
         },
         "decisions": {
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
-                    "decision": {"type": "string"},
-                    "context": {"type": "string"},
+                    "decision": {"type": "string", "description": "One short line - what was decided, not why."},
+                    "context": {"type": "string", "description": "One short sentence at most."},
                     "owner": {"type": "string"},
                     "needs_confirmation": {"type": "boolean"},
                 },
@@ -49,7 +61,7 @@ EXTRACTION_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "task": {"type": "string"},
+                    "task": {"type": "string", "description": "One short line - what to do, stated plainly."},
                     "owner": {"type": "string"},
                     "due_date": {"type": ["string", "null"], "description": "YYYY-MM-DD or null"},
                     "priority": {"type": "string", "enum": ["High", "Medium", "Low"]},
