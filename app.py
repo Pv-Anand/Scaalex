@@ -46,6 +46,7 @@ def create_app(config_class=Config):
     from routes.fireflies import fireflies_bp
     from routes.calendar import calendar_bp
     from routes.reports import reports_bp
+    from routes.calendar_board import calendar_board_bp
     from routes.portal import portal_bp, portal_hub_bp
 
     app.register_blueprint(auth_bp)
@@ -61,6 +62,7 @@ def create_app(config_class=Config):
     app.register_blueprint(fireflies_bp)
     app.register_blueprint(calendar_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(calendar_board_bp)
     app.register_blueprint(portal_bp)
     app.register_blueprint(portal_hub_bp)
 

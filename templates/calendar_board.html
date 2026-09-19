@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Calendar — Scaalex Intelligence{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Overview</div>
+    <h1>Calendar</h1>
+  </div>
+  <div class="flex-gap" style="align-items:center;">
+    <form method="GET">
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <select name="client_id" onchange="this.form.submit()">
+        <option value="">All Clients</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}" {{ 'selected' if current_client_id == c.id }}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <a href="{{ url_for('calendar_board.board', client_id=current_client_id) }}" class="btn btn-secondary">Today</a>
+  </div>
+</div>
+<p class="small muted mb-24">Everything scheduled or due across every client — meetings held, action item due dates, decisions, and milestone deadlines.</p>
+
+<div class="flex-between mb-16">
+  <div class="flex-gap" style="align-items:center; gap:12px;">
+    <a href="{{ url_for('calendar_board.board', year=prev_year, month=prev_month, client_id=current_client_id) }}" class="icon-btn" aria-label="Previous month">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div style="font-size:15px; font-weight:600; width:150px; text-align:center;">{{ month_label }}</div>
+    <a href="{{ url_for('calendar_board.board', year=next_year, month=next_month, client_id=current_client_id) }}" class="icon-btn" aria-label="Next month">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+  <div class="flex-gap" style="gap:16px; font-size:11.5px; color:var(--grey-700);">
+    <span><span class="legend-dot dot-meeting"></span>Meeting</span>
+    <span><span class="legend-dot dot-action"></span>Action Due</span>
+    <span><span class="legend-dot dot-decision"></span>Decision</span>
+    <span><span class="legend-dot dot-milestone"></span>Milestone</span>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 340px; gap:28px; align-items:start;">
+
+  <div class="cal-grid">
+    <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div><div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div>
+
+    {% for week in weeks %}
+    {% for d in week %}
+    {% set items = activities_by_day.get(d, []) %}
+    <a href="{{ url_for('calendar_board.board', year=d.year, month=d.month, date=d.isoformat(), client_id=current_client_id) }}"
+       class="cal-cell {{ 'out' if d.month != month }} {{ 'today' if d == today }} {{ 'selected' if d == selected }}">
+      <div class="cal-daynum">{{ d.day }}</div>
+      {% for item in items[:3] %}
+      <div class="cal-chip"><span class="legend-dot {{ item.dot }}" style="margin:0;"></span>{{ item.client.name }}: {{ item.title }}</div>
+      {% endfor %}
+      {% if items|length > 3 %}
+      <div class="cal-more">+{{ items|length - 3 }} more</div>
+      {% endif %}
+    </a>
+    {% endfor %}
+    {% endfor %}
+  </div>
+
+  <div>
+    <div class="card">
+      <div style="font-size:13.5px; font-weight:600; margin-bottom:2px;">Activity — {{ selected.strftime('%d %b %Y') }}</div>
+      <div class="small muted mb-16">{{ selected_items|length }} item{{ 's' if selected_items|length != 1 }}{% if selected_client_count %} across {{ selected_client_count }} client{{ 's' if selected_client_count != 1 }}{% endif %}</div>
+
+      {% if selected_items %}
+      {% for item in selected_items %}
+      <div class="agenda-item">
+        <div class="agenda-dot-col"><span class="legend-dot {{ item.dot }}"></span></div>
+        <div style="min-width:0;">
+          <a href="{{ item.url }}" class="agenda-title" style="color:var(--black); display:block;">{{ item.title }}</a>
+          <div class="agenda-meta">
+            {{ item.client.name }}
+            {% if item.owner %}· <span class="owner-chip"><span class="owner-dot">{{ item.owner[0]|upper }}</span>{{ item.owner }}</span>{% endif %}
+            {% if item.meta %}· <span style="{{ 'color:var(--danger); font-weight:500;' if item.meta_danger }}">{{ item.meta }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="muted small">Nothing on this day.</p>
+      {% endif %}
+    </div>
+
+    <div class="card mt-20">
+      <div style="font-size:13.5px; font-weight:600; margin-bottom:12px;">This Week</div>
+      <div class="flex-between" style="font-size:12.5px; padding:6px 0;"><span>Meetings held</span><strong>{{ week_counts.meeting }}</strong></div>
+      <div class="flex-between" style="font-size:12.5px; padding:6px 0;"><span>Action items due</span><strong>{{ week_counts.action }}</strong></div>
+      <div class="flex-between" style="font-size:12.5px; padding:6px 0;"><span>Milestones due</span><strong>{{ week_counts.milestone }}</strong></div>
+      <div class="flex-between" style="font-size:12.5px; padding:6px 0;"><span>Decisions made</span><strong>{{ week_counts.decision }}</strong></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -25,6 +25,7 @@
           <span>Meetings</span>
           {% if fireflies_uncategorized_count %}<span class="nav-badge">{{ fireflies_uncategorized_count }}</span>{% endif %}
         </a>
+        <a href="{{ url_for('calendar_board.board') }}" class="{{ 'active' if request.endpoint == 'calendar_board.board' }}">Calendar</a>
       </nav>
       <div class="sidebar-section-label">Clients</div>
       <div class="sidebar-clients">

@@ -186,6 +186,34 @@ button { font-family: inherit; }
 .access-head:first-child { justify-content: flex-start; }
 .access-radio { justify-content: center; }
 
+/* ---------- Calendar / Activity Board ---------- */
+.legend-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.dot-meeting { background: var(--black); }
+.dot-action { background: var(--warn); }
+.dot-action.overdue { background: var(--danger); }
+.dot-decision { background: var(--grey-700); }
+.dot-milestone { background: var(--success); }
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.cal-dow { background: var(--grey-50); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-500); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--grey-100); }
+.cal-dow:last-child { border-right: none; }
+.cal-cell { min-height: 108px; padding: 8px; border-right: 1px solid var(--grey-100); border-bottom: 1px solid var(--grey-100); cursor: pointer; display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: inherit; }
+.cal-cell:hover { background: var(--grey-50); }
+.cal-cell.out { color: var(--grey-300); background: #fcfcfc; }
+.cal-cell.today { background: var(--grey-50); }
+.cal-cell.selected { outline: 2px solid var(--black); outline-offset: -2px; }
+.cal-daynum { font-size: 12px; font-weight: 500; }
+.cal-chip { font-size: 10.5px; padding: 2px 6px; border-radius: 3px; display: flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: var(--grey-50); color: var(--charcoal); }
+.cal-more { font-size: 10px; color: var(--grey-500); padding-left: 6px; }
+
+.agenda-item { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--grey-100); }
+.agenda-item:last-child { border-bottom: none; }
+.agenda-dot-col { padding-top: 4px; }
+.agenda-title { font-size: 13px; font-weight: 500; }
+.agenda-meta { font-size: 11.5px; color: var(--grey-500); margin-top: 3px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.owner-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--charcoal); font-weight: 500; }
+.owner-dot { width: 16px; height: 16px; border-radius: 50%; background: var(--grey-100); color: var(--grey-700); font-size: 9px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
 /* ---------- Sub nav (client tabs) ---------- */
 .subnav { display: flex; gap: 0; justify-content: space-between; border-bottom: 1px solid var(--line); margin-bottom: 28px; flex-wrap: wrap; }
 .subnav a { padding: 9px 8px; font-size: 12px; color: var(--grey-500); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
