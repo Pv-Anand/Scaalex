@@ -199,15 +199,21 @@ button { font-family: inherit; }
 .dot-milestone { background: var(--success); }
 
 .calendar-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start; }
+.cal-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; }
 .cal-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.cal-cell { min-height: 150px; min-width: 0; padding: 12px; border-right: 1px solid var(--grey-100); cursor: pointer; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.cal-dow { background: var(--grey-50); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-500); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--grey-100); }
+.cal-cell { min-height: 150px; min-width: 0; padding: 12px; border-right: 1px solid var(--grey-100); border-bottom: 1px solid var(--grey-100); cursor: pointer; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; }
+.cal-grid .cal-cell { min-height: 108px; padding: 8px; }
 .cal-cell:last-child { border-right: none; }
 .cal-cell:hover { background: var(--grey-50); }
+.cal-cell.out { color: var(--grey-300); background: #fcfcfc; }
 .cal-cell.today { background: var(--grey-50); }
 .cal-cell.selected { outline: 2px solid var(--black); outline-offset: -2px; }
 .cal-cell.has-overdue { border-left: 3px solid var(--danger); }
 .cal-strip-dow { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey-500); font-weight: 600; }
 .cal-daynum { font-size: 15px; font-weight: 600; }
+.cal-grid .cal-daynum { font-size: 12px; font-weight: 500; }
 .cal-daynum-today { width: 26px; height: 26px; border-radius: 999px; background: var(--black); color: var(--white); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 .cal-type-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .cal-type-count { display: flex; align-items: center; gap: 2px; font-size: 9.5px; font-weight: 600; color: var(--grey-700); }
@@ -216,14 +222,6 @@ button { font-family: inherit; }
 .cal-chip-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; flex: 1; }
 .cal-chip-count { flex-shrink: 0; font-size: 10px; font-weight: 600; color: var(--grey-700); background: var(--white); border: 1px solid var(--line); border-radius: 20px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
 .cal-more { font-size: 10px; color: var(--grey-500); padding-left: 6px; }
-
-.week-stat-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.week-stat-cell { padding: 16px 18px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.week-stat-cell:nth-child(2n) { border-right: none; }
-.week-stat-cell:nth-last-child(-n+2) { border-bottom: none; }
-.week-stat-cell .num { font-size: 22px; font-weight: 600; }
-.week-stat-cell .num.is-zero { color: var(--grey-300); }
-.week-stat-cell .label { font-size: 10.5px; color: var(--grey-500); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
 
 .agenda-item { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--grey-100); }
 .agenda-item:last-child { border-bottom: none; }
@@ -625,6 +623,8 @@ a.auth-submit { justify-content: center; text-decoration: none; margin-top: 16px
   .calendar-layout { grid-template-columns: 1fr; }
   .cal-strip { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(130px, 1fr); overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .cal-cell { min-height: 130px; }
+  .cal-grid { min-width: 640px; }
+  .cal-grid .cal-cell { min-height: 88px; }
 
   .decision-pending-row { flex-direction: column; align-items: stretch; }
   .decision-pending-actions { width: 100%; }
