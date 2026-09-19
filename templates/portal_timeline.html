@@ -15,7 +15,7 @@
       <span style="font-weight:400; color:var(--grey-700);">{{ client.name }}</span>
     </div>
     <div class="flex-gap">
-      <span class="small muted">Signed in as <strong style="color:var(--charcoal);">{{ contact.name }}</strong></span>
+      <span class="small muted portal-signedin">Signed in as <strong style="color:var(--charcoal);">{{ contact.name }}</strong></span>
       <a href="{{ url_for('portal.logout', portal_slug=client.portal_slug) }}" class="small muted">Sign out</a>
     </div>
   </div>
