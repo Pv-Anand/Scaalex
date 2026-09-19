@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from sqlalchemy import or_
 from flask_login import login_required, current_user
 
 from extensions import db
@@ -28,12 +29,37 @@ def global_list():
     if status:
         q = q.filter_by(status=status)
 
-    decisions = q.order_by(Decision.date.desc()).all()
+    search = request.args.get("q", "").strip()
+    if search:
+        like = f"%{search}%"
+        q = q.filter(or_(Decision.decision.ilike(like), Decision.context.ilike(like)))
+
+    sort = request.args.get("sort", "newest")
+    q = q.order_by(Decision.date.asc() if sort == "oldest" else Decision.date.desc())
+    decisions = q.all()
+
+    needs_confirmation = [d for d in decisions if d.status == "Needs Confirmation"]
+    confirmed = [d for d in decisions if d.status != "Needs Confirmation"]
+    confirmed_groups = _group_by_month(confirmed)
+
     return render_template(
         "decisions_global.html", decisions=decisions, clients=clients,
-        current_client_id=client_id, current_status=status,
+        current_client_id=client_id, current_status=status, current_sort=sort, current_search=search,
+        needs_confirmation=needs_confirmation, confirmed_groups=confirmed_groups,
         active_subtab="decisions",
     )
+
+
+def _group_by_month(decisions):
+    groups = []
+    current_key = None
+    for d in decisions:
+        key = d.date.strftime("%B %Y") if d.date else "Undated"
+        if key != current_key:
+            groups.append({"label": key, "decisions": []})
+            current_key = key
+        groups[-1]["decisions"].append(d)
+    return groups
 
 
 @decisions_bp.route("/clients/<slug>/decisions")
@@ -41,8 +67,12 @@ def global_list():
 def client_list(slug):
     client = get_client_or_404(slug)
     decisions = client.decisions.order_by(Decision.date.desc()).all()
+    needs_confirmation = [d for d in decisions if d.status == "Needs Confirmation"]
+    confirmed = [d for d in decisions if d.status != "Needs Confirmation"]
+    confirmed_groups = _group_by_month(confirmed)
     return render_template(
         "decisions_client.html", client=client, active_tab="decisions", decisions=decisions,
+        needs_confirmation=needs_confirmation, confirmed_groups=confirmed_groups,
         active_subtab="decisions",
     )
 

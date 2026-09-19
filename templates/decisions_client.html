@@ -10,25 +10,70 @@
 </div>
 
 {% if decisions %}
-{% for d in decisions %}
-<div class="card mb-16">
-  <div class="flex-between">
-    <h3 style="font-size:15px;">{{ d.decision }}</h3>
-    <span class="badge {{ 'badge-status-Needs.Confirmation' if d.status == 'Needs Confirmation' else 'badge-status-Confirmed' }}">{{ d.status }}</span>
+
+  {% if needs_confirmation %}
+  <div class="flex-between mb-4">
+    <h3 class="section-title" style="margin-bottom:0; font-size:14px;">Needs Confirmation</h3>
+    <span class="badge badge-needs-confirmation">{{ needs_confirmation|length }}</span>
   </div>
-  <div class="small muted mt-8">
-    {{ d.date.strftime('%d %b %Y') }}
-    {% if d.source_label %} · Source: {{ d.source_label }}{% endif %}
-    {% if d.owner %} · Owner: {{ d.owner }}{% endif %}
+  <p class="small muted mb-16">Logged from a conversation or meeting — confirm to lock these in as final.</p>
+  {% for d in needs_confirmation %}
+  <div class="decision-card decision-card-pending mb-12">
+    <div class="flex-between" style="align-items:flex-start; gap:16px;">
+      <div style="flex:1; min-width:0;">
+        <div class="decision-title">{{ d.decision }}</div>
+        <div class="decision-chips">
+          <span class="decision-chip">{{ d.date.strftime('%d %b %Y') }}</span>
+          {% if d.owner %}<span class="decision-chip">Owner: {{ d.owner }}</span>{% endif %}
+          {% if d.source_label %}<span class="decision-chip">Source: {{ d.source_label }}</span>{% endif %}
+        </div>
+        {% if d.context %}<div class="decision-context">{{ d.context }}</div>{% endif %}
+        {% if d.conversation_id %}
+        <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=d.conversation_id) }}" class="small mt-8" style="display:inline-block;">View source conversation →</a>
+        {% endif %}
+      </div>
+      <form method="POST" action="{{ url_for('decisions.update_status', decision_id=d.id) }}" style="flex-shrink:0;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="status" value="Confirmed">
+        <button type="submit" class="btn btn-sm">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Confirm
+        </button>
+      </form>
+    </div>
   </div>
-  {% if d.context %}
-  <p class="mt-16">{{ d.context }}</p>
+  {% endfor %}
   {% endif %}
-  {% if d.conversation_id %}
-  <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=d.conversation_id) }}" class="small mt-8" style="display:inline-block;">View source conversation →</a>
+
+  {% if confirmed_groups %}
+  <div style="{{ 'margin-top:32px;' if needs_confirmation }}"></div>
+  {% for group in confirmed_groups %}
+  <div class="decision-month-label">{{ group.label }}</div>
+  <div class="decision-timeline mb-32">
+    {% for d in group.decisions %}
+    <div class="decision-timeline-item">
+      <div class="decision-timeline-dot"></div>
+      <div class="decision-card">
+        <div class="flex-between" style="align-items:flex-start; margin-bottom:8px;">
+          <div class="decision-title">{{ d.decision }}</div>
+          <span class="badge badge-status-Confirmed" style="flex-shrink:0;">{{ d.status }}</span>
+        </div>
+        <div class="decision-chips">
+          <span class="decision-chip">{{ d.date.strftime('%d %b %Y') }}</span>
+          {% if d.owner %}<span class="decision-chip">Owner: {{ d.owner }}</span>{% endif %}
+          {% if d.source_label %}<span class="decision-chip">Source: {{ d.source_label }}</span>{% endif %}
+        </div>
+        {% if d.context %}<div class="decision-context decision-context-clamp">{{ d.context }}</div>{% endif %}
+        {% if d.conversation_id %}
+        <a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=d.conversation_id) }}" class="small mt-8" style="display:inline-block;">View source conversation →</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
   {% endif %}
-</div>
-{% endfor %}
+
 {% else %}
 <div class="empty-state">
   <h3>No decisions recorded yet</h3>

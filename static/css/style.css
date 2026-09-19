@@ -500,6 +500,22 @@ a.auth-submit { justify-content: center; text-decoration: none; margin-top: 16px
 .milestone-dot.upcoming { background: var(--grey-300); border: 1.5px solid var(--grey-300); }
 .milestone-dot.rejected { background: var(--danger); }
 
+/* ---------- Decisions: pending cards + month-grouped timeline ---------- */
+.decision-card { border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; background: var(--white); }
+.decision-card-pending { border-color: var(--warn); border-left: 3px solid var(--warn); background: var(--warn-bg); }
+.decision-title { font-size: 14.5px; font-weight: 600; margin-bottom: 8px; }
+.decision-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.decision-chip { display: inline-flex; align-items: center; font-size: 11px; padding: 3px 9px; border-radius: 20px; background: var(--grey-50); border: 1px solid var(--line); color: var(--charcoal); }
+.decision-card-pending .decision-chip { background: var(--white); }
+.decision-context { font-size: 13px; color: var(--grey-700); line-height: 1.55; }
+.decision-context-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.decision-month-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--grey-500); margin-bottom: 14px; }
+.decision-timeline { position: relative; padding-left: 28px; }
+.decision-timeline::before { content: ""; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 1.5px; background: var(--grey-200); }
+.decision-timeline-item { position: relative; margin-bottom: 16px; }
+.decision-timeline-item:last-child { margin-bottom: 0; }
+.decision-timeline-dot { position: absolute; left: -28px; top: 18px; width: 11px; height: 11px; border-radius: 999px; background: var(--success-bg); border: 1.5px solid var(--success); }
+
 .portal-topbar { height: 64px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; }
 .portal-container { max-width: 780px; margin: 0 auto; padding: 44px 20px 80px; }
 .portal-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14.5px; color: var(--black); }
