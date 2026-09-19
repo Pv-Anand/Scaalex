@@ -51,3 +51,24 @@ def account():
         return redirect(url_for("auth.account"))
 
     return render_template("account.html")
+
+
+@auth_bp.route("/team")
+@login_required
+def team():
+    users = User.query.order_by(User.name).all()
+    return render_template("team.html", users=users)
+
+
+@auth_bp.route("/team/<int:user_id>/reset-password", methods=["POST"])
+@login_required
+def reset_password(user_id):
+    user = User.query.get_or_404(user_id)
+    new_password = request.form.get("new_password", "")
+    if len(new_password) < 8:
+        flash("Password must be at least 8 characters.", "error")
+        return redirect(url_for("auth.team"))
+    user.set_password(new_password)
+    db.session.commit()
+    flash(f"Password updated for {user.name}.", "success")
+    return redirect(url_for("auth.team"))

@@ -39,7 +39,10 @@
       </div>
       <div class="sidebar-footer">
         <a href="{{ url_for('auth.account') }}" class="sidebar-user">{{ current_user.name }}</a>
-        <a href="{{ url_for('auth.logout') }}" class="sidebar-logout">Sign out</a>
+        <div class="flex-gap" style="gap:10px;">
+          <a href="{{ url_for('auth.team') }}" class="sidebar-logout">Team</a>
+          <a href="{{ url_for('auth.logout') }}" class="sidebar-logout">Sign out</a>
+        </div>
       </div>
     </aside>
     <main class="main">
