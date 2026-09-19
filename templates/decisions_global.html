@@ -52,15 +52,21 @@
         <a href="{{ url_for('conversations.detail', slug=d.client.slug, conversation_id=d.conversation_id) }}" class="small mt-8" style="display:inline-block;">View source conversation →</a>
         {% endif %}
       </div>
-      <form method="POST" action="{{ url_for('decisions.update_status', decision_id=d.id) }}" style="flex-shrink:0;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="status" value="Confirmed">
-        <button type="submit" class="btn btn-sm">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Confirm
+      <div class="flex-gap decision-pending-actions" style="flex-shrink:0; gap:8px;">
+        <button type="button" class="icon-btn" aria-label="Edit decision" onclick="toggleDecisionEdit({{ d.id }})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
         </button>
-      </form>
+        <form method="POST" action="{{ url_for('decisions.update_status', decision_id=d.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="Confirmed">
+          <button type="submit" class="btn btn-sm">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Confirm
+          </button>
+        </form>
+      </div>
     </div>
+    {% include "_decision_edit_form.html" %}
   </div>
   {% endfor %}
   {% endif %}
@@ -76,7 +82,12 @@
       <div class="decision-card">
         <div class="flex-between" style="align-items:flex-start; margin-bottom:8px;">
           <div class="decision-title">{{ d.decision }}</div>
-          <span class="badge badge-status-Confirmed" style="flex-shrink:0;">{{ d.status }}</span>
+          <div class="flex-gap" style="flex-shrink:0; gap:8px;">
+            <span class="badge badge-status-Confirmed">{{ d.status }}</span>
+            <button type="button" class="icon-btn" aria-label="Edit decision" onclick="toggleDecisionEdit({{ d.id }})">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            </button>
+          </div>
         </div>
         <div class="decision-chips">
           <a href="{{ url_for('clients.overview', slug=d.client.slug) }}" class="decision-chip">{{ d.client.name }}</a>
@@ -88,6 +99,7 @@
         {% if d.conversation_id %}
         <a href="{{ url_for('conversations.detail', slug=d.client.slug, conversation_id=d.conversation_id) }}" class="small mt-8" style="display:inline-block;">View source conversation →</a>
         {% endif %}
+        {% include "_decision_edit_form.html" %}
       </div>
     </div>
     {% endfor %}

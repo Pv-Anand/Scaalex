@@ -223,6 +223,11 @@ function toggleActionItemRow(itemId) {
   toggleBtn.classList.toggle('open', !open);
 }
 
+function toggleDecisionEdit(decisionId) {
+  const el = document.getElementById(`decision-edit-${decisionId}`);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
 /* ---------------- Action item inline status ---------------- */
 async function updateActionStatus(itemId, status, selectEl) {
   const res = await fetch(`/action-items/${itemId}/status`, {

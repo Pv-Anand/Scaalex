@@ -152,6 +152,7 @@ def edit(item_id):
         except ValueError:
             due_date = None
 
+    item.task = request.form.get("task", "").strip() or item.task
     item.assignee = request.form.get("assignee", "").strip() or None
     item.owner = request.form.get("owner", "").strip() or "Unassigned"
     item.priority = request.form.get("priority", item.priority)

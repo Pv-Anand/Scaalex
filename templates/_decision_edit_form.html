@@ -1,0 +1,31 @@
+<div id="decision-edit-{{ d.id }}" class="decision-edit-form" style="display:none;">
+  <form method="POST" action="{{ url_for('decisions.edit', decision_id=d.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>Decision</label>
+      <textarea name="decision" rows="2" required>{{ d.decision }}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" name="date" value="{{ d.date.strftime('%Y-%m-%d') if d.date else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Owner</label>
+        <input type="text" name="owner" value="{{ d.owner or '' }}" placeholder="e.g. Client CEO">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Context / Rationale</label>
+      <textarea name="context" rows="2" placeholder="Why was this decided?">{{ d.context or '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Source</label>
+      <input type="text" name="source_label" value="{{ d.source_label or '' }}" placeholder="e.g. Client Meeting — 16 Sep 2026">
+    </div>
+    <div class="form-actions" style="justify-content:flex-end; gap:10px;">
+      <button type="button" class="link-btn small muted" onclick="toggleDecisionEdit({{ d.id }})">Cancel</button>
+      <button type="submit" class="btn btn-sm">Save Changes</button>
+    </div>
+  </form>
+</div>

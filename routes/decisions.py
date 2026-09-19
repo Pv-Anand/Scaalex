@@ -119,3 +119,28 @@ def update_status(decision_id):
     db.session.commit()
     flash("Decision updated.", "success")
     return redirect(request.referrer or url_for("decisions.global_list"))
+
+
+@decisions_bp.route("/decisions/<int:decision_id>/edit", methods=["POST"])
+@login_required
+def edit(decision_id):
+    decision = Decision.query.get_or_404(decision_id)
+    if not current_user.can_edit_client(decision.client_id):
+        abort(403)
+
+    date_str = request.form.get("date")
+    if date_str:
+        try:
+            decision.date = datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            pass
+
+    decision.decision = request.form.get("decision", decision.decision).strip() or decision.decision
+    decision.owner = request.form.get("owner", "").strip() or None
+    decision.context = request.form.get("context", "").strip()
+    decision.source_label = request.form.get("source_label", "").strip() or None
+
+    log_activity(current_user.id, decision.client_id, "Decision updated", "decision", decision.id)
+    db.session.commit()
+    flash("Decision updated.", "success")
+    return redirect(request.referrer or url_for("decisions.global_list"))
