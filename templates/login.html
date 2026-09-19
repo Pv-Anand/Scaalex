@@ -1,31 +1,93 @@
 {% extends "base.html" %}
 {% block title %}Sign in — Scaalex Intelligence{% endblock %}
 {% block auth_content %}
-<div class="auth-shell">
-  <div class="auth-card">
-    <img src="{{ url_for('static', filename='images/logo-black.png') }}" alt="Scaalex" class="auth-brand-logo">
-    <div class="auth-sub">Client Project Intelligence &amp; Documentation</div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash flash-{{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" name="email" required autofocus>
+<div class="auth-split">
+  <div class="auth-left">
+    <div class="auth-left-inner">
+      <div class="auth-left-top">
+        <img src="{{ url_for('static', filename='images/logo-white.png') }}" alt="Scaalex" class="auth-left-logo">
+        <div class="auth-left-tagline">Client Project Intelligence</div>
       </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" name="password" required>
+
+      <nav class="auth-left-nav">
+        <span>Clients</span>
+        <span>Conversations</span>
+        <span>Decisions</span>
+        <span>Action Items</span>
+      </nav>
+
+      <div class="auth-left-mid">
+        <div class="auth-left-rule"></div>
+        <h1>Intelligence behind<br>every client decision.</h1>
+        <p>Client Project Intelligence<br>&amp; Documentation</p>
       </div>
-      <button type="submit" class="btn" style="width:100%; justify-content:center;">Sign In</button>
-    </form>
+
+      <div class="auth-left-stats">
+        <div><div class="auth-left-stat-label">Clients</div><div class="auth-left-stat-value">Managed</div></div>
+        <div><div class="auth-left-stat-label">Conversations</div><div class="auth-left-stat-value">Captured</div></div>
+        <div><div class="auth-left-stat-label">Decisions</div><div class="auth-left-stat-value">Tracked</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-right-inner">
+      <div class="auth-right-top">Secure. Private. Professional.</div>
+
+      <div class="auth-form-wrap">
+        <div class="auth-eyebrow">Welcome Back</div>
+        <h2>Sign in to<br>Scaalex Intelligence</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label>Email</label>
+            <div class="auth-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="auth-input-icon"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <input type="email" name="email" placeholder="you@company.com" required autofocus>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="auth-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="auth-input-icon"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3" stroke-linecap="round"/></svg>
+              <input type="password" name="password" id="auth-password" placeholder="Enter your password" required>
+              <button type="button" class="auth-input-toggle" onclick="togglePasswordVisibility()" aria-label="Show password">
+                <svg id="auth-eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn auth-submit">
+            Sign In
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+
+        <div class="auth-secure-note">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3" stroke-linecap="round"/></svg>
+          Your data is encrypted and securely protected.
+        </div>
+      </div>
+
+      <div class="auth-right-footer">&copy; {{ current_year }} Scaalex. All rights reserved.</div>
+    </div>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function togglePasswordVisibility() {
+  const input = document.getElementById('auth-password');
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+}
+</script>
 {% endblock %}

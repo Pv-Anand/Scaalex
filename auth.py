@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_user, logout_user, login_required, current_user
 
@@ -25,7 +27,7 @@ def login():
 
         flash("Invalid email or password.", "error")
 
-    return render_template("login.html")
+    return render_template("login.html", current_year=datetime.utcnow().year)
 
 
 @auth_bp.route("/logout")

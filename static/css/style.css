@@ -295,6 +295,51 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator:hover {
 .auth-brand-logo { height: 34px; width: auto; display: block; margin: 0 auto 8px; }
 .auth-sub { text-align: center; color: var(--grey-500); font-size: 12.5px; margin-bottom: 28px; }
 
+/* ---------- Auth: split-screen login ---------- */
+.auth-split { min-height: 100vh; display: flex; }
+.auth-left {
+  flex: 1 1 46%; position: relative; overflow: hidden; display: flex; color: var(--white);
+  background: linear-gradient(155deg, #050505 0%, var(--charcoal) 55%, var(--charcoal-2) 100%);
+}
+.auth-left::before {
+  content: ""; position: absolute; top: -10%; right: -15%; width: 60%; height: 130%;
+  background: linear-gradient(100deg, transparent 40%, rgba(255,255,255,0.05) 48%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.05) 52%, transparent 60%);
+  transform: rotate(8deg);
+}
+.auth-left-inner { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 56px 64px; width: 100%; box-sizing: border-box; }
+.auth-left-logo { height: 26px; width: auto; display: block; }
+.auth-left-tagline { font-size: 11px; color: var(--grey-300); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+.auth-left-nav { display: flex; flex-direction: column; gap: 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--grey-300); margin-top: 44px; }
+.auth-left-mid { margin: auto 0; }
+.auth-left-rule { width: 40px; height: 2px; background: var(--white); margin-bottom: 24px; }
+.auth-left-mid h1 { font-size: 36px; line-height: 1.18; font-weight: 600; margin: 0 0 20px 0; }
+.auth-left-mid p { font-size: 14px; color: var(--grey-300); line-height: 1.5; margin: 0; }
+.auth-left-stats { display: flex; gap: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.12); }
+.auth-left-stat-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--white); font-weight: 600; }
+.auth-left-stat-value { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--grey-300); margin-top: 3px; }
+
+.auth-right { flex: 1 1 54%; display: flex; flex-direction: column; background: var(--white); }
+.auth-right-inner { flex: 1; display: flex; flex-direction: column; padding: 56px 80px; max-width: 560px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.auth-right-top { text-align: right; font-size: 12px; color: var(--grey-500); }
+.auth-form-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.auth-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--grey-500); margin-bottom: 8px; }
+.auth-form-wrap h2 { font-size: 30px; font-weight: 600; line-height: 1.22; margin: 0 0 32px 0; }
+.auth-input-wrap { position: relative; display: flex; align-items: center; }
+.auth-input-icon { position: absolute; left: 12px; color: var(--grey-500); pointer-events: none; }
+.auth-input-wrap input { width: 100%; box-sizing: border-box; padding: 11px 40px 11px 38px; font-size: 13.5px; border: 1px solid var(--line); border-radius: var(--radius); }
+.auth-input-wrap input:focus { outline: none; border-color: var(--black); }
+.auth-input-toggle { position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--grey-500); display: flex; align-items: center; padding: 4px; }
+.auth-input-toggle:hover { color: var(--black); }
+.auth-submit { width: 100%; justify-content: center; gap: 8px; padding: 13px; font-size: 14px; margin-top: 8px; }
+.auth-secure-note { display: flex; align-items: center; gap: 8px; justify-content: center; font-size: 12px; color: var(--grey-500); margin-top: 20px; }
+.auth-right-footer { text-align: center; font-size: 11.5px; color: var(--grey-500); padding-top: 24px; }
+
+@media (max-width: 900px) {
+  .auth-left { display: none; }
+  .auth-right { flex: 1 1 100%; }
+  .auth-right-inner { padding: 40px 24px; }
+}
+
 /* ---------- Flash ---------- */
 .flash { padding: 11px 16px; border-radius: var(--radius); font-size: 13px; margin-bottom: 18px; border: 1px solid; }
 .flash-success { background: var(--success-bg); color: var(--success); border-color: transparent; }
