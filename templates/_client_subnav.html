@@ -18,7 +18,7 @@
 </div>
 <div class="subnav">
   <a href="{{ url_for('clients.overview', slug=client.slug) }}" class="{{ 'active' if active_tab == 'overview' }}">Overview</a>
-  <a href="{{ url_for('action_items.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab in ('action_items', 'decisions') }}">Tasks</a>
+  <a href="{{ url_for('action_items.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab in ('action_items', 'decisions') }}">Action</a>
   <a href="{{ url_for('documents.client_list', slug=client.slug) }}" class="{{ 'active' if active_tab == 'documents' }}">Documents</a>
   <a href="{{ url_for('conversations.sync_history', slug=client.slug) }}" class="{{ 'active' if active_tab == 'sync_history' }}">Sync History</a>
   <a href="{{ url_for('ai_overview.ai_summary', slug=client.slug) }}" class="{{ 'active' if active_tab == 'ai_summary' }}">AI Summary</a>

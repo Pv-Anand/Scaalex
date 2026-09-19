@@ -18,13 +18,13 @@
       </div>
       <nav class="sidebar-nav">
         <a href="{{ url_for('home.index') }}" class="{{ 'active' if request.endpoint == 'home.index' }}">Home</a>
-        <a href="{{ url_for('action_items.global_list') }}" class="{{ 'active' if request.endpoint in ('action_items.global_list', 'decisions.global_list') }}">Tasks</a>
-        <a href="{{ url_for('documents.global_list') }}" class="{{ 'active' if request.endpoint == 'documents.global_list' }}">Documents</a>
+        <a href="{{ url_for('action_items.global_list') }}" class="{{ 'active' if request.endpoint in ('action_items.global_list', 'decisions.global_list') }}">Action</a>
+        <a href="{{ url_for('calendar_board.board') }}" class="{{ 'active' if request.endpoint == 'calendar_board.board' }}">Calendar</a>
         <a href="{{ url_for('fireflies.inbox') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('fireflies.') }}">
           <span>Meetings</span>
           {% if fireflies_uncategorized_count %}<span class="nav-badge">{{ fireflies_uncategorized_count }}</span>{% endif %}
         </a>
-        <a href="{{ url_for('calendar_board.board') }}" class="{{ 'active' if request.endpoint == 'calendar_board.board' }}">Calendar</a>
+        <a href="{{ url_for('documents.global_list') }}" class="{{ 'active' if request.endpoint == 'documents.global_list' }}">Documents</a>
       </nav>
       <div class="sidebar-section-label">Clients</div>
       <div class="sidebar-clients">
