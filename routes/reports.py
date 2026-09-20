@@ -324,6 +324,7 @@ def attach_deliverable(slug, milestone_id):
 ACCESS_ACTIONS = {
     "Portal access granted", "Portal access revoked", "Password set",
     "Primary contact changed", "Client contact added", "Client contact removed",
+    "Terms accepted",
 }
 
 

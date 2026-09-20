@@ -88,14 +88,19 @@ def set_password(portal_slug, client, contact):
     if request.method == "POST":
         new_password = request.form.get("new_password", "")
         confirm_password = request.form.get("confirm_password", "")
+        agree_terms = request.form.get("agree_terms")
         if len(new_password) < 8:
             flash("Password must be at least 8 characters.", "error")
         elif new_password != confirm_password:
             flash("Passwords don't match.", "error")
+        elif not agree_terms:
+            flash("Please agree to the Terms & Conditions and Privacy Policy to continue.", "error")
         else:
             contact.set_password(new_password)
             contact.must_change_password = False
+            contact.terms_accepted_at = datetime.utcnow()
             log_portal_activity(contact.id, client.id, "Password set", "client_contact", contact.id)
+            log_portal_activity(contact.id, client.id, "Terms accepted", "client_contact", contact.id)
             db.session.commit()
             flash("Password set.", "success")
             return redirect(url_for("portal.timeline", portal_slug=portal_slug))

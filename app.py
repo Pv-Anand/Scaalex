@@ -190,6 +190,7 @@ def _ensure_schema_migrations(app):
         for column, ddl_type in (
             ("portal_access", "BOOLEAN DEFAULT 0"), ("password_hash", "VARCHAR(255)"),
             ("must_change_password", "BOOLEAN DEFAULT 1"), ("last_login_at", "DATETIME"),
+            ("terms_accepted_at", "DATETIME"),
         ):
             if column not in contact_columns:
                 conn.execute(db.text(f"ALTER TABLE client_contacts ADD COLUMN {column} {ddl_type}"))

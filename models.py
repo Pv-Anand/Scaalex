@@ -200,6 +200,7 @@ class ClientContact(db.Model):
     password_hash = db.Column(db.String(255))
     must_change_password = db.Column(db.Boolean, default=True)
     last_login_at = db.Column(db.DateTime)
+    terms_accepted_at = db.Column(db.DateTime)
 
     created_at = db.Column(db.DateTime, default=_now)
 
