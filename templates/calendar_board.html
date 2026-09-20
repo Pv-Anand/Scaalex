@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Calendar — Scaalex Intelligence{% endblock %}
+{% block title %}Calendar - Scaalex Intelligence{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
@@ -30,7 +30,7 @@
     <a href="{{ url_for('calendar_board.board', view=view, client_id=current_client_id) }}" class="btn btn-secondary">Today</a>
   </div>
 </div>
-<p class="small muted mb-24">Everything scheduled or due across every client — meetings held, action item due dates, decisions, and milestone deadlines.</p>
+<p class="small muted mb-24">Everything scheduled or due across every client - meetings held, action item due dates, decisions, and milestone deadlines.</p>
 
 <div class="flex-between mb-16">
   {% if view == 'monthly' %}
@@ -135,7 +135,7 @@
 
   <div>
     <div class="card">
-      <div style="font-size:13.5px; font-weight:600; margin-bottom:2px;">{% if selected == today %}Today — {% endif %}{{ selected.strftime('%a, %d %b %Y') }}</div>
+      <div style="font-size:13.5px; font-weight:600; margin-bottom:2px;">{% if selected == today %}Today - {% endif %}{{ selected.strftime('%a, %d %b %Y') }}</div>
       <div class="small muted mb-16">{{ selected_items|length }} item{{ 's' if selected_items|length != 1 }}{% if selected_client_count %} across {{ selected_client_count }} client{{ 's' if selected_client_count != 1 }}{% endif %}</div>
 
       {% if selected_items %}

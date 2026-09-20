@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Home — Scaalex Intelligence{% endblock %}
+{% block title %}Home - Scaalex Intelligence{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
@@ -39,7 +39,7 @@
   <div class="attn-header">
     <div class="flex-gap" style="align-items:center;">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
-      <span style="font-size:13.5px; font-weight:600; color:var(--danger);">Needs Attention — overdue or high priority</span>
+      <span style="font-size:13.5px; font-weight:600; color:var(--danger);">Needs Attention - overdue or high priority</span>
     </div>
     <a href="{{ url_for('action_items.global_list') }}" style="font-size:12.5px; color:var(--danger); font-weight:500;">View all Action Items →</a>
   </div>
@@ -127,7 +127,7 @@
           <div class="list-item" style="padding:14px 16px;">
             <div class="flex-between">
               <div>
-                <strong>{{ c.client.name }}</strong> — {{ c.interaction_type }}
+                <strong>{{ c.client.name }}</strong> - {{ c.interaction_type }}
                 <div class="small muted mt-8">{{ c.summary or (c.raw_notes[:140] ~ ('…' if c.raw_notes|length > 140 else '')) or 'No notes yet' }}</div>
               </div>
               <div class="small muted" style="white-space:nowrap;">{{ c.date.strftime('%d %b %Y') }}</div>

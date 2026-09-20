@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Timeline — {{ client.name }}{% endblock %}
+{% block title %}Timeline - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 
@@ -49,7 +49,7 @@
       <div class="timeline-section-title">Action Items</div>
       <ul class="bullets">
         {% for a in items %}
-        <li>{{ a.owner }} — {{ a.task }}{% if a.due_date %} (due {{ a.due_date.strftime('%d %b') }}){% endif %}</li>
+        <li>{{ a.owner }} - {{ a.task }}{% if a.due_date %} (due {{ a.due_date.strftime('%d %b') }}){% endif %}</li>
         {% endfor %}
       </ul>
       {% endif %}

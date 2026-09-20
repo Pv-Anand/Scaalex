@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Project Updates — {{ client.name }}{% endblock %}
+{% block title %}Project Updates - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 
 <div class="flex-between">
   <div>
     <h2 class="section-title" style="margin-bottom:4px;">Engagement Milestones</h2>
-    <p class="small muted">This list — in this order — is what the client sees on their portal timeline.</p>
+    <p class="small muted">This list - in this order - is what the client sees on their portal timeline.</p>
   </div>
   <a href="{{ url_for('reports.new_milestone', slug=client.slug) }}" class="btn btn-sm">+ Add Update</a>
 </div>

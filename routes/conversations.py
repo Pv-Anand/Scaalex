@@ -151,7 +151,7 @@ def sync(slug):
     candidates = [c for c in candidates if (c.raw_notes or c.transcript or "").strip()]
 
     if not candidates:
-        flash("Nothing to sync — every update already has AI extraction generated or reviewed.", "info")
+        flash("Nothing to sync - every update already has AI extraction generated or reviewed.", "info")
         return redirect(url_for("clients.overview", slug=slug))
 
     processed_ids = []
@@ -173,7 +173,7 @@ def sync(slug):
             details=f"{len(processed_ids)} update(s)",
         )
         db.session.commit()
-        flash(f"Synced {len(processed_ids)} update(s) — review the extracted details below.", "success")
+        flash(f"Synced {len(processed_ids)} update(s) - review the extracted details below.", "success")
         if len(processed_ids) == 1:
             return redirect(url_for("conversations.detail", slug=slug, conversation_id=processed_ids[0]))
     else:
@@ -223,7 +223,7 @@ def resync(slug, conversation_id):
 
     log_activity(current_user.id, client.id, "Update re-synced", "conversation", conversation.id)
     db.session.commit()
-    flash("Synced — review the extracted details below.", "success")
+    flash("Synced - review the extracted details below.", "success")
     return redirect(url_for("conversations.detail", slug=slug, conversation_id=conversation.id))
 
 
@@ -298,7 +298,7 @@ def confirm_extraction(slug, conversation_id):
     conversation.important_context = payload.get("important_context", conversation.important_context)
     conversation.open_questions = payload.get("open_questions", [])
 
-    source_label = f"{conversation.interaction_type} — {conversation.date.strftime('%d %b %Y')}"
+    source_label = f"{conversation.interaction_type} - {conversation.date.strftime('%d %b %Y')}"
 
     # A conversation can be confirmed more than once (edit notes -> re-sync ->
     # confirm again). conversation_id on Decision/ActionItem is only ever set
@@ -364,7 +364,7 @@ def discard_extraction(slug, conversation_id):
     # re-enters the Sync queue instead of being stuck needing a manual re-sync.
     conversation.extraction_status = "none"
     log_activity(
-        current_user.id, client.id, "AI extraction discarded — update returned to pending sync",
+        current_user.id, client.id, "AI extraction discarded - update returned to pending sync",
         "conversation", conversation.id,
     )
     db.session.commit()

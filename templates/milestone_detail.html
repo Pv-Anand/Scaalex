@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ milestone.title }} — {{ client.name }}{% endblock %}
+{% block title %}{{ milestone.title }} - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 
@@ -14,7 +14,7 @@
 </div>
 
 <div class="flex-gap mb-32" style="font-size:13px; color:var(--grey-700);">
-  <div>Due <strong style="color:var(--black);">{{ milestone.due_date.strftime('%d %b %Y') if milestone.due_date else '—' }}</strong></div>
+  <div>Due <strong style="color:var(--black);">{{ milestone.due_date.strftime('%d %b %Y') if milestone.due_date else '-' }}</strong></div>
   <div>Reporting Manager <strong style="color:var(--black);">{{ milestone.reporting_manager.name if milestone.reporting_manager else 'Unassigned' }}</strong></div>
   <div>Visible to client <strong style="color:var(--black);">{{ 'Yes' if milestone.visible_to_client else 'No' }}</strong></div>
 </div>
@@ -113,7 +113,7 @@
         <div class="flex-gap">
           <div class="small muted">Requested on <strong style="color:var(--black);">{{ active.requested_at.strftime('%d %b %Y') }}</strong></div>
           <span class="badge badge-status-in-progress">Awaiting response</span>
-          <button type="button" class="btn btn-sm" style="margin-left:auto; background:var(--grey-100); color:var(--grey-300); cursor:not-allowed;" disabled title="One request at a time — wait for a response, or it'll show here once one comes in.">Send Request</button>
+          <button type="button" class="btn btn-sm" style="margin-left:auto; background:var(--grey-100); color:var(--grey-300); cursor:not-allowed;" disabled title="One request at a time - wait for a response, or it'll show here once one comes in.">Send Request</button>
         </div>
         {% else %}
         <form method="POST" action="{{ url_for('reports.send_request', slug=client.slug, milestone_id=milestone.id) }}" id="send-request-form">
@@ -186,7 +186,7 @@
   <div class="side-col">
     <div class="card">
       <h3 style="font-size:14px; margin-bottom:4px;">Delivery to Client</h3>
-      <p class="small muted mb-16">Attach the finished output here — downloadable on their portal once this milestone is complete and visible.</p>
+      <p class="small muted mb-16">Attach the finished output here - downloadable on their portal once this milestone is complete and visible.</p>
 
       <form method="POST" action="{{ url_for('reports.attach_deliverable', slug=client.slug, milestone_id=milestone.id) }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -203,7 +203,7 @@
         {% for d in deliverables %}
         <li class="list-item">
           <a href="{{ url_for('documents.download', doc_id=d.id) }}">{{ d.file_name }}</a>
-          <span class="small muted"> — {{ d.uploaded_at.strftime('%d %b %Y') }}</span>
+          <span class="small muted"> - {{ d.uploaded_at.strftime('%d %b %Y') }}</span>
         </li>
         {% endfor %}
       </ul>

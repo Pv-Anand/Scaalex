@@ -31,7 +31,7 @@ def _build_history_text(client, date_from=None, date_to=None):
         )
 
     for c in conversations:
-        lines.append(f"\n[{c.date.strftime('%d %b %Y')}] {c.interaction_type} — Participants: {c.participants_display or 'n/a'}")
+        lines.append(f"\n[{c.date.strftime('%d %b %Y')}] {c.interaction_type} - Participants: {c.participants_display or 'n/a'}")
         if c.summary:
             lines.append(f"Summary: {c.summary}")
         elif c.raw_notes:

@@ -224,7 +224,7 @@ def respond_to_request(portal_slug, client, contact, request_id):
     req.fulfilled_by_contact_id = contact.id
     req.fulfilled_at = datetime.utcnow()
     db.session.commit()
-    flash("Submitted — this is now under review by Scaalex.", "success")
+    flash("Submitted - this is now under review by Scaalex.", "success")
     return redirect(url_for("portal.timeline", portal_slug=portal_slug))
 
 

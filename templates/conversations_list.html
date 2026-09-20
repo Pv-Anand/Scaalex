@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Conversations — {{ client.name }}{% endblock %}
+{% block title %}Conversations - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 {% include "_overview_subtabs.html" %}
@@ -26,7 +26,7 @@
       <tr onclick="window.location='{{ url_for('conversations.detail', slug=client.slug, conversation_id=c.id) }}'" style="cursor:pointer;">
         <td style="white-space:nowrap;">{{ c.date.strftime('%d %b %Y') }}</td>
         <td><span class="badge badge-type">{{ c.interaction_type }}</span></td>
-        <td>{{ c.participants_display or '—' }}</td>
+        <td>{{ c.participants_display or '-' }}</td>
         <td>
           {{ (c.summary or c.raw_notes or '')[:120] }}{{ '…' if (c.summary or c.raw_notes or '')|length > 120 else '' }}
           {% if c.extraction_status == 'pending_review' %}<span class="needs-confirmation-tag small">Needs Review</span>{% endif %}

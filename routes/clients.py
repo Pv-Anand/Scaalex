@@ -117,19 +117,19 @@ def _build_overview_events(client, limit=40):
         if req.status == "received" and req.received_at:
             events.append({
                 "date": req.received_at.date(), "kind": "Received", "kind_class": "badge-status-completed",
-                "title": f"{req.milestone.title} — response received", "detail": preview,
+                "title": f"{req.milestone.title} - response received", "detail": preview,
                 "url": url_for("reports.milestone_detail", slug=client.slug, milestone_id=req.milestone_id),
             })
         elif req.status == "rejected" and req.rejected_at:
             events.append({
                 "date": req.rejected_at.date(), "kind": "Rejected", "kind_class": "badge-overdue",
-                "title": f"{req.milestone.title} — response rejected", "detail": req.rejection_comment or "",
+                "title": f"{req.milestone.title} - response rejected", "detail": req.rejection_comment or "",
                 "url": url_for("reports.milestone_detail", slug=client.slug, milestone_id=req.milestone_id),
             })
         elif req.fulfilled_at:
             events.append({
                 "date": req.fulfilled_at.date(), "kind": "Under Review", "kind_class": "badge-status-in-progress",
-                "title": f"{req.milestone.title} — client responded", "detail": preview,
+                "title": f"{req.milestone.title} - client responded", "detail": preview,
                 "url": url_for("reports.milestone_detail", slug=client.slug, milestone_id=req.milestone_id),
             })
 
@@ -139,7 +139,7 @@ def _build_overview_events(client, limit=40):
             snippet = snippet[:90].rstrip() + "…"
         events.append({
             "date": c.date.date(), "kind": "Conversation", "kind_class": "badge-type",
-            "title": f"{c.interaction_type} — {c.date.strftime('%d %b %Y')}",
+            "title": f"{c.interaction_type} - {c.date.strftime('%d %b %Y')}",
             "detail": snippet or "No notes recorded.",
             "url": url_for("conversations.detail", slug=client.slug, conversation_id=c.id),
         })

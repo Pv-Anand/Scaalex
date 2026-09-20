@@ -157,7 +157,7 @@ def board():
             client = client_map[m.client_id]
             add(d, {
                 "type": "milestone", "dot": "dot-milestone",
-                "title": f"{m.title} — due",
+                "title": f"{m.title} - due",
                 "client": client,
                 "owner": m.reporting_manager.name if m.reporting_manager else None,
                 "meta": m.status.replace("_", " ").title(), "meta_danger": False,

@@ -217,7 +217,7 @@ def send_request(slug, milestone_id):
     db.session.flush()
     log_activity(current_user.id, client.id, "Requested from client", "milestone_request", req.id, details=f"{milestone.title}: {message}")
     db.session.commit()
-    flash("Request sent — it now shows on the client's portal.", "success")
+    flash("Request sent - it now shows on the client's portal.", "success")
     return redirect(url_for("reports.milestone_detail", slug=slug, milestone_id=milestone.id))
 
 
@@ -284,7 +284,7 @@ def reject_request(slug, request_id):
         details=f"{req.milestone.title}: {comment}",
     )
     db.session.commit()
-    flash("Rejected — the client will see your comment and can resubmit.", "success")
+    flash("Rejected - the client will see your comment and can resubmit.", "success")
     return redirect(request.referrer or url_for("clients.overview", slug=slug))
 
 
@@ -317,7 +317,7 @@ def attach_deliverable(slug, milestone_id):
     db.session.flush()
     log_activity(current_user.id, client.id, "Deliverable attached", "document", doc.id, details=f"{milestone.title}: {original_name}")
     db.session.commit()
-    flash(f"{original_name} attached — visible to the client once this milestone is complete.", "success")
+    flash(f"{original_name} attached - visible to the client once this milestone is complete.", "success")
     return redirect(url_for("reports.milestone_detail", slug=slug, milestone_id=milestone.id))
 
 

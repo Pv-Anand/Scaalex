@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ client.name }} — Engagement Progress</title>
+  <title>{{ client.name }} - Engagement Progress</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -90,7 +90,7 @@
     {% if under_review %}
     <div class="mt-32">
       <h2 class="section-title" style="margin-bottom:4px;">Under Review</h2>
-      <p class="small muted mb-16">Sent to Scaalex — waiting on their next step.</p>
+      <p class="small muted mb-16">Sent to Scaalex - waiting on their next step.</p>
       {% for req in under_review %}
       <div class="milestone-row review-desktop-row">
         <div style="width:96px; flex-shrink:0;" class="small muted">{{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}</div>
@@ -182,7 +182,7 @@
 
     <div class="mt-32" style="padding-top:24px; border-top:1px solid var(--line); text-align:center;">
       <div class="small muted">Questions about your engagement? Reach out to your Scaalex relationship manager.</div>
-      <div class="small" style="color:var(--grey-300); margin-top:10px;">© Scaalex Consulting — Private client portal</div>
+      <div class="small" style="color:var(--grey-300); margin-top:10px;">© Scaalex Consulting - Private client portal</div>
     </div>
   </div>
   <script>

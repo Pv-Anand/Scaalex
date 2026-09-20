@@ -41,7 +41,7 @@ def add_conversation(client, user, interaction_type, date, participants, raw_not
     db.session.add(conversation)
     db.session.flush()
 
-    source_label = f"{interaction_type} — {date.strftime('%d %b %Y')}"
+    source_label = f"{interaction_type} - {date.strftime('%d %b %Y')}"
 
     for d in decisions or []:
         db.session.add(Decision(
@@ -100,7 +100,7 @@ def seed():
                 "Walked management through Google Ads performance over the last quarter. CTR and "
                 "conversion rate both improved month-on-month. Management is inclined to continue "
                 "the campaign but wants to see options for scaling spend ahead of the festive season.",
-                summary="Reviewed Google Ads performance with management — CTR and conversions trending "
+                summary="Reviewed Google Ads performance with management - CTR and conversions trending "
                         "up month-on-month. Management wants scaling options ahead of the festive season.",
                 important_context="Festive season timing is a key driver for any budget increase decision.",
                 open_questions=["What incremental budget would be needed to meaningfully scale before the festive season?"],
@@ -174,7 +174,7 @@ def seed():
                 "approach. Timeline for outreach was not finalized.",
                 summary="Reviewed investor positioning note; founder requested market sizing revisions "
                         "and asked for an initial investor shortlist.",
-                open_questions=["Exact outreach start date — not yet finalized with the founder."],
+                open_questions=["Exact outreach start date - not yet finalized with the founder."],
                 decisions=[],
                 action_items=[
                     {"task": "Revise market sizing section of positioning note", "owner": "Scaalex",

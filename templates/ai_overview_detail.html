@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Leadership Overview — {{ client.name }}{% endblock %}
+{% block title %}Leadership Overview - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 
@@ -37,7 +37,7 @@
         <tr>
           <td>{{ a.action }}</td>
           <td>{{ a.owner }}</td>
-          <td>{{ a.due_date or '—' }}</td>
+          <td>{{ a.due_date or '-' }}</td>
           <td>{{ a.status }}</td>
         </tr>
         {% endfor %}
@@ -82,7 +82,7 @@
 </div>
 
 <div class="section">
-  <h2 class="section-title">6. Recommended Next Steps <span class="small muted" style="font-weight:400; text-transform:none; letter-spacing:0;">(Suggested — not yet agreed)</span></h2>
+  <h2 class="section-title">6. Recommended Next Steps <span class="small muted" style="font-weight:400; text-transform:none; letter-spacing:0;">(Suggested - not yet agreed)</span></h2>
   {% if overview.suggested_next_steps %}
   <ul class="bullets">
     {% for s in overview.suggested_next_steps %}<li>{{ s }}</li>{% endfor %}

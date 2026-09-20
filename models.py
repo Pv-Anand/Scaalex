@@ -432,7 +432,7 @@ class Document(db.Model):
             return f"Deliverable for milestone: {self.milestone.title}"
         if self.conversation_id and self.conversation:
             c = self.conversation
-            return f"Attached to update: {c.interaction_type} — {c.date.strftime('%d %b %Y')}"
+            return f"Attached to update: {c.interaction_type} - {c.date.strftime('%d %b %Y')}"
         return "Manual upload"
 
 

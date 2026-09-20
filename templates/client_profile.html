@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Client Profile — {{ client.name }}{% endblock %}
+{% block title %}Client Profile - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 
@@ -11,7 +11,7 @@
       <span class="status-pill"><span class="status-dot {{ client.status }}"></span>{{ client.status }}</span>
     </div>
     <div class="small muted mt-4">
-      {% if client.website %}{{ client.website }} &middot; {% endif %}Client since {{ client.created_at.strftime('%b %Y') if client.created_at else '—' }}
+      {% if client.website %}{{ client.website }} &middot; {% endif %}Client since {{ client.created_at.strftime('%b %Y') if client.created_at else '-' }}
     </div>
   </div>
 </div>
@@ -31,9 +31,9 @@
         {% for c in contacts %}
         <tr>
           <td>{{ c.name }}{% if c.is_primary %} <span class="badge badge-type">Primary</span>{% endif %}</td>
-          <td>{{ c.designation or '—' }}</td>
-          <td>{{ c.email or '—' }}</td>
-          <td>{{ c.phone or '—' }}</td>
+          <td>{{ c.designation or '-' }}</td>
+          <td>{{ c.email or '-' }}</td>
+          <td>{{ c.phone or '-' }}</td>
           <td style="white-space:nowrap;">
             {% if not c.is_primary %}
             <form method="POST" action="{{ url_for('clients.make_primary_contact', slug=client.slug, contact_id=c.id) }}" style="display:inline;">
@@ -111,8 +111,8 @@
             {{ c.name }}
             <div class="small muted">{{ c.designation or '' }}</div>
           </td>
-          <td>{{ c.email or '—' }}</td>
-          <td>{{ c.phone or '—' }}</td>
+          <td>{{ c.email or '-' }}</td>
+          <td>{{ c.phone or '-' }}</td>
           <td>
             <form method="POST" action="{{ url_for('clients.toggle_portal_access', slug=client.slug, contact_id=c.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -125,7 +125,7 @@
           <td class="small muted">{% if c.portal_access %}{% if c.must_change_password %}Invited, not signed in yet{% else %}Active{% endif %}{% else %}No access{% endif %}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" class="muted small">No team members yet — add one above first.</td></tr>
+        <tr><td colspan="5" class="muted small">No team members yet - add one above first.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -157,21 +157,21 @@ function toggleAddContact() {
       </div>
       <div>
         <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Registered Name</div>
-        <div style="font-size:13.5px;">{{ client.registered_name or '—' }}</div>
+        <div style="font-size:13.5px;">{{ client.registered_name or '-' }}</div>
       </div>
     </div>
     <div class="mt-16">
       <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Address</div>
-      <div style="font-size:13.5px;">{{ client.address or '—' }}</div>
+      <div style="font-size:13.5px;">{{ client.address or '-' }}</div>
     </div>
     <div class="form-row mt-16">
       <div>
         <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">Website</div>
-        <div style="font-size:13.5px;">{{ client.website or '—' }}</div>
+        <div style="font-size:13.5px;">{{ client.website or '-' }}</div>
       </div>
       <div>
         <div class="small muted" style="text-transform:uppercase; letter-spacing:.06em; font-size:11px; margin-bottom:5px;">GST Number</div>
-        <div style="font-size:13.5px;">{{ client.gst_number or '—' }}</div>
+        <div style="font-size:13.5px;">{{ client.gst_number or '-' }}</div>
       </div>
     </div>
   </div>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ client.name }} — Scaalex Intelligence{% endblock %}
+{% block title %}{{ client.name }} - Scaalex Intelligence{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 {% include "_overview_subtabs.html" %}
@@ -10,7 +10,7 @@
     <div class="label">Engagement Status</div>
   </div>
   <div class="stat-cell">
-    <div class="num">{{ client.last_activity.strftime('%d %b %Y') if client.last_activity else '—' }}</div>
+    <div class="num">{{ client.last_activity.strftime('%d %b %Y') if client.last_activity else '-' }}</div>
     <div class="label">Last Interaction</div>
   </div>
   <div class="stat-cell">
@@ -34,7 +34,7 @@
 {% if needs_review %}
 <div class="section">
   <h2 class="section-title" style="margin-bottom:4px;">Needs Your Review</h2>
-  <p class="small muted mb-16">What the client has sent back — accept it to close the loop and let them know it's been received.</p>
+  <p class="small muted mb-16">What the client has sent back - accept it to close the loop and let them know it's been received.</p>
   {% for req in needs_review %}
   <div class="card mb-16" style="background:var(--grey-50);">
     <div class="flex-between" style="align-items:flex-start;">
@@ -49,7 +49,7 @@
           {% elif req.response_url %}{{ req.response_url }}
           {% else %}{{ req.response_text }}
           {% endif %}
-          — submitted by {{ req.fulfilled_by_contact.name if req.fulfilled_by_contact else 'client' }}, {{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}
+          - submitted by {{ req.fulfilled_by_contact.name if req.fulfilled_by_contact else 'client' }}, {{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}
         </div>
       </div>
       <div class="flex-gap" style="flex-shrink:0;">
@@ -69,7 +69,7 @@
   <div>
     <div class="section">
       <h2 class="section-title" style="margin-bottom:4px;">Engagement Timeline</h2>
-      <p class="small muted mb-16">Everything that's happened, in order — milestones, client submissions, and conversations together.</p>
+      <p class="small muted mb-16">Everything that's happened, in order - milestones, client submissions, and conversations together.</p>
       {% if events %}
       {% for e in events %}
       <a href="{{ e.url }}" style="display:block;">
@@ -78,7 +78,7 @@
             <span class="badge {{ e.kind_class }}">{{ e.kind }}</span>
             <strong>{{ e.title }}</strong>
           </div>
-          <div class="small muted mt-8">{{ e.date.strftime('%d %b %Y') }} — {{ e.detail }}</div>
+          <div class="small muted mt-8">{{ e.date.strftime('%d %b %Y') }} - {{ e.detail }}</div>
         </div>
       </a>
       {% endfor %}

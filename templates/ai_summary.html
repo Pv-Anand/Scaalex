@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}AI Summary — {{ client.name }}{% endblock %}
+{% block title %}AI Summary - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 
@@ -27,7 +27,7 @@
 {% if latest %}
 <div class="section">
   <div class="flex-between mb-16">
-    <h2 class="section-title" style="margin-bottom:0;">Latest Overview — {{ latest.generated_at.strftime('%d %b %Y, %I:%M %p') }}</h2>
+    <h2 class="section-title" style="margin-bottom:0;">Latest Overview - {{ latest.generated_at.strftime('%d %b %Y, %I:%M %p') }}</h2>
     <a href="{{ url_for('ai_overview.view_overview', slug=client.slug, overview_id=latest.id) }}" class="btn btn-sm btn-secondary">Open Full Overview →</a>
   </div>
   <div class="card">
@@ -54,7 +54,7 @@
         {{ o.generated_at.strftime('%d %b %Y, %I:%M %p') }}
       </a>
       {% if o.period_start or o.period_end %}
-      <span class="small muted">— covering {{ o.period_start.strftime('%d %b %Y') if o.period_start else 'start' }} to {{ o.period_end.strftime('%d %b %Y') if o.period_end else 'today' }}</span>
+      <span class="small muted">- covering {{ o.period_start.strftime('%d %b %Y') if o.period_start else 'start' }} to {{ o.period_end.strftime('%d %b %Y') if o.period_end else 'today' }}</span>
       {% endif %}
     </li>
     {% endfor %}

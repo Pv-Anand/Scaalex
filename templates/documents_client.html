@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Documents — {{ client.name }}{% endblock %}
+{% block title %}Documents - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 
 <h2 class="section-title" style="margin-bottom:4px;">Documents</h2>
-<p class="small muted mb-24">Every file exchanged on this engagement — what Scaalex has shared, and what the client has sent back — with the date, who, and why.</p>
+<p class="small muted mb-24">Every file exchanged on this engagement - what Scaalex has shared, and what the client has sent back - with the date, who, and why.</p>
 
 <div class="stat-row">
   <div class="stat-cell">
@@ -38,7 +38,7 @@
       <select name="conversation_id">
         <option value="">None</option>
         {% for c in conversations %}
-        <option value="{{ c.id }}">{{ c.date.strftime('%d %b %Y') }} — {{ c.interaction_type }}</option>
+        <option value="{{ c.id }}">{{ c.date.strftime('%d %b %Y') }} - {{ c.interaction_type }}</option>
         {% endfor %}
       </select>
     </div>

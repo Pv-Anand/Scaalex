@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Action Items — {{ client.name }}{% endblock %}
+{% block title %}Action Items - {{ client.name }}{% endblock %}
 {% block content %}
 {% include "_client_subnav.html" %}
 {% include "_tasks_client_subtabs.html" %}
@@ -103,7 +103,7 @@
         <div class="form-group">
           <label>Source</label>
           <div class="small muted" style="padding-top:9px;">
-            {% if a.conversation_id %}<a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=a.conversation_id) }}">{{ a.source_label }}</a>{% else %}{{ a.source_label or '—' }}{% endif %}
+            {% if a.conversation_id %}<a href="{{ url_for('conversations.detail', slug=client.slug, conversation_id=a.conversation_id) }}">{{ a.source_label }}</a>{% else %}{{ a.source_label or '-' }}{% endif %}
           </div>
         </div>
       </div>
