@@ -288,24 +288,30 @@ button { font-family: inherit; }
 .table-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table select { min-width: 152px; padding: 6px 26px 6px 8px; background-position: right 8px center; font-size: 12.5px; }
 
-/* ---------- Action items table: fixed columns, dividers, zebra rows ---------- */
-.action-table { table-layout: fixed; min-width: 900px; }
-.action-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.action-table .col-task { width: 36%; }
-.action-table .col-client { width: 11%; }
-.action-table .col-assignee { width: 9%; }
-.action-table .col-owner { width: 9%; }
-.action-table .col-due { width: 10%; }
-.action-table .col-priority { width: 8%; }
-.action-table .col-status { width: 17%; }
-.action-table th, .action-table td { border-left: 1px solid var(--grey-100); }
-.action-table th:first-child, .action-table td:first-child { border-left: none; }
-.action-table tbody tr:nth-child(even) td { background: var(--grey-50); }
-.action-table tbody tr:hover td { background: var(--grey-100); }
-.action-table-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.45; }
-.action-table-empty { color: var(--grey-300); }
-.needs-confirmation-badge { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; background: var(--warn-bg); color: var(--warn); }
 .status-pill-select { border-radius: 20px; width: 100%; }
+
+/* ---------- Action items: card-row list ---------- */
+.action-list { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--white); }
+.action-row { display: flex; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--grey-100); border-left: 3px solid transparent; transition: background 0.12s ease; }
+.action-row:last-child { border-bottom: none; }
+.action-row:hover { background: var(--grey-50); }
+.action-row.priority-High { border-left-color: var(--danger); }
+.action-row.priority-Medium { border-left-color: var(--warn); }
+.action-row.priority-Low { border-left-color: var(--line-strong); }
+.action-row.is-overdue { border-left-color: var(--danger); background: var(--danger-bg); }
+.action-row.is-overdue:hover { background: var(--danger-bg); }
+.action-row.is-completed { opacity: 0.55; }
+.action-row-main { flex: 1; min-width: 0; }
+.action-row-task { font-size: 13.5px; font-weight: 600; line-height: 1.5; }
+.action-row-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 7px; font-size: 11.5px; color: var(--grey-700); }
+.action-row-meta .sep { color: var(--line-strong); }
+.action-row-meta .muted { color: var(--grey-500); }
+.action-row-meta a:hover { text-decoration: underline; }
+.action-avatar { width: 16px; height: 16px; border-radius: var(--radius); background: var(--grey-100); color: var(--grey-700); font-size: 9px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.action-row-side { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.action-row-side .status-pill-select { width: auto; min-width: 150px; }
+.action-edit-panel { background: var(--grey-50); padding: 20px; border-bottom: 1px solid var(--grey-100); }
+.action-list .action-row:last-child + .action-edit-panel { border-bottom: none; }
 
 .list-item { padding: 14px 0; border-bottom: 1px solid var(--grey-100); }
 .list-item:last-child { border-bottom: none; }
@@ -667,4 +673,8 @@ a.auth-submit { justify-content: center; text-decoration: none; margin-top: 16px
   .decision-pending-actions { width: 100%; }
   .decision-pending-actions form { flex: 1; }
   .decision-pending-actions form button { width: 100%; justify-content: center; }
+
+  .action-row { flex-direction: column; align-items: stretch; }
+  .action-row-side { width: 100%; justify-content: space-between; }
+  .action-row-side .status-pill-select { flex: 1; min-width: 0; }
 }

@@ -54,11 +54,17 @@ def global_list():
 
     items = _apply_filters_and_sort(q, request.args)
 
+    people = set()
+    for a in items:
+        for name in (a.owner, a.assignee):
+            if name and name != "Unassigned":
+                people.add(name)
+
     return render_template(
         "action_items_global.html", items=items, clients=clients,
         statuses=STATUSES, priorities=PRIORITIES,
         current_client_id=client_id, filters=request.args,
-        active_subtab="action",
+        people=sorted(people), active_subtab="action",
     )
 
 

@@ -219,7 +219,7 @@ function toggleActionItemRow(itemId) {
   const editRow = document.getElementById(`action-item-edit-${itemId}`);
   const toggleBtn = document.getElementById(`action-item-toggle-${itemId}`);
   const open = editRow.style.display !== 'none';
-  editRow.style.display = open ? 'none' : 'table-row';
+  editRow.style.display = open ? 'none' : 'block';
   toggleBtn.classList.toggle('open', !open);
 }
 
@@ -242,6 +242,6 @@ async function updateActionStatus(itemId, status, selectEl) {
   const data = await res.json();
   if (data.ok) {
     showToast('Status updated');
-    selectEl.closest('tr')?.classList.toggle('is-completed', status === 'Completed');
+    selectEl.closest('.action-row')?.classList.toggle('is-completed', status === 'Completed');
   }
 }

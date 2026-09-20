@@ -31,35 +31,96 @@
 </form>
 
 {% if items %}
-<div class="table-wrap">
-  <table class="table action-table">
-    <colgroup>
-      <col class="col-task"><col class="col-client"><col class="col-assignee"><col class="col-owner"><col class="col-due"><col class="col-priority"><col class="col-status">
-    </colgroup>
-    <thead><tr><th>Task</th><th>Client</th><th>Assignee</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead>
-    <tbody>
-      {% for a in items %}
-      <tr>
-        <td>
-          <div class="action-table-clamp">{{ a.task }}</div>
-          {% if a.needs_confirmation %}<span class="needs-confirmation-badge">Needs Confirmation</span>{% endif %}
-        </td>
-        <td><a href="{{ url_for('clients.overview', slug=a.client.slug) }}">{{ a.client.name }}</a></td>
-        <td>{% if a.assignee %}{{ a.assignee }}{% else %}<span class="action-table-empty">—</span>{% endif %}</td>
-        <td>{{ a.owner }}</td>
-        <td class="{{ 'overdue-text' if a.is_overdue }}">{% if a.due_date %}{{ a.due_date.strftime('%d %b %Y') }}{% if a.is_overdue %} (Overdue){% endif %}{% else %}<span class="action-table-empty">—</span>{% endif %}</td>
-        <td><span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span></td>
-        <td>
-          <select class="status-pill-select" onchange="updateActionStatus({{ a.id }}, this.value, this)">
-            {% for s in statuses %}
-            <option value="{{ s }}" {{ 'selected' if s == a.status }}>{{ s }}</option>
-            {% endfor %}
+<datalist id="action-item-people">
+  {% for p in people %}<option value="{{ p }}"></option>{% endfor %}
+</datalist>
+<div class="action-list">
+  {% for a in items %}
+  <div id="action-item-row-{{ a.id }}" class="action-row priority-{{ a.priority }} {{ 'is-overdue' if a.is_overdue }} {{ 'is-completed' if a.status == 'Completed' }}">
+    <div class="action-row-main">
+      <div class="action-row-task">{{ a.task }}</div>
+      <div class="action-row-meta">
+        <a href="{{ url_for('clients.overview', slug=a.client.slug) }}">{{ a.client.name }}</a>
+        <span class="sep">&middot;</span>
+        {% if a.assignee %}
+        <span><span class="action-avatar">{{ a.assignee[0]|upper }}</span> {{ a.assignee }}</span>
+        {% elif a.owner and a.owner != 'Unassigned' %}
+        <span class="muted">Owner: {{ a.owner }}</span>
+        {% else %}
+        <span class="muted">Unassigned</span>
+        {% endif %}
+        <span class="sep">&middot;</span>
+        {% if a.due_date %}
+        <span class="{{ 'overdue-text' if a.is_overdue }}">{{ 'Overdue since ' if a.is_overdue }}{{ a.due_date.strftime('%d %b %Y') if not a.is_overdue else a.due_date.strftime('%d %b') }}</span>
+        {% else %}
+        <span class="muted">No due date</span>
+        {% endif %}
+        <span class="sep">&middot;</span>
+        <span class="badge badge-priority-{{ a.priority }}">{{ a.priority }}</span>
+        {% if a.needs_confirmation %}<span class="badge badge-needs-confirmation">Needs Confirmation</span>{% endif %}
+      </div>
+    </div>
+    <div class="action-row-side">
+      <select class="status-pill-select" onchange="updateActionStatus({{ a.id }}, this.value, this)">
+        {% for s in statuses %}
+        <option value="{{ s }}" {{ 'selected' if s == a.status }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" id="action-item-toggle-{{ a.id }}" class="row-expand-btn" onclick="toggleActionItemRow({{ a.id }})" aria-label="Edit action item">
+        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="action-item-edit-{{ a.id }}" class="action-edit-panel" style="display:none;">
+    <form method="POST" action="{{ url_for('action_items.edit', item_id=a.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>Task</label>
+        <textarea name="task" rows="2" required>{{ a.task }}</textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Assignee</label>
+          <input type="text" name="assignee" value="{{ a.assignee or '' }}" list="action-item-people" placeholder="Select or write a name">
+        </div>
+        <div class="form-group">
+          <label>Task Owner</label>
+          <input type="text" name="owner" value="{{ a.owner or '' }}" list="action-item-people" placeholder="Select or write a name">
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority">
+            {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if p == a.priority }}>{{ p }}</option>{% endfor %}
           </select>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Due Date</label>
+          <input type="date" name="due_date" value="{{ a.due_date.strftime('%Y-%m-%d') if a.due_date else '' }}">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status">
+            {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == a.status }}>{{ s }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Source</label>
+          <div class="small muted" style="padding-top:9px;">{{ a.source_label or '—' }}</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea name="notes" rows="2" placeholder="Add context, blockers, or updates on this task">{{ a.notes or '' }}</textarea>
+      </div>
+      <div class="form-actions" style="justify-content:flex-end; gap:10px;">
+        <button type="button" class="link-btn small muted" onclick="toggleActionItemRow({{ a.id }})">Cancel</button>
+        <button type="submit" class="btn btn-sm">Save Changes</button>
+      </div>
+    </form>
+  </div>
+  {% endfor %}
 </div>
 {% else %}
 <div class="empty-state"><h3>No action items match these filters</h3></div>
