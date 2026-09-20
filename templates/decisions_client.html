@@ -33,6 +33,15 @@
         {% endif %}
       </div>
       <div class="flex-gap decision-pending-actions" style="flex-shrink:0; gap:8px;">
+        <button type="button" class="notify-btn"
+                data-entity-type="decision" data-entity-id="{{ d.id }}"
+                data-state="pending"
+                data-eyebrow="Decision · Needs Confirmation"
+                data-title="Notify {{ client.name }}" data-subtitle="{{ d.decision }}"
+                onclick="openNotifyModal(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2l-7 20-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Notify Client
+        </button>
         <button type="button" class="icon-btn" aria-label="Edit decision" onclick="toggleDecisionEdit({{ d.id }})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
         </button>
@@ -64,6 +73,15 @@
           <div class="decision-title">{{ d.decision }}</div>
           <div class="flex-gap" style="flex-shrink:0; gap:8px;">
             <span class="badge badge-status-Confirmed">{{ d.status }}</span>
+            <button type="button" class="notify-btn"
+                    data-entity-type="decision" data-entity-id="{{ d.id }}"
+                    data-state="completed"
+                    data-eyebrow="Decision · Confirmed"
+                    data-title="Notify {{ client.name }}" data-subtitle="{{ d.decision }}"
+                    onclick="openNotifyModal(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2l-7 20-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Notify Client
+            </button>
             <button type="button" class="icon-btn" aria-label="Edit decision" onclick="toggleDecisionEdit({{ d.id }})">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
             </button>

@@ -61,6 +61,17 @@
       </div>
     </div>
     <div class="action-row-side">
+      {% if a.needs_confirmation or a.status == 'Waiting on Client' or a.status == 'Completed' %}
+      <button type="button" class="notify-btn"
+              data-entity-type="action-item" data-entity-id="{{ a.id }}"
+              data-state="{{ 'completed' if a.status == 'Completed' else 'pending' }}"
+              data-eyebrow="Action Item · {{ 'Completed' if a.status == 'Completed' else 'Needs Confirmation' }}"
+              data-title="Notify {{ a.client.name }}" data-subtitle="{{ a.task }}"
+              onclick="openNotifyModal(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2l-7 20-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Notify Client
+      </button>
+      {% endif %}
       <select class="status-pill-select" onchange="updateActionStatus({{ a.id }}, this.value, this)">
         {% for s in statuses %}
         <option value="{{ s }}" {{ 'selected' if s == a.status }}>{{ s }}</option>

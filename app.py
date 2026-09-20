@@ -48,6 +48,7 @@ def create_app(config_class=Config):
     from routes.reports import reports_bp
     from routes.calendar_board import calendar_board_bp
     from routes.portal import portal_bp, portal_hub_bp
+    from routes.notify import notify_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(home_bp)
@@ -65,6 +66,7 @@ def create_app(config_class=Config):
     app.register_blueprint(calendar_board_bp)
     app.register_blueprint(portal_bp)
     app.register_blueprint(portal_hub_bp)
+    app.register_blueprint(notify_bp)
 
     @app.context_processor
     def inject_globals():

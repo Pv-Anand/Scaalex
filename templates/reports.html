@@ -37,6 +37,17 @@
         {% elif m.status == 'completed' %}
         <a href="{{ url_for('reports.milestone_detail', slug=client.slug, milestone_id=m.id) }}" class="small muted">+ Attach deliverable</a>
         {% endif %}
+        {% if m.active_request or m.status == 'completed' %}
+        <button type="button" class="notify-btn"
+                data-entity-type="milestone" data-entity-id="{{ m.id }}"
+                data-state="{{ 'completed' if m.status == 'completed' else 'pending' }}"
+                data-eyebrow="Milestone · {{ 'Completed' if m.status == 'completed' else 'Requested from Client' }}"
+                data-title="Notify {{ client.name }}" data-subtitle="{{ m.title }}"
+                onclick="openNotifyModal(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2l-7 20-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Notify Client
+        </button>
+        {% endif %}
       </div>
     </div>
     <div class="small" style="flex-shrink:0; white-space:nowrap; color:var(--grey-500);">

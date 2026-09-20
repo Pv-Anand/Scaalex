@@ -245,3 +245,102 @@ async function updateActionStatus(itemId, status, selectEl) {
     selectEl.closest('.action-row')?.classList.toggle('is-completed', status === 'Completed');
   }
 }
+
+/* ---------------- Notify Client ---------------- */
+let notifyDraftData = null;
+
+function ensureNotifyModal() {
+  let overlay = document.getElementById('notify-modal-overlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.id = 'notify-modal-overlay';
+  overlay.className = 'notify-modal-overlay';
+  overlay.innerHTML = `
+    <div class="notify-modal">
+      <div class="notify-modal-head">
+        <div>
+          <div class="notify-modal-eyebrow" id="notify-modal-eyebrow"></div>
+          <div class="notify-modal-title" id="notify-modal-title"></div>
+          <div class="notify-modal-subtitle" id="notify-modal-subtitle"></div>
+        </div>
+        <button type="button" class="notify-modal-close" onclick="closeNotifyModal()" aria-label="Close">&times;</button>
+      </div>
+      <div class="notify-modal-body" id="notify-modal-body"></div>
+    </div>`;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeNotifyModal(); });
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function closeNotifyModal() {
+  document.getElementById('notify-modal-overlay')?.classList.remove('show');
+  notifyDraftData = null;
+}
+
+async function openNotifyModal(btn) {
+  const { entityType, entityId, state, eyebrow, title, subtitle } = btn.dataset;
+  ensureNotifyModal();
+  const eyebrowEl = document.getElementById('notify-modal-eyebrow');
+  eyebrowEl.textContent = eyebrow;
+  eyebrowEl.className = 'notify-modal-eyebrow' + (state === 'completed' ? ' state-completed' : '');
+  document.getElementById('notify-modal-title').textContent = title;
+  document.getElementById('notify-modal-subtitle').textContent = subtitle;
+  document.getElementById('notify-modal-body').innerHTML = '<div class="notify-modal-loading">Drafting your email and WhatsApp message&hellip;</div>';
+  document.getElementById('notify-modal-overlay').classList.add('show');
+
+  try {
+    const res = await fetch(`/notify/${entityType}/${entityId}`);
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('notify-modal-body').innerHTML = `<div class="notify-modal-error">${escapeHtml(data.error)}</div>`;
+      return;
+    }
+    notifyDraftData = data;
+    renderNotifyTemplates(data);
+  } catch (err) {
+    document.getElementById('notify-modal-body').innerHTML = `<div class="notify-modal-error">Couldn't generate templates: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function linkifyPortalUrl(text) {
+  return text.replace(/((https?:\/\/)?[a-z0-9.-]+\/client-login\/[a-z0-9-]+)/gi, '<span class="notify-portal-link">$1</span>');
+}
+
+const copyIconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke-linecap="round"/></svg>';
+
+function renderNotifyTemplates(data) {
+  document.getElementById('notify-modal-body').innerHTML = `
+    <div class="tmpl-block">
+      <div class="tmpl-head">
+        <div class="tmpl-head-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Email
+        </div>
+      </div>
+      <div class="tmpl-subject-row">
+        <div class="tmpl-subject-text">${escapeHtml(data.subject)}</div>
+        <button type="button" class="copy-btn" onclick="copyNotifyField('subject')">${copyIconSvg} Copy</button>
+      </div>
+      <div class="tmpl-body-row">
+        <div class="tmpl-body-text">${linkifyPortalUrl(escapeHtml(data.email_body))}</div>
+        <button type="button" class="copy-btn" onclick="copyNotifyField('email_body')">${copyIconSvg} Copy</button>
+      </div>
+    </div>
+    <div class="tmpl-block">
+      <div class="tmpl-head">
+        <div class="tmpl-head-label">
+          <svg viewBox="0 0 24 24" fill="none"><path fill="#25984a" d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .9.9-2.9-.2-.3A8 8 0 1112 20z"/><path fill="#25984a" d="M17 14.3c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.5-1.8-.1-.2 0-.4.1-.5l.4-.5c.1-.1.1-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.3-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.4 3.8 3.4.5.2.9.4 1.3.5.5.1 1 .1 1.4.1.4-.1 1.3-.5 1.5-1s.2-.9.1-1c0-.1-.2-.2-.4-.3z"/></svg>
+          WhatsApp
+        </div>
+        <button type="button" class="copy-btn" onclick="copyNotifyField('whatsapp_body')">${copyIconSvg} Copy</button>
+      </div>
+      <div class="tmpl-body">${linkifyPortalUrl(escapeHtml(data.whatsapp_body))}</div>
+    </div>`;
+}
+
+function copyNotifyField(field) {
+  if (!notifyDraftData) return;
+  navigator.clipboard.writeText(notifyDraftData[field])
+    .then(() => showToast('Copied to clipboard'))
+    .catch(() => showToast('Could not copy - select and copy manually'));
+}
