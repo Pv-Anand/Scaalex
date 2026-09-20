@@ -197,6 +197,20 @@ button { font-family: inherit; }
 .dot-action.overdue { background: var(--danger); }
 .dot-decision { background: var(--grey-700); }
 .dot-milestone { background: var(--success); }
+.dot-log-signin { background: var(--black); }
+.dot-log-document { background: var(--grey-500); }
+.dot-log-access { background: var(--danger); }
+.dot-log-other { background: var(--grey-300); }
+
+.log-day-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--grey-500); margin-bottom: 10px; }
+.log-day-group { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.log-entry { display: flex; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--grey-100); align-items: flex-start; }
+.log-entry:last-child { border-bottom: none; }
+.log-entry-client { background: var(--success-bg); border-left: 3px solid var(--success); }
+.log-entry-dot-col { padding-top: 5px; }
+.log-entry-action { font-size: 13.5px; font-weight: 600; }
+.log-entry-time { font-size: 11.5px; color: var(--grey-500); white-space: nowrap; }
+.badge-log-client { background: var(--white); border: 1px solid var(--success); color: var(--success); font-weight: 500; }
 
 .calendar-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start; }
 .cal-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; }

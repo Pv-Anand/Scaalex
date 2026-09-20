@@ -15,46 +15,90 @@
     <div class="num">{{ logins_30d }}</div>
     <div class="label">Sign-ins This Month</div>
   </div>
+  <div class="stat-cell">
+    <div class="num">{{ documents_30d }}</div>
+    <div class="label">Documents Exchanged (30d)</div>
+  </div>
+  <div class="stat-cell {{ 'alert' if access_changes_30d }}">
+    <div class="num">{{ access_changes_30d }}</div>
+    <div class="label">Access Changes (30d)</div>
+  </div>
 </div>
 
-<form class="filter-bar" method="GET">
-  <select name="contact_id" onchange="this.form.submit()">
+<div class="filter-bar">
+  <select name="contact_id" onchange="location.href=updateLogsQuery('contact_id', this.value)">
     <option value="">All Contacts</option>
     {% for c in contacts %}
     <option value="{{ c.id }}" {{ 'selected' if current_contact_id == c.id }}>{{ c.name }}</option>
     {% endfor %}
   </select>
-  <select name="actor" onchange="this.form.submit()">
+  <select name="actor" onchange="location.href=updateLogsQuery('actor', this.value)">
     <option value="">All Activity</option>
     <option value="client" {{ 'selected' if current_actor == 'client' }}>Client Side</option>
     <option value="staff" {{ 'selected' if current_actor == 'staff' }}>Scaalex Side</option>
   </select>
-</form>
-
-{% if entries %}
-<div class="table-wrap">
-  <table class="table">
-    <thead><tr><th>Time</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead>
-    <tbody>
-      {% for e in entries %}
-      <tr>
-        <td style="white-space:nowrap;">{{ e.created_at.strftime('%d %b, %I:%M %p') }}</td>
-        <td>
-          {% if e.client_contact %}{{ e.client_contact.name }}
-          {% elif e.user %}{{ e.user.name }} <span class="badge badge-type">Scaalex</span>
-          {% else %}—{% endif %}
-        </td>
-        <td>{{ e.action }}</td>
-        <td class="small muted">{{ e.details or '' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <select name="category" onchange="location.href=updateLogsQuery('category', this.value)">
+    <option value="">Category: All</option>
+    <option value="signin" {{ 'selected' if current_category == 'signin' }}>Sign-ins</option>
+    <option value="document" {{ 'selected' if current_category == 'document' }}>Documents</option>
+    <option value="decision" {{ 'selected' if current_category == 'decision' }}>Decisions</option>
+    <option value="action_item" {{ 'selected' if current_category == 'action_item' }}>Action Items</option>
+    <option value="milestone" {{ 'selected' if current_category == 'milestone' }}>Milestones</option>
+    <option value="access" {{ 'selected' if current_category == 'access' }}>Access Changes</option>
+    <option value="other" {{ 'selected' if current_category == 'other' }}>Other</option>
+  </select>
+  <div class="flex-gap" style="gap:14px; font-size:10.5px; color:var(--grey-700); margin-left:auto; flex-wrap:wrap;">
+    <span style="display:flex; align-items:center; gap:4px;"><span class="legend-dot dot-log-signin"></span>Sign-in</span>
+    <span style="display:flex; align-items:center; gap:4px;"><span class="legend-dot dot-log-document"></span>Document</span>
+    <span style="display:flex; align-items:center; gap:4px;"><span class="legend-dot dot-log-decision"></span>Decision</span>
+    <span style="display:flex; align-items:center; gap:4px;"><span class="legend-dot dot-log-action"></span>Action</span>
+    <span style="display:flex; align-items:center; gap:4px;"><span class="legend-dot dot-log-milestone"></span>Milestone</span>
+    <span style="display:flex; align-items:center; gap:4px;"><span class="legend-dot dot-log-access"></span>Access</span>
+  </div>
 </div>
+
+{% if entry_groups %}
+{% for group in entry_groups %}
+<div class="log-day-label">{{ group.label }}</div>
+<div class="log-day-group mb-24">
+  {% for e in group.entries %}
+  <div class="log-entry {{ 'log-entry-client' if e.client_contact }}">
+    <div class="log-entry-dot-col"><span class="legend-dot {{ e.dot_class }}"></span></div>
+    <div style="flex:1; min-width:0;">
+      <div class="flex-gap" style="gap:8px; flex-wrap:wrap;">
+        <span class="log-entry-action">{{ e.action }}</span>
+        {% if e.client_contact %}
+        <span class="badge badge-log-client">Client</span>
+        {% elif e.user %}
+        <span class="badge badge-type">Scaalex</span>
+        {% endif %}
+      </div>
+      <div class="small muted mt-4">
+        {% if e.client_contact %}{{ e.client_contact.name }}{% elif e.user %}{{ e.user.name }}{% else %}—{% endif %}
+        {% if e.details %} · {{ e.details }}{% endif %}
+      </div>
+      {% if e.view_url %}
+      <a href="{{ e.view_url }}" class="small mt-4" style="display:inline-block; text-decoration:underline;">{{ e.view_label }} →</a>
+      {% endif %}
+    </div>
+    <div class="log-entry-time">{{ e.created_at.strftime('%I:%M %p') }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
 {% else %}
 <div class="empty-state">
   <h3>No activity yet</h3>
   <p>Sign-ins, requests, and file exchanges on this client's portal will show up here.</p>
 </div>
 {% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+function updateLogsQuery(key, value) {
+  const url = new URL(window.location.href);
+  if (value) { url.searchParams.set(key, value); } else { url.searchParams.delete(key); }
+  return url.toString();
+}
+</script>
 {% endblock %}

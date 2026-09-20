@@ -8,7 +8,7 @@ also where team members are managed.
 """
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
@@ -321,6 +321,78 @@ def attach_deliverable(slug, milestone_id):
     return redirect(url_for("reports.milestone_detail", slug=slug, milestone_id=milestone.id))
 
 
+ACCESS_ACTIONS = {
+    "Portal access granted", "Portal access revoked", "Password set",
+    "Primary contact changed", "Client contact added", "Client contact removed",
+}
+
+
+def _annotate_log_entry(entry, client):
+    """Attach a category, a legend dot class, and a "View" link to a raw
+    AuditLog row, using the entity_type/entity_id it already stores but the
+    old flat table never surfaced."""
+    if entry.action in ACCESS_ACTIONS:
+        entry.log_category = "access"
+        entry.dot_class = "dot-log-access"
+        entry.view_url = url_for("clients.profile", slug=client.slug)
+        entry.view_label = "View access"
+    elif entry.action == "Signed in":
+        entry.log_category = "signin"
+        entry.dot_class = "dot-log-signin"
+        entry.view_url = None
+        entry.view_label = None
+    elif entry.entity_type == "document":
+        entry.log_category = "document"
+        entry.dot_class = "dot-log-document"
+        entry.view_url = url_for("documents.client_list", slug=client.slug)
+        entry.view_label = "View document"
+    elif entry.entity_type == "decision":
+        entry.log_category = "decision"
+        entry.dot_class = "dot-decision"
+        entry.view_url = url_for("decisions.client_list", slug=client.slug)
+        entry.view_label = "View decision"
+    elif entry.entity_type == "action_item":
+        entry.log_category = "action_item"
+        entry.dot_class = "dot-action"
+        entry.view_url = url_for("action_items.client_list", slug=client.slug)
+        entry.view_label = "View action item"
+    elif entry.entity_type == "milestone":
+        entry.log_category = "milestone"
+        entry.dot_class = "dot-milestone"
+        entry.view_url = (
+            url_for("reports.milestone_detail", slug=client.slug, milestone_id=entry.entity_id)
+            if entry.entity_id else None
+        )
+        entry.view_label = "View milestone"
+    elif entry.entity_type == "milestone_request":
+        req = MilestoneRequest.query.get(entry.entity_id) if entry.entity_id else None
+        entry.log_category = "milestone"
+        entry.dot_class = "dot-milestone"
+        entry.view_url = (
+            url_for("reports.milestone_detail", slug=client.slug, milestone_id=req.milestone_id)
+            if req else None
+        )
+        entry.view_label = "View milestone"
+    else:
+        entry.log_category = "other"
+        entry.dot_class = "dot-log-other"
+        entry.view_url = None
+        entry.view_label = None
+    return entry
+
+
+def _group_log_entries_by_day(entries):
+    groups = []
+    current_key = None
+    for e in entries:
+        key = e.created_at.strftime("%A, %d %b %Y")
+        if key != current_key:
+            groups.append({"label": key, "entries": []})
+            current_key = key
+        groups[-1]["entries"].append(e)
+    return groups
+
+
 @reports_bp.route("/logs")
 @login_required
 def logs(slug):
@@ -338,17 +410,34 @@ def logs(slug):
         q = q.filter(AuditLog.user_id.isnot(None))
 
     entries = q.order_by(AuditLog.created_at.desc()).limit(200).all()
+    for e in entries:
+        _annotate_log_entry(e, client)
 
+    category = request.args.get("category")
+    if category:
+        entries = [e for e in entries if e.log_category == category]
+
+    entry_groups = _group_log_entries_by_day(entries)
+
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     logins_30d = AuditLog.query.filter(
         AuditLog.client_id == client.id, AuditLog.action == "Signed in",
         AuditLog.created_at >= datetime.utcnow().replace(day=1),
+    ).count()
+    documents_30d = AuditLog.query.filter(
+        AuditLog.client_id == client.id, AuditLog.entity_type == "document",
+        AuditLog.created_at >= thirty_days_ago,
+    ).count()
+    access_changes_30d = AuditLog.query.filter(
+        AuditLog.client_id == client.id, AuditLog.action.in_(ACCESS_ACTIONS),
+        AuditLog.created_at >= thirty_days_ago,
     ).count()
     active_contacts = ClientContact.query.filter_by(client_id=client.id, portal_access=True).count()
 
     return render_template(
         "logs.html", client=client, active_tab="logs",
-        entries=entries, contacts=contacts,
+        entry_groups=entry_groups, contacts=contacts,
         active_contacts=active_contacts, total_contacts=len(contacts),
-        logins_30d=logins_30d,
-        current_contact_id=contact_id, current_actor=actor,
+        logins_30d=logins_30d, documents_30d=documents_30d, access_changes_30d=access_changes_30d,
+        current_contact_id=contact_id, current_actor=actor, current_category=category,
     )
