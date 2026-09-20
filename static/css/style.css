@@ -458,7 +458,8 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator:hover {
 /* ---------- Auth ---------- */
 .auth-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--grey-50); }
 .auth-card { width: 380px; max-width: calc(100vw - 40px); padding: 40px 36px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-sizing: border-box; }
-.auth-brand-logo { height: 34px; width: auto; display: block; margin: 0 auto 8px; }
+.auth-card-brand { width: 44px; height: 44px; display: block; margin: 0 auto 8px; }
+.auth-card-brand-name { text-align: center; font-size: 15px; font-weight: 700; color: var(--black); }
 .auth-sub { text-align: center; color: var(--grey-500); font-size: 12.5px; margin-bottom: 28px; }
 
 /* ---------- Auth: split-screen login ---------- */
@@ -473,7 +474,10 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator:hover {
   transform: rotate(8deg);
 }
 .auth-left-inner { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 56px 64px; width: 100%; box-sizing: border-box; }
-.auth-left-logo { height: 26px; width: auto; display: block; }
+.auth-left-brand { display: flex; align-items: center; gap: 14px; }
+.auth-left-brand-mark { width: 38px; height: 38px; display: block; flex-shrink: 0; }
+.auth-left-brand-name { font-size: 18px; font-weight: 700; color: var(--white); letter-spacing: -0.01em; line-height: 1.2; }
+.auth-left-brand-sub { font-size: 10px; color: var(--grey-300); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
 .auth-left-tagline { font-size: 11px; color: var(--grey-300); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
 .auth-left-nav { display: flex; flex-direction: column; gap: 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--grey-300); margin-top: 44px; }
 .auth-left-mid { margin: auto 0; }
@@ -622,6 +626,7 @@ a.auth-submit { justify-content: center; text-decoration: none; margin-top: 16px
 .portal-topbar { height: 64px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; }
 .portal-container { max-width: 780px; margin: 0 auto; padding: 44px 20px 80px; }
 .portal-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14.5px; color: var(--black); }
+.portal-brand-mark { width: 24px; height: 24px; display: block; }
 .next-up-card { border: 1px solid var(--black); border-radius: 4px; padding: 22px 24px; background: var(--grey-50); }
 
 .review-mobile-card { display: none; }
