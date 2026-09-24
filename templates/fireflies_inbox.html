@@ -41,7 +41,7 @@
   {% for e in upcoming_events %}
   <div class="card mb-16">
     <div class="flex-between">
-      <h3 style="font-size:15px;">{{ e.title }}{% if e.is_sales %} <span class="badge badge-type" style="margin-left:6px;">Sales</span>{% endif %}</h3>
+      <h3 style="font-size:15px;">{{ e.title }}</h3>
       <span class="small muted">
         {% if e.is_all_day %}{{ e.start.strftime('%d %b %Y') if e.start else '' }} · All day
         {% else %}{{ e.start.strftime('%d %b %Y, %I:%M %p') if e.start else 'Time TBD' }}
@@ -65,7 +65,7 @@
   <div class="subnav" style="margin-bottom:20px;">
     <button type="button" class="tab-btn active" id="tab-pending-btn" onclick="switchMeetingTab('pending')">Pending{% if pending %} ({{ pending|length }}){% endif %}</button>
     <button type="button" class="tab-btn" id="tab-completed-btn" onclick="switchMeetingTab('completed')">Completed{% if completed %} ({{ completed|length }}){% endif %}</button>
-    <button type="button" class="tab-btn" id="tab-sales-btn" onclick="switchMeetingTab('sales')">Sales{% if sales_meetings %} ({{ sales_meetings|length }}){% endif %}</button>
+    <button type="button" class="tab-btn" id="tab-sales-btn" onclick="switchMeetingTab('sales')">Others / Sales{% if sales_meetings %} ({{ sales_meetings|length }}){% endif %}</button>
   </div>
 
   <div id="tab-pending">
@@ -95,7 +95,7 @@
               {% for c in clients %}
               <option value="{{ c.id }}">{{ c.name }}</option>
               {% endfor %}
-              <option value="sales_meeting">Sales</option>
+              <option value="sales_meeting">Others / Sales</option>
             </select>
           </div>
           <button type="submit" class="btn btn-sm">Move</button>
@@ -150,14 +150,13 @@
       <li class="list-item">
         <div class="flex-between">
           <span>{{ m.title }}</span>
-          <span class="badge badge-type">Sales</span>
+          <span class="badge badge-type">Other / Sales</span>
         </div>
         <div class="small muted mt-8">
           {{ m.meeting_date.strftime('%d %b %Y') if m.meeting_date else '' }}
           {% if m.participants %} · {{ m.participants|join(', ') }}{% endif %}
           {% if m.synced_by %} · Synced by {{ m.synced_by.name }}{% endif %}
         </div>
-        {% if m.fireflies_overview %}<p class="small mt-8" style="color:var(--grey-700);">{{ m.fireflies_overview }}</p>{% endif %}
         <form method="POST" action="{{ url_for('fireflies.revert', meeting_id=m.id) }}" class="mt-8">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="small link-btn">Move back to Pending</button>
@@ -167,8 +166,8 @@
     </ul>
     {% else %}
     <div class="empty-state">
-      <h3>No sales meetings yet</h3>
-      <p>Any meeting you invite sales@scaalex.com to is filed here automatically on the next sync. You can also move a pending meeting here by hand.</p>
+      <h3>No other/sales meetings yet</h3>
+      <p>Meetings moved to "Others / Sales" from Pending will show up here.</p>
     </div>
     {% endif %}
   </div>

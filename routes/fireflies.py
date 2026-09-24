@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from extensions import db, limiter
@@ -31,19 +31,12 @@ def guess_client_match(title, participant_names):
     return None
 
 
-def _is_sales_meeting(attendees):
-    """True when a sales mailbox (sales@scaalex.com by default) was invited."""
-    sales = set(current_app.config.get("SALES_MEETING_EMAILS") or ())
-    return any((a.get("email") or "").strip().lower() in sales for a in attendees or [])
-
-
 def _sync_transcripts():
     meetings = fetch_recent_transcripts(limit=25)
     existing_ids = {m.fireflies_id for m in FirefliesMeeting.query.all()}
 
     new_count = 0
     auto_matched_count = 0
-    sales_count = 0
 
     for m in meetings:
         fid = m.get("id")
@@ -59,9 +52,7 @@ def _sync_transcripts():
         summary = detail.get("summary") or {}
         overview = summary.get("short_overview") or ""
 
-        is_sales = _is_sales_meeting(attendees)
-        # Sales meetings are prospects, not projects: never match them to a client.
-        client = None if is_sales else guess_client_match(title, participant_names)
+        client = guess_client_match(title, participant_names)
 
         record = FirefliesMeeting(
             fireflies_id=fid,
@@ -72,20 +63,13 @@ def _sync_transcripts():
             transcript=transcript_text,
             fireflies_overview=overview,
             matched_client_id=client.id if client else None,
-            synced_by_id=current_user.id if (client or is_sales) else None,
-            status="sales_meeting" if is_sales else "uncategorized",
+            synced_by_id=current_user.id if client else None,
         )
         db.session.add(record)
         db.session.flush()
         new_count += 1
 
-        if is_sales:
-            sales_count += 1
-            log_activity(
-                current_user.id, None, "Meeting synced from Fireflies (sales)",
-                "fireflies_meeting", record.id, details=title,
-            )
-        elif client:
+        if client:
             conversation = Conversation(
                 client_id=client.id,
                 interaction_type="Video Call",
@@ -116,7 +100,7 @@ def _sync_transcripts():
             )
 
     db.session.commit()
-    return new_count, auto_matched_count, sales_count
+    return new_count, auto_matched_count
 
 
 @fireflies_bp.route("")
@@ -152,9 +136,6 @@ def inbox():
             try:
                 raw_events = fetch_upcoming_events(access_token, max_results=10)
                 upcoming_events = [parse_event(e) for e in raw_events]
-                sales = set(current_app.config.get("SALES_MEETING_EMAILS") or ())
-                for e in upcoming_events:
-                    e["is_sales"] = any(x in sales for x in e.get("attendee_emails", []))
             except CalendarRequestError as exc:
                 calendar_error = str(exc)
 
@@ -171,7 +152,7 @@ def inbox():
 @limiter.limit("10 per minute")
 def sync():
     try:
-        new_count, auto_matched, sales_count = _sync_transcripts()
+        new_count, auto_matched = _sync_transcripts()
     except FirefliesConfigError as exc:
         flash(str(exc), "error")
         return redirect(url_for("fireflies.inbox"))
@@ -182,10 +163,9 @@ def sync():
     if new_count == 0:
         flash("No new meetings found since the last sync.", "info")
     else:
-        review = new_count - auto_matched - sales_count
         flash(
             f"Synced {new_count} new meeting(s) - {auto_matched} auto-matched to a project, "
-            f"{sales_count} filed under Sales, {review} need manual review below.",
+            f"{new_count - auto_matched} need manual review below.",
             "success",
         )
     return redirect(url_for("fireflies.inbox"))

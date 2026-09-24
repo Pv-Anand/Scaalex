@@ -156,13 +156,10 @@ def parse_event(event: dict) -> dict:
             start_dt = None
 
     attendees = []
-    emails = []
     for a in event.get("attendees") or []:
         name = a.get("displayName") or a.get("email")
         if name and name not in attendees:
             attendees.append(name)
-        if a.get("email"):
-            emails.append(a["email"].strip().lower())
 
     return {
         "id": event.get("id"),
@@ -170,6 +167,5 @@ def parse_event(event: dict) -> dict:
         "start": start_dt,
         "is_all_day": is_all_day,
         "attendees": attendees,
-        "attendee_emails": emails,
         "html_link": event.get("htmlLink"),
     }
