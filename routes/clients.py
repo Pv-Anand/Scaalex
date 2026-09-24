@@ -309,6 +309,12 @@ def delete_contact(slug, contact_id):
     return redirect(url_for("clients.profile", slug=slug))
 
 
+def _norm_name(text):
+    """Forgiving comparison for the delete confirmation: ignores case, repeated
+    spaces and stray punctuation at the ends (e.g. a copied full stop)."""
+    return " ".join((text or "").split()).strip(" .,;:!?\"'").lower()
+
+
 @clients_bp.route("/<slug>/delete", methods=["POST"])
 @login_required
 def delete_client(slug):
@@ -317,7 +323,7 @@ def delete_client(slug):
     if not current_user.is_owner:
         abort(403)
     client = get_client_or_404(slug)
-    if request.form.get("confirm_name", "").strip() != client.name:
+    if _norm_name(request.form.get("confirm_name", "")) != _norm_name(client.name):
         flash("Client not deleted: the name you typed did not match.", "error")
         return redirect(url_for("clients.profile", slug=slug))
 

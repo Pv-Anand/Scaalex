@@ -312,7 +312,7 @@ function toggleEngagementEdit() {
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-group">
         <label>Type <strong>{{ client.name }}</strong> to confirm</label>
-        <input type="text" name="confirm_name" id="delete-confirm" autocomplete="off" oninput="document.getElementById('delete-submit').disabled = this.value.trim() !== {{ client.name|tojson }};">
+        <input type="text" name="confirm_name" id="delete-confirm" autocomplete="off" oninput="var n = function(t){ return t.split(/\s+/).join(' ').replace(/^[\s.,;:!?&quot;']+|[\s.,;:!?&quot;']+$/g, '').toLowerCase(); }; document.getElementById('delete-submit').disabled = n(this.value) !== n({{ client.name|tojson|forceescape }});">
       </div>
       <div class="form-actions" style="justify-content:flex-end; gap:10px;">
         <button type="button" class="link-btn small muted" onclick="location.reload()">Cancel</button>
