@@ -1,11 +1,16 @@
 import re
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+import os
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from flask_login import login_required, current_user
 
 from extensions import db
-from models import Client, ClientContact, Conversation, Decision, ActionItem, Milestone, MilestoneRequest, log_activity
+from models import (
+    Client, ClientContact, ClientAccess, Conversation, Decision, ActionItem, Milestone, MilestoneRequest,
+    Document, DataRoomFolder, AIOverview, EmailDraft, FirefliesMeeting, AuditLog, log_activity,
+)
 from permissions import admin_required
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/clients")
@@ -302,3 +307,59 @@ def delete_contact(slug, contact_id):
     db.session.commit()
     flash("Contact removed.", "success")
     return redirect(url_for("clients.profile", slug=slug))
+
+
+@clients_bp.route("/<slug>/delete", methods=["POST"])
+@login_required
+def delete_client(slug):
+    """Permanently remove a client and everything filed under it. Owner only,
+    and the owner must type the client's name to confirm."""
+    if not current_user.is_owner:
+        abort(403)
+    client = get_client_or_404(slug)
+    if request.form.get("confirm_name", "").strip() != client.name:
+        flash("Client not deleted: the name you typed did not match.", "error")
+        return redirect(url_for("clients.profile", slug=slug))
+
+    cid, name = client.id, client.name
+    stored_names = [d.stored_name for d in Document.query.filter_by(client_id=cid).all()]
+    milestone_ids = [m.id for m in Milestone.query.filter_by(client_id=cid).all()]
+
+    # Children first so no foreign key is left dangling.
+    if milestone_ids:
+        MilestoneRequest.query.filter(MilestoneRequest.milestone_id.in_(milestone_ids)).delete(synchronize_session=False)
+    EmailDraft.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    # Fireflies transcripts are the firm's own records: send them back to the
+    # inbox instead of destroying them.
+    FirefliesMeeting.query.filter(
+        (FirefliesMeeting.assigned_client_id == cid) | (FirefliesMeeting.matched_client_id == cid)
+    ).update(
+        {"assigned_client_id": None, "matched_client_id": None,
+         "assigned_conversation_id": None, "status": "uncategorized"},
+        synchronize_session=False,
+    )
+    Document.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    DataRoomFolder.query.filter_by(client_id=cid).update({"parent_id": None}, synchronize_session=False)
+    DataRoomFolder.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    ActionItem.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    Decision.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    AIOverview.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    Conversation.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    Milestone.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    AuditLog.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    ClientContact.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    ClientAccess.query.filter_by(client_id=cid).delete(synchronize_session=False)
+    db.session.execute(db.text("DELETE FROM clients WHERE id = :id"), {"id": cid})
+    db.session.expire_all()
+    log_activity(current_user.id, None, "Client deleted", "client", cid, details=name)
+    db.session.commit()
+
+    folder = current_app.config["DOCUMENT_UPLOAD_FOLDER"]
+    for stored in stored_names:
+        try:
+            os.remove(os.path.join(folder, stored))
+        except OSError:
+            pass
+
+    flash(f"{name} and all of its data were deleted.", "success")
+    return redirect(url_for("home.index"))

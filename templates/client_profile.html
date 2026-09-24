@@ -301,6 +301,27 @@ function toggleEngagementEdit() {
   view.style.display = editing ? '' : 'none';
 }
 </script>
+
+{% if current_user.is_owner %}
+<div class="section mt-32">
+  <h2 class="section-title" style="margin-bottom:4px;">Delete Client</h2>
+  <p class="small muted mb-16">Permanently removes {{ client.name }} with its milestones, action items, decisions, updates, documents, Data Room, portal contacts and activity history. This cannot be undone.</p>
+  <button type="button" class="btn btn-danger" onclick="document.getElementById('delete-client-box').style.display='block'; this.style.display='none';">Delete Client</button>
+  <div id="delete-client-box" class="card" style="display:none; border-color:var(--danger);">
+    <form method="POST" action="{{ url_for('clients.delete_client', slug=client.slug) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>Type <strong>{{ client.name }}</strong> to confirm</label>
+        <input type="text" name="confirm_name" id="delete-confirm" autocomplete="off" oninput="document.getElementById('delete-submit').disabled = this.value.trim() !== {{ client.name|tojson }};">
+      </div>
+      <div class="form-actions" style="justify-content:flex-end; gap:10px;">
+        <button type="button" class="link-btn small muted" onclick="location.reload()">Cancel</button>
+        <button type="submit" id="delete-submit" class="btn btn-danger" disabled>Delete permanently</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endif %}
 {% endblock %}
 {% block scripts %}
