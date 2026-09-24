@@ -309,29 +309,13 @@ def delete_contact(slug, contact_id):
     return redirect(url_for("clients.profile", slug=slug))
 
 
-def _norm_name(text):
-    """Forgiving comparison for the delete confirmation: ignores case, repeated
-    spaces and stray punctuation at the ends (e.g. a copied full stop)."""
-    return " ".join((text or "").split()).strip(" .,;:!?\"'").lower()
-
-
-@clients_bp.route("/<slug>/delete", methods=["POST"])
-@login_required
-def delete_client(slug):
-    """Permanently remove a client and everything filed under it. Owner only,
-    and the owner must type the client's name to confirm."""
-    if not current_user.is_owner:
-        abort(403)
-    client = get_client_or_404(slug)
-    if _norm_name(request.form.get("confirm_name", "")) != _norm_name(client.name):
-        flash("Client not deleted: the name you typed did not match.", "error")
-        return redirect(url_for("clients.profile", slug=slug))
-
-    cid, name = client.id, client.name
+def purge_client(client):
+    """Delete a client and every record filed under it (children first so no
+    foreign key is left dangling). Returns the stored file names of its
+    documents; the caller removes those files after committing."""
+    cid = client.id
     stored_names = [d.stored_name for d in Document.query.filter_by(client_id=cid).all()]
     milestone_ids = [m.id for m in Milestone.query.filter_by(client_id=cid).all()]
-
-    # Children first so no foreign key is left dangling.
     if milestone_ids:
         MilestoneRequest.query.filter(MilestoneRequest.milestone_id.in_(milestone_ids)).delete(synchronize_session=False)
     EmailDraft.query.filter_by(client_id=cid).delete(synchronize_session=False)
@@ -357,6 +341,29 @@ def delete_client(slug):
     ClientAccess.query.filter_by(client_id=cid).delete(synchronize_session=False)
     db.session.execute(db.text("DELETE FROM clients WHERE id = :id"), {"id": cid})
     db.session.expire_all()
+    return stored_names
+
+
+def _norm_name(text):
+    """Forgiving comparison for the delete confirmation: ignores case, repeated
+    spaces and stray punctuation at the ends (e.g. a copied full stop)."""
+    return " ".join((text or "").split()).strip(" .,;:!?\"'").lower()
+
+
+@clients_bp.route("/<slug>/delete", methods=["POST"])
+@login_required
+def delete_client(slug):
+    """Permanently remove a client and everything filed under it. Owner only,
+    and the owner must type the client's name to confirm."""
+    if not current_user.is_owner:
+        abort(403)
+    client = get_client_or_404(slug)
+    if _norm_name(request.form.get("confirm_name", "")) != _norm_name(client.name):
+        flash("Client not deleted: the name you typed did not match.", "error")
+        return redirect(url_for("clients.profile", slug=slug))
+
+    cid, name = client.id, client.name
+    stored_names = purge_client(client)
     log_activity(current_user.id, None, "Client deleted", "client", cid, details=name)
     db.session.commit()
 
