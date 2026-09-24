@@ -9,6 +9,7 @@ from extensions import db
 from models import Client, Document, Conversation, Milestone, log_activity
 from routes.clients import get_client_or_404
 from data_room import Tree
+from brand import BRAND
 
 documents_bp = Blueprint("documents", __name__)
 
@@ -92,7 +93,7 @@ def client_list(slug):
         wanted = {int(folder_filter)} | tree.descendants(int(folder_filter))
         documents = [d for d in documents if doc_folder[d.id] in wanted]
     if source == "scaalex":
-        documents = [d for d in documents if d.uploader_role == "Scaalex"]
+        documents = [d for d in documents if d.uploader_role == BRAND.name]
     elif source == "client":
         documents = [d for d in documents if d.uploader_role == "Client"]
     if milestone_id:
@@ -101,7 +102,7 @@ def client_list(slug):
     conversations = client.conversations.order_by(Conversation.date.desc()).all()
     milestones = client.milestones.order_by(Milestone.title).all()
 
-    from_scaalex = sum(1 for d in all_documents if d.uploader_role == "Scaalex")
+    from_scaalex = sum(1 for d in all_documents if d.uploader_role == BRAND.name)
     from_client = sum(1 for d in all_documents if d.uploader_role == "Client")
 
     return render_template(

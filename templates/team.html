@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Team - Scaalex Intelligence{% endblock %}
+{% block title %}Team - {{ brand.name }} Intelligence{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
@@ -21,7 +21,7 @@
       </div>
       <div class="form-group">
         <label>Email</label>
-        <input type="email" name="email" placeholder="name@scaalex.com" required>
+        <input type="email" name="email" placeholder="name@{{ brand.email_domain }}" required>
       </div>
       <div class="form-group">
         <label>Role</label>
@@ -162,7 +162,7 @@
             <div style="flex:1;">
               <div style="font-size:13.5px; font-weight:600;">Account access</div>
               <div class="small muted" style="margin-top:2px;">
-                {% if u.is_active %}{{ u.name.split(' ')[0] }} can sign in to Scaalex and see the clients granted below.
+                {% if u.is_active %}{{ u.name.split(' ')[0] }} can sign in to {{ brand.name }} and see the clients granted below.
                 {% else %}Deactivated. Role and client access are kept for when you reactivate.{% endif %}
               </div>
             </div>

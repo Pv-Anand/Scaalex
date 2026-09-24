@@ -9,6 +9,7 @@ call out what changed, not just restate the latest meeting.
 from typing import Optional
 
 from ai.anthropic_client import call_structured
+from brand import BRAND, brandify_prompt
 
 SYSTEM_PROMPT = """You are a senior partner at Scaalex Consulting, a premium M&A and \
 capital advisory firm, preparing a leadership briefing on a client relationship for other \
@@ -32,6 +33,7 @@ resolved or new action items, shifts in priority). If nothing material changed, 
 repeated mentions, client-facing dependencies) - do not assign priority arbitrarily.
 - Be concise. Leadership reads this in under two minutes.
 """
+SYSTEM_PROMPT = brandify_prompt(SYSTEM_PROMPT)
 
 OVERVIEW_SCHEMA = {
     "type": "object",

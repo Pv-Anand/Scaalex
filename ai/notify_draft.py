@@ -9,6 +9,7 @@ update once it's done.
 from typing import Optional
 
 from ai.anthropic_client import call_structured
+from brand import BRAND, brandify_prompt
 
 SYSTEM_PROMPT = """You are a senior advisor at Scaalex Consulting writing a short, human \
 follow-up to a client contact, prompting them to log into their client portal.
@@ -34,6 +35,7 @@ If PENDING: the tone is a polite, low-pressure ask - "could you take a minute to
 If COMPLETED: the tone is a courtesy update - "wanted to let you know...", nothing beyond an \
 optional look is implied.
 """
+SYSTEM_PROMPT = brandify_prompt(SYSTEM_PROMPT)
 
 NOTIFY_SCHEMA = {
     "type": "object",

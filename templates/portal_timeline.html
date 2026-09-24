@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ client.name }} - Engagement Progress</title>
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename=brand.assets.favicon) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -39,7 +39,7 @@
       <div style="font-size:18px; font-weight:600; margin-top:8px;">{{ next_up.title }}</div>
       <div class="small mt-8" style="color:var(--grey-700);">
         {% if next_up.due_date %}Due {{ next_up.due_date.strftime('%d %b %Y') }} · {% endif %}
-        Reporting Manager: {{ next_up.reporting_manager.name if next_up.reporting_manager else 'Scaalex' }}{% if next_up.reporting_manager and next_up.reporting_manager.email %}, {{ next_up.reporting_manager.email }}{% endif %}
+        Reporting Manager: {{ next_up.reporting_manager.name if next_up.reporting_manager else '{{ brand.name }}' }}{% if next_up.reporting_manager and next_up.reporting_manager.email %}, {{ next_up.reporting_manager.email }}{% endif %}
       </div>
     </div>
     {% endif %}
@@ -47,7 +47,7 @@
     {% if open_requests %}
     <div class="mt-32">
       <h2 class="section-title" style="margin-bottom:4px;">Action Needed</h2>
-      <p class="small muted mb-16">Scaalex needs the following from you to keep things moving.</p>
+      <p class="small muted mb-16">{{ brand.name }} needs the following from you to keep things moving.</p>
       {% for req in open_requests %}
       <div class="next-up-card mb-16">
         <div class="page-eyebrow" style="margin-bottom:0;">{{ req.milestone.title }}</div>
@@ -81,7 +81,7 @@
     {% if under_review %}
     <div class="mt-32">
       <h2 class="section-title" style="margin-bottom:4px;">Under Review</h2>
-      <p class="small muted mb-16">Sent to Scaalex - waiting on their next step.</p>
+      <p class="small muted mb-16">Sent to {{ brand.name }} - waiting on their next step.</p>
       {% for req in under_review %}
       <div class="milestone-row review-desktop-row">
         <div style="width:96px; flex-shrink:0;" class="small muted">{{ req.fulfilled_at.strftime('%d %b %Y') if req.fulfilled_at else '' }}</div>
@@ -104,7 +104,7 @@
             {% endif %}
           </div>
           {% if req.status == 'rejected' %}
-          <div class="small mt-8" style="color:var(--danger); background:var(--danger-bg); display:inline-block; padding:4px 10px; border-radius:3px;">Scaalex needs changes: {{ req.rejection_comment }}</div>
+          <div class="small mt-8" style="color:var(--danger); background:var(--danger-bg); display:inline-block; padding:4px 10px; border-radius:3px;">{{ brand.name }} needs changes: {{ req.rejection_comment }}</div>
           {% endif %}
         </div>
       </div>
@@ -129,7 +129,7 @@
           {% endif %}
         </div>
         {% if req.status == 'rejected' %}
-        <div class="review-mobile-rejection">Scaalex needs changes: {{ req.rejection_comment }}</div>
+        <div class="review-mobile-rejection">{{ brand.name }} needs changes: {{ req.rejection_comment }}</div>
         {% endif %}
       </div>
       {% endfor %}
@@ -138,7 +138,7 @@
 
     <div class="mt-32">
       <h2 class="section-title" style="margin-bottom:4px;">Recently Completed</h2>
-      <p class="small muted mb-16">The last {{ completed|length }} milestone{{ 's' if completed|length != 1 }} Scaalex has delivered on this engagement.</p>
+      <p class="small muted mb-16">The last {{ completed|length }} milestone{{ 's' if completed|length != 1 }} {{ brand.name }} has delivered on this engagement.</p>
       {% for m in completed %}
       <div class="milestone-row">
         <div style="width:96px; flex-shrink:0;" class="small muted">{{ m.date.strftime('%d %b %Y') if m.date else '' }}</div>
@@ -172,8 +172,8 @@
     </div>
 
     <div class="mt-32" style="padding-top:24px; border-top:1px solid var(--line); text-align:center;">
-      <div class="small muted">Questions about your engagement? Reach out to your Scaalex relationship manager.</div>
-      <div class="small" style="color:var(--grey-300); margin-top:10px;">© Scaalex Consulting - Private client portal</div>
+      <div class="small muted">Questions about your engagement? Reach out to your {{ brand.name }} relationship manager.</div>
+      <div class="small" style="color:var(--grey-300); margin-top:10px;">© {{ brand.legal_name }} - Private client portal</div>
     </div>
   </div>
   <script>

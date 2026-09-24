@@ -7,6 +7,7 @@ explicitly says so - uncertain points use hedged language ("we will confirm...")
 from typing import Optional
 
 from ai.anthropic_client import call_structured
+from brand import BRAND, brandify_prompt
 
 SYSTEM_PROMPT = """You are a senior advisor at Scaalex Consulting, a premium M&A and \
 capital advisory firm, drafting a follow-up email to a client after a documented discussion.
@@ -26,6 +27,7 @@ generic AI phrasing ("I hope this email finds you well", "In today's fast-paced 
 action items with owner and timeline, next steps, professional closing.
 - Sign off as "Scaalex Consulting" unless a specific advisor name is given in participants.
 """
+SYSTEM_PROMPT = brandify_prompt(SYSTEM_PROMPT)
 
 EMAIL_SCHEMA = {
     "type": "object",
@@ -41,7 +43,7 @@ EMAIL_SCHEMA = {
 
 
 def draft_email(client_name: str, context_text: str, advisor_name: Optional[str] = None):
-    signer = advisor_name or "Scaalex Consulting"
+    signer = advisor_name or BRAND.legal_name
     user_prompt = f"""Client: {client_name}
 Advisor sending this email: {signer}
 

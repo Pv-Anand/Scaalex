@@ -35,7 +35,7 @@
   <select name="actor" onchange="location.href=updateLogsQuery('actor', this.value)">
     <option value="">All Activity</option>
     <option value="client" {{ 'selected' if current_actor == 'client' }}>Client Side</option>
-    <option value="staff" {{ 'selected' if current_actor == 'staff' }}>Scaalex Side</option>
+    <option value="staff" {{ 'selected' if current_actor == 'staff' }}>{{ brand.name }} Side</option>
   </select>
   <select name="category" onchange="location.href=updateLogsQuery('category', this.value)">
     <option value="">Category: All</option>
@@ -70,7 +70,7 @@
         {% if e.client_contact %}
         <span class="badge badge-log-client">Client</span>
         {% elif e.user %}
-        <span class="badge badge-type">Scaalex</span>
+        <span class="badge badge-type">{{ brand.name }}</span>
         {% endif %}
       </div>
       <div class="small muted mt-4">

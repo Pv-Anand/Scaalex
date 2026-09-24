@@ -3,13 +3,14 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 
+from brand import BRAND
 from extensions import db
 from models import Client, ActionItem, log_activity
 from routes.clients import get_client_or_404
 
 action_items_bp = Blueprint("action_items", __name__)
 
-STATUSES = ["Not Started", "In Progress", "Waiting on Client", "Waiting on Scaalex", "Completed"]
+STATUSES = ["Not Started", "In Progress", "Waiting on Client", f"Waiting on {BRAND.name}", "Completed"]
 PRIORITIES = ["High", "Medium", "Low"]
 
 

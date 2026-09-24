@@ -155,7 +155,7 @@
           <div class="small muted">
             {% if locked %}Hidden because a parent folder is hidden. Show "{{ tree.parent_of(selected).name }}" first to share this one.
             {% elif shown %}The client can see this folder and its {{ tree.doc_count(selected.id) }} document{{ 's' if tree.doc_count(selected.id) != 1 }}{% if not client.data_room_enabled %} once the Data Room is turned on{% endif %}.
-            {% else %}Only Scaalex staff can see this folder and its {{ tree.doc_count(selected.id) }} document{{ 's' if tree.doc_count(selected.id) != 1 }}.{% endif %}
+            {% else %}Only {{ brand.name }} staff can see this folder and its {{ tree.doc_count(selected.id) }} document{{ 's' if tree.doc_count(selected.id) != 1 }}.{% endif %}
           </div>
         </div>
         <div class="dr-seg">

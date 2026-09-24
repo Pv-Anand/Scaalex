@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Choose a project - Scaalex Client Portal</title>
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <title>Choose a project - {{ brand.name }} Client Portal</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename=brand.assets.favicon) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
   <div class="auth-shell">
     <div class="auth-card" style="width:440px;">
-      <img src="{{ url_for('static', filename='images/favicon-navy-mark.png') }}" alt="Scaalex" class="auth-card-brand">
-      <div class="auth-card-brand-name">Scaalex</div>
+      <img src="{{ url_for('static', filename=brand.assets.mark_dark) }}" alt="{{ brand.name }}" class="auth-card-brand">
+      <div class="auth-card-brand-name">{{ brand.name }}</div>
       <div class="auth-sub">Client Portal</div>
 
       {% with messages = get_flashed_messages(with_categories=true) %}

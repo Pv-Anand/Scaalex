@@ -4,6 +4,7 @@ from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from brand import BRAND
 from extensions import db
 
 
@@ -458,7 +459,7 @@ class Document(db.Model):
 
     @property
     def uploader_role(self):
-        return "Client" if self.uploaded_by_contact_id else "Scaalex"
+        return "Client" if self.uploaded_by_contact_id else BRAND.name
 
     @property
     def context_label(self):

@@ -84,6 +84,12 @@ def create_app(config_class=Config):
     app.register_blueprint(notify_bp)
     app.register_blueprint(data_room_bp)
 
+    from brand import BRAND
+
+    @app.context_processor
+    def inject_brand():
+        return {"brand": BRAND}
+
     @app.context_processor
     def inject_globals():
         from flask import request as _request

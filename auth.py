@@ -4,13 +4,14 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 
 import backup
+from brand import BRAND
 from extensions import db, limiter
 from models import User, Client, ClientAccess, ActionItem, ROLES, ROLE_LABELS, log_activity
 from permissions import admin_required
 
 auth_bp = Blueprint("auth", __name__)
 
-DEACTIVATED_MESSAGE = "Your Scaalex account has been deactivated. Please contact your Scaalex administrator."
+DEACTIVATED_MESSAGE = f"Your {BRAND.name} account has been deactivated. Please contact your {BRAND.name} administrator."
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])

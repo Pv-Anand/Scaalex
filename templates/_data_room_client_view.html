@@ -19,11 +19,11 @@
     </form>
   </div>
   <div class="drp-sub">
-    {% if view.updated %}Everything Scaalex has organised for you, in one place. Last updated {{ view.updated.strftime('%d %b %Y') }}.{% else %}Everything Scaalex organises for you will appear here.{% endif %}
+    {% if view.updated %}Everything {{ brand.name }} has organised for you, in one place. Last updated {{ view.updated.strftime('%d %b %Y') }}.{% else %}Everything {{ brand.name }} organises for you will appear here.{% endif %}
   </div>
 
   {% if not view.has_folders %}
-  <div class="empty-state"><h3>Nothing here yet</h3><p>Scaalex has not shared any folders yet. They will appear here as soon as they are ready.</p></div>
+  <div class="empty-state"><h3>Nothing here yet</h3><p>{{ brand.name }} has not shared any folders yet. They will appear here as soon as they are ready.</p></div>
   {% else %}
 
   {% if view.subfolders and not view.q %}

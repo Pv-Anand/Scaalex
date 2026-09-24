@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scaalex | Project Intelligence</title>
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <title>{{ brand.name }} | {{ brand.product }}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename=brand.assets.favicon) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -13,10 +13,10 @@
     <div class="auth-left-inner">
       <div class="auth-left-top">
         <div class="auth-left-brand">
-          <img src="{{ url_for('static', filename='images/favicon-white-mark.png') }}" alt="Scaalex" class="auth-left-brand-mark">
+          <img src="{{ url_for('static', filename=brand.assets.mark_light) }}" alt="{{ brand.name }}" class="auth-left-brand-mark">
           <div>
-            <div class="auth-left-brand-name">Scaalex</div>
-            <div class="auth-left-brand-sub">Project Intelligence</div>
+            <div class="auth-left-brand-name">{{ brand.name }}</div>
+            <div class="auth-left-brand-sub">{{ brand.product }}</div>
           </div>
         </div>
       </div>
@@ -24,7 +24,7 @@
       <div class="auth-left-mid">
         <div class="auth-left-rule"></div>
         <h1>Intelligence behind<br>every client decision.</h1>
-        <p>Client Project Intelligence<br>&amp; Documentation</p>
+        <p>Client {{ brand.product }}<br>&amp; Documentation</p>
       </div>
 
       <div class="auth-left-stats">
@@ -41,7 +41,7 @@
 
       <div class="auth-form-wrap">
         <div class="auth-eyebrow">Welcome Back</div>
-        <h2 style="margin-bottom:6px;">Scaalex Intelligence</h2>
+        <h2 style="margin-bottom:6px;">{{ brand.name }} Intelligence</h2>
         <div style="font-size:15px; color:var(--grey-500); margin-bottom:6px;">Client Sign in</div>
         <div class="small muted" style="margin-bottom:26px;">{{ client.name }}</div>
 
@@ -66,7 +66,7 @@
             <label>Mobile Number</label>
             <div class="auth-input-wrap">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="auth-input-icon"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3" stroke-linecap="round"/></svg>
-              <input type="password" name="password" id="auth-password" placeholder="The mobile number Scaalex has on file" required>
+              <input type="password" name="password" id="auth-password" placeholder="The mobile number {{ brand.name }} has on file" required>
               <button type="button" class="auth-input-toggle" onclick="togglePasswordVisibility()" aria-label="Show password">
                 <svg id="auth-eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
@@ -79,7 +79,7 @@
         </form>
 
         <div class="small muted" style="text-align:center; margin-top:14px; line-height:1.6;">
-          By signing in, you agree to our <a href="https://scaalex.com/terms-and-conditions" target="_blank" rel="noopener" style="text-decoration:underline;">Terms &amp; Conditions</a> and <a href="https://scaalex.com/privacy-policy" target="_blank" rel="noopener" style="text-decoration:underline;">Privacy Policy</a>.
+          By signing in, you agree to our <a href="{{ brand.terms_url }}" target="_blank" rel="noopener" style="text-decoration:underline;">Terms &amp; Conditions</a> and <a href="{{ brand.privacy_url }}" target="_blank" rel="noopener" style="text-decoration:underline;">Privacy Policy</a>.
         </div>
 
         <div class="auth-secure-note">
@@ -87,11 +87,11 @@
           Your data is encrypted and securely protected.
         </div>
         <div class="small muted" style="text-align:center; margin-top:16px; line-height:1.6;">
-          Trouble signing in? Contact your Scaalex relationship manager.
+          Trouble signing in? Contact your {{ brand.name }} relationship manager.
         </div>
       </div>
 
-      <div class="auth-right-footer">&copy; {{ current_year }} Scaalex. All rights reserved.</div>
+      <div class="auth-right-footer">&copy; {{ current_year }} {{ brand.name }}. All rights reserved.</div>
     </div>
   </div>
 </div>

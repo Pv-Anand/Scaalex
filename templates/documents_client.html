@@ -4,7 +4,7 @@
 {% include "_client_subnav.html" %}
 
 <h2 class="section-title" style="margin-bottom:4px;">Documents</h2>
-<p class="small muted mb-16">Every file exchanged on this engagement - what Scaalex has shared, and what the client has sent back - with the date, who, and why.</p>
+<p class="small muted mb-16">Every file exchanged on this engagement - what {{ brand.name }} has shared, and what the client has sent back - with the date, who, and why.</p>
 {% set active_subtab = 'all' %}{% set docs_total = total_count %}{% set docs_filed = filed_count %}
 {% include "_documents_tabs.html" %}
 
@@ -15,7 +15,7 @@
   </div>
   <div class="stat-cell">
     <div class="num">{{ from_scaalex }}</div>
-    <div class="label">Shared by Scaalex</div>
+    <div class="label">Shared by {{ brand.name }}</div>
   </div>
   <div class="stat-cell">
     <div class="num">{{ from_client }}</div>
@@ -59,7 +59,7 @@
 <form class="filter-bar">
   <select name="source" onchange="this.form.submit()">
     <option value="">All Sources</option>
-    <option value="scaalex" {{ 'selected' if current_source == 'scaalex' }}>Shared by Scaalex</option>
+    <option value="scaalex" {{ 'selected' if current_source == 'scaalex' }}>Shared by {{ brand.name }}</option>
     <option value="client" {{ 'selected' if current_source == 'client' }}>Received from Client</option>
   </select>
   <select name="milestone_id" onchange="this.form.submit()">

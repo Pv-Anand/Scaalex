@@ -14,6 +14,7 @@ from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 
+from brand import BRAND
 from extensions import db, limiter
 from models import Client, ClientContact, Milestone, MilestoneRequest, Document, log_portal_activity
 from routes.documents import _allowed
@@ -225,7 +226,7 @@ def respond_to_request(portal_slug, client, contact, request_id):
     req.fulfilled_by_contact_id = contact.id
     req.fulfilled_at = datetime.utcnow()
     db.session.commit()
-    flash("Submitted - this is now under review by Scaalex.", "success")
+    flash(f"Submitted - this is now under review by {BRAND.name}.", "success")
     return redirect(url_for("portal.timeline", portal_slug=portal_slug))
 
 

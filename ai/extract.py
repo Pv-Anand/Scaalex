@@ -7,6 +7,7 @@ asserted, and the advisor reviews everything before it becomes part of the
 permanent record (see routes/conversations.py confirm_extraction).
 """
 from ai.anthropic_client import call_structured
+from brand import BRAND, brandify_prompt
 
 SYSTEM_PROMPT = """You are a meticulous documentation assistant for Scaalex Consulting, \
 a premium M&A and capital advisory firm. You convert raw notes or transcripts of client \
@@ -34,6 +35,7 @@ reasoning goes in its own "context" field, also kept brief - one short sentence 
 separated by newlines, each starting with "- " (e.g. "- Reviewed Q3 pipeline\\n- Agreed to \
 push renewal call to next week"). 3-6 bullets, each one short line. Never a paragraph.
 """
+SYSTEM_PROMPT = brandify_prompt(SYSTEM_PROMPT)
 
 EXTRACTION_SCHEMA = {
     "type": "object",

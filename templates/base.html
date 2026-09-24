@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   {% if current_user.is_authenticated %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
-  <title>{% block title %}Scaalex Intelligence{% endblock %}</title>
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <title>{% block title %}{{ brand.name }} Intelligence{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename=brand.assets.favicon) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -14,16 +14,16 @@
     <button type="button" class="menu-toggle" aria-label="Open menu" onclick="toggleSidebar()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
     </button>
-    <span class="brand">Scaalex</span>
+    <span class="brand">{{ brand.name }}</span>
   </div>
   <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <img src="{{ url_for('static', filename='images/favicon-white-mark.png') }}" alt="Scaalex" class="brand-mark">
+        <img src="{{ url_for('static', filename=brand.assets.mark_light) }}" alt="{{ brand.name }}" class="brand-mark">
         <div>
-          <div class="brand-name">Scaalex</div>
-          <div class="sub">Project Intelligence</div>
+          <div class="brand-name">{{ brand.name }}</div>
+          <div class="sub">{{ brand.product }}</div>
         </div>
       </div>
       <nav class="sidebar-nav">

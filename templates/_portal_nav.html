@@ -1,7 +1,7 @@
 <div class="portal-topbar">
   <div class="portal-brand">
-    <img src="{{ url_for('static', filename='images/favicon-navy-mark.png') }}" alt="Scaalex" class="portal-brand-mark">
-    <span>Scaalex</span>
+    <img src="{{ url_for('static', filename=brand.assets.mark_dark) }}" alt="{{ brand.name }}" class="portal-brand-mark">
+    <span>{{ brand.name }}</span>
     <span style="color:var(--line-strong); font-weight:400;">|</span>
     <span style="font-weight:400; color:var(--grey-700);">{{ client.name }}</span>
   </div>
