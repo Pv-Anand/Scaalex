@@ -359,17 +359,39 @@ const DR = (function () {
   function docMenu(docId, anchor) {
     const html = `<div class="dr-pop-list">
       <button type="button" class="dr-pop-item" data-act="move">Move to folder...</button>
-      <button type="button" class="dr-pop-item" data-act="remove">Remove from Data Room</button></div>`;
+      <button type="button" class="dr-pop-item" data-act="remove">Remove from Data Room</button>
+      <button type="button" class="dr-pop-item danger" data-act="delete">Delete document...</button></div>`;
     const el = openPopover(anchor, html, { alignRight: true });
     el.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => {
       const act = b.dataset.act;
       closePopover();
       if (act === 'move') pickFolder([docId], anchor, {});
       if (act === 'remove') moveDocs([docId], null, {});
+      if (act === 'delete') confirmDeleteDocs([docId], anchor);
     }));
   }
 
   // ------------------------------------------------------------ documents
+  function confirmDeleteDocs(docIds, anchor) {
+    if (!docIds.length) return;
+    const n = docIds.length;
+    const what = n === 1 ? 'this document' : `these ${n} documents`;
+    const el = openPopover(anchor, `<div class="dr-confirm">
+      <div class="dr-confirm-title">Delete ${what}?</div>
+      <p>${n === 1 ? 'The file is' : 'The files are'} removed for good, from the Data Room and from All Documents. This cannot be undone.</p>
+      <div class="dr-confirm-actions"><button type="button" class="btn btn-sm btn-danger-solid" data-go>Delete</button><button type="button" class="link-btn small muted" data-cancel>Cancel</button></div>
+    </div>`, {});
+    el.querySelector('[data-cancel]').addEventListener('click', closePopover);
+    el.querySelector('[data-go]').addEventListener('click', async (ev) => {
+      ev.target.disabled = true;
+      try {
+        const data = await post('/documents/delete', { doc_ids: docIds });
+        closePopover();
+        commit({ message: `${data.deleted} document${data.deleted === 1 ? '' : 's'} deleted` });
+      } catch (e) { ev.target.disabled = false; }
+    });
+  }
+
   function pickFolder(docIds, anchor, opts) {
     if (!docIds.length) return;
     if (!(state.folders || []).length) { showToast('Create a Data Room folder first.'); return; }
@@ -729,7 +751,7 @@ const DR = (function () {
   return {
     setVisibility, toggleVisibility, bulkVisibility, newFolder, renameFolder, deleteFolder, bulkDelete, bulkMove,
     moveFolderPicker, folderMenu, docMenu, pickFolder, moveDocs, selectedDocIds, onDocSelect, toggleAllDocs,
-    clearDocSelection, onFolderSelect, uploadFiles, toggleService, chooseScratch, createStructure, startBlank, setMaster, setContactAccess,
+    clearDocSelection, onFolderSelect, uploadFiles, confirmDeleteDocs, toggleService, chooseScratch, createStructure, startBlank, setMaster, setContactAccess,
     openSharePanel, notify,
   };
 })();

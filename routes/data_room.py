@@ -1,10 +1,11 @@
+import os
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, jsonify, url_for
+from flask import Blueprint, render_template, request, jsonify, url_for, current_app
 from flask_login import login_required, current_user
 
 from extensions import db
-from models import ClientContact, DataRoomFolder, Document, log_activity
+from models import ClientContact, DataRoomFolder, Document, MilestoneRequest, log_activity
 from routes.clients import get_client_or_404
 from routes.documents import save_upload
 from data_room import Tree, SERVICES, SERVICE_ORDER, TOP_ORDER, ENGAGEMENT, WORKING_PAPERS, apply_template, build_client_view, guess_services
@@ -309,6 +310,39 @@ def move_documents(slug):
                      details=f"{len(docs)} document{'s' if len(docs) != 1 else ''} -> {target}")
     db.session.commit()
     return jsonify(ok=True, moved=len(docs), previous=previous)
+
+
+@data_room_bp.route("/documents/delete", methods=["POST"])
+@login_required
+def delete_documents(slug):
+    """Permanently delete documents (the stored files too). Cannot be undone,
+    so the UI asks first."""
+    client = get_client_or_404(slug)
+    ids = [int(i) for i in _body().get("doc_ids", []) if str(i).isdigit()]
+    docs = Document.query.filter(Document.client_id == client.id, Document.id.in_(ids)).all()
+    if not docs:
+        return _fail("Documents not found.", 404)
+
+    doc_ids = [d.id for d in docs]
+    # A client's response to a request may point at the file; drop the link
+    # rather than leave it dangling.
+    MilestoneRequest.query.filter(MilestoneRequest.response_document_id.in_(doc_ids)).update(
+        {"response_document_id": None}, synchronize_session=False)
+    names = [d.file_name for d in docs]
+    stored = [d.stored_name for d in docs]
+    for d in docs:
+        db.session.delete(d)
+    log_activity(current_user.id, client.id, "Documents deleted", None, None,
+                 details=f"{len(docs)} document{'s' if len(docs) != 1 else ''}: " + ", ".join(names)[:400])
+    db.session.commit()
+
+    folder = current_app.config["DOCUMENT_UPLOAD_FOLDER"]
+    for name in stored:
+        try:
+            os.remove(os.path.join(folder, name))
+        except OSError:
+            pass
+    return jsonify(ok=True, deleted=len(docs))
 
 
 @data_room_bp.route("/upload", methods=["POST"])

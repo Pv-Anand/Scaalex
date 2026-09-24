@@ -81,6 +81,7 @@
   <strong><span id="doc-bulk-n">0</span> selected</strong>
   <button type="button" class="dr-bulk-btn primary" onclick="DR.pickFolder(DR.selectedDocIds(), this, {reloadAfter: true})">Move to Data Room folder &#9662;</button>
   <button type="button" class="dr-bulk-btn" onclick="DR.moveDocs(DR.selectedDocIds(), null, {reloadAfter: true})">Remove from Data Room</button>
+  <button type="button" class="dr-bulk-btn danger" onclick="DR.confirmDeleteDocs(DR.selectedDocIds(), this)">Delete</button>
   <button type="button" class="dr-bulk-btn dim" style="margin-left:auto;" onclick="DR.clearDocSelection()">Clear</button>
 </div>
 
