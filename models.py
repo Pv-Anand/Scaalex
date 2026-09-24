@@ -44,6 +44,16 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(40), default="executive")
     created_at = db.Column(db.DateTime, default=_now)
+    last_login_at = db.Column(db.DateTime)
+    # A deactivated person cannot sign in; nothing they wrote is removed.
+    # NULL means active, so existing rows stay active without a backfill.
+    deactivated_at = db.Column(db.DateTime)
+    deactivated_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+
+    @property
+    def is_active(self):
+        # Flask-Login refuses login_user() for anyone this returns False for.
+        return self.deactivated_at is None
 
     def set_password(self, password):
         # pbkdf2:sha256 explicitly, since this environment's Python is built against

@@ -8,7 +8,7 @@
   </div>
   <button type="button" class="btn" onclick="toggleAddUser()">+ Add User</button>
 </div>
-<p class="small muted mb-24">Owners and Administrators manage the team and reset passwords. Executives only see the clients they're granted access to.</p>
+<p class="small muted mb-24">Owners and Administrators manage the team and reset passwords. Executives only see the clients they're granted access to. Deactivate a person to stop them signing in without removing them.</p>
 
 <div id="add-user-panel" class="card mb-24" style="display:none; background:var(--grey-50);">
   <div style="font-size:13.5px; font-weight:600; margin-bottom:14px;">Add User</div>
@@ -45,26 +45,76 @@
   </form>
 </div>
 
+{% set active_owner_count = users|selectattr('role', 'equalto', 'owner')|selectattr('is_active')|list|length %}
+{% set active_count = users|selectattr('is_active')|list|length %}
+<div class="team-tabs" id="team-tabs">
+  <button type="button" class="team-tab active" data-filter="all" onclick="filterTeam('all')">All <i>{{ users|length }}</i></button>
+  <button type="button" class="team-tab" data-filter="active" onclick="filterTeam('active')">Active <i>{{ active_count }}</i></button>
+  <button type="button" class="team-tab" data-filter="deactivated" onclick="filterTeam('deactivated')">Deactivated <i>{{ users|length - active_count }}</i></button>
+</div>
+
 <div class="table-wrap">
   <table class="table">
-    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th style="width:260px;"></th></tr></thead>
+    <thead><tr><th>Member</th><th>Role</th><th>Client access</th><th>Last sign-in</th><th style="text-align:center;">Access</th><th style="width:210px;"></th></tr></thead>
     <tbody>
       {% for u in users %}
-      <tr>
-        <td>{{ u.name }}{% if u.id == current_user.id %} <span class="small muted">(you)</span>{% endif %}</td>
-        <td>{{ u.email }}</td>
+      {% set is_me = u.id == current_user.id %}
+      {% set locked_reason = 'You can\'t deactivate your own account.' if is_me else ('Only an Owner can change another Owner\'s access.' if (u.role == 'owner' and not current_user.is_owner) else ('The last active Owner can\'t be deactivated.' if (u.role == 'owner' and u.is_active and active_owner_count <= 1) else '')) %}
+      {% set oi = open_items.get(u.id, {'count': 0, 'clients': 0}) %}
+      <tr class="team-row {{ 'row-deactivated' if not u.is_active }}" data-status="{{ 'active' if u.is_active else 'deactivated' }}">
+        <td>
+          <div class="team-member">
+            <span class="team-av {{ 'off' if not u.is_active }}">{{ u.name[0]|upper }}</span>
+            <div>
+              <div class="team-name">{{ u.name }}{% if is_me %} <span class="small muted">(you)</span>{% endif %}{% if not u.is_active %} <span class="chip-deactivated">Deactivated</span>{% endif %}</div>
+              <div class="small muted">{{ u.email }}</div>
+            </div>
+          </div>
+        </td>
         <td><span class="role-badge role-{{ u.role }}">{{ u.role_label }}</span></td>
+        <td class="small">
+          {% if u.role in ('owner', 'admin') %}All clients
+          {% else %}
+            {% set g = namespace(n=0) %}
+            {% for c in clients %}{% if access_map.get((u.id, c.id), 'none') != 'none' %}{% set g.n = g.n + 1 %}{% endif %}{% endfor %}
+            {% if u.is_active %}{{ g.n }} of {{ clients|length }} clients{% else %}Kept: {{ g.n }} of {{ clients|length }} clients{% endif %}
+          {% endif %}
+        </td>
+        <td class="small">
+          {% if not u.is_active %}Deactivated {{ u.deactivated_at.strftime('%d %b') }}{% if u.deactivated_by_id %} by {{ users|selectattr('id', 'equalto', u.deactivated_by_id)|map(attribute='name')|first|default('an admin') }}{% endif %}
+          {% elif u.last_login_at %}{{ u.last_login_at.strftime('%d %b, %H:%M') }}
+          {% else %}<span class="muted">Not yet</span>{% endif %}
+        </td>
+        <td style="text-align:center;">
+          {% if u.is_active %}
+          <label class="toggle-switch team-switch" title="{{ locked_reason }}">
+            <input type="checkbox" checked {{ 'disabled' if locked_reason }} onclick="event.preventDefault(); openDeactivate({{ u.id }});" aria-label="Access for {{ u.name }}">
+            <span class="toggle-track"><span class="toggle-knob"></span></span>
+          </label>
+          {% else %}
+          <form method="POST" action="{{ url_for('auth.reactivate_user', user_id=u.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="toggle-switch team-switch" title="{{ locked_reason }}">
+              <input type="checkbox" {{ 'disabled' if locked_reason }} onchange="this.form.submit()" aria-label="Reactivate {{ u.name }}">
+              <span class="toggle-track"><span class="toggle-knob"></span></span>
+            </label>
+          </form>
+          {% endif %}
+        </td>
         <td style="white-space:nowrap;">
+          {% if u.is_active %}
           <button type="button" class="link-btn small" onclick="toggleResetPassword({{ u.id }})">Reset Password</button>
-          {% if u.id != current_user.id %}
-          &middot;
+          {% if not is_me %}&middot; {% endif %}
+          {% endif %}
+          {% if not is_me %}
           <button type="button" class="link-btn small" onclick="toggleManage({{ u.id }})" style="font-weight:600;">Manage</button>
           {% endif %}
         </td>
       </tr>
 
+      {% if u.is_active %}
       <tr id="reset-password-row-{{ u.id }}" style="display:none;">
-        <td colspan="4" style="background:var(--grey-50); padding:18px;">
+        <td colspan="6" style="background:var(--grey-50); padding:18px;">
           <form method="POST" action="{{ url_for('auth.reset_password', user_id=u.id) }}" style="display:flex; align-items:flex-end; gap:12px;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group" style="flex:1; margin-bottom:0;">
@@ -77,9 +127,58 @@
         </td>
       </tr>
 
-      {% if u.id != current_user.id %}
+      {% if not locked_reason %}
+      <tr id="deactivate-row-{{ u.id }}" style="display:none;">
+        <td colspan="6" style="background:var(--grey-50); padding:20px;">
+          <form method="POST" action="{{ url_for('auth.deactivate_user', user_id=u.id) }}" class="team-confirm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="font-size:14px; font-weight:600; margin-bottom:6px;">Deactivate {{ u.name }}?</div>
+            <p class="small" style="color:var(--grey-700); line-height:1.6; margin:0 0 12px;">They will be signed out immediately and cannot sign in again until you reactivate them. Their history and client notes stay.</p>
+            {% if oi.count %}
+            <div class="team-reassign">
+              <div style="font-size:12.5px; font-weight:600; color:var(--warn); margin-bottom:8px;">{{ u.name.split(' ')[0] }} has {{ oi.count }} open action item{{ 's' if oi.count != 1 }} across {{ oi.clients }} client{{ 's' if oi.clients != 1 }}</div>
+              <label class="team-radio"><input type="radio" name="reassign_choice" value="move" checked onchange="this.form.querySelector('select').disabled = false"> Reassign to
+                <select name="reassign_to">
+                  {% for o in users if o.is_active and o.id != u.id %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+              </label>
+              <label class="team-radio"><input type="radio" name="reassign_choice" value="keep" onchange="this.form.querySelector('select').disabled = true"> Leave them assigned to {{ u.name.split(' ')[0] }}</label>
+            </div>
+            {% endif %}
+            <div style="display:flex; gap:10px; align-items:center; margin-top:14px;">
+              <button type="submit" class="btn btn-sm btn-danger-solid">Deactivate</button>
+              <button type="button" class="link-btn small muted" onclick="closeDeactivate({{ u.id }})">Cancel</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% endif %}
+      {% endif %}
+
+      {% if not is_me %}
       <tr id="manage-row-{{ u.id }}" style="display:none;">
-        <td colspan="4" style="background:var(--grey-50); padding:20px;">
+        <td colspan="6" style="background:var(--grey-50); padding:20px;">
+          <div class="team-account-card {{ 'is-off' if not u.is_active }}">
+            <div style="flex:1;">
+              <div style="font-size:13.5px; font-weight:600;">Account access</div>
+              <div class="small muted" style="margin-top:2px;">
+                {% if u.is_active %}{{ u.name.split(' ')[0] }} can sign in to Scaalex and see the clients granted below.
+                {% else %}Deactivated. Role and client access are kept for when you reactivate.{% endif %}
+              </div>
+            </div>
+            {% if u.is_active %}
+            <span class="chip-active">Active</span>
+            <button type="button" class="btn btn-sm btn-secondary" {{ 'disabled' if locked_reason }} title="{{ locked_reason }}" onclick="toggleManage({{ u.id }}); openDeactivate({{ u.id }});">Deactivate</button>
+            {% else %}
+            <span class="chip-deactivated">Deactivated</span>
+            <form method="POST" action="{{ url_for('auth.reactivate_user', user_id=u.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm" {{ 'disabled' if locked_reason }} title="{{ locked_reason }}">Reactivate</button>
+            </form>
+            {% endif %}
+          </div>
+
+          <div class="{{ 'team-dim' if not u.is_active }}">
           <form method="POST" action="{{ url_for('auth.update_role', user_id=u.id) }}" style="display:flex; align-items:flex-end; gap:14px; margin-bottom:18px;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group" style="margin-bottom:0;">
@@ -120,6 +219,7 @@
               <button type="button" class="link-btn small muted" onclick="toggleManage({{ u.id }})">Close</button>
             </div>
           </form>
+          </div>
         </td>
       </tr>
       {% endif %}
@@ -185,6 +285,26 @@ function toggleAddUser() {
 function toggleResetPassword(userId) {
   const row = document.getElementById('reset-password-row-' + userId);
   row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+function openDeactivate(userId) {
+  const row = document.getElementById('deactivate-row-' + userId);
+  if (row) row.style.display = 'table-row';
+}
+function closeDeactivate(userId) {
+  document.getElementById('deactivate-row-' + userId).style.display = 'none';
+}
+function filterTeam(which) {
+  document.querySelectorAll('.team-tab').forEach(t => t.classList.toggle('active', t.dataset.filter === which));
+  document.querySelectorAll('tr.team-row').forEach(r => {
+    const show = which === 'all' || r.dataset.status === which;
+    r.style.display = show ? '' : 'none';
+    // hide the row's expandable siblings too when filtered out
+    let n = r.nextElementSibling;
+    while (n && !n.classList.contains('team-row')) {
+      if (!show) n.style.display = 'none';
+      n = n.nextElementSibling;
+    }
+  });
 }
 function toggleManage(userId) {
   const row = document.getElementById('manage-row-' + userId);

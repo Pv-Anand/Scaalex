@@ -33,7 +33,7 @@ def create_app(config_class=Config):
     def load_user(user_id):
         return db.session.get(User, int(user_id))
 
-    from auth import auth_bp
+    from auth import auth_bp, DEACTIVATED_MESSAGE
     from routes.home import home_bp
     from routes.clients import clients_bp
     from routes.conversations import conversations_bp
@@ -50,6 +50,20 @@ def create_app(config_class=Config):
     from routes.portal import portal_bp, portal_hub_bp
     from routes.notify import notify_bp
     from routes.data_room import data_room_bp
+
+    @app.before_request
+    def end_deactivated_sessions():
+        # Deactivating someone takes effect on their next click, not when
+        # their session cookie happens to expire.
+        from flask import flash, redirect, request, url_for
+        from flask_login import current_user, logout_user
+        if request.endpoint in (None, "static") or not current_user.is_authenticated:
+            return None
+        if not current_user.is_active:
+            logout_user()
+            flash(DEACTIVATED_MESSAGE, "error")
+            return redirect(url_for("auth.login"))
+        return None
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(home_bp)
@@ -165,6 +179,14 @@ def _ensure_schema_migrations(app):
         for column in ("period_start", "period_end"):
             if column not in overview_columns:
                 conn.execute(db.text(f"ALTER TABLE ai_overviews ADD COLUMN {column} DATE"))
+                conn.commit()
+
+        user_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(users)"))}
+        for column, ddl_type in (
+            ("last_login_at", "DATETIME"), ("deactivated_at", "DATETIME"), ("deactivated_by_id", "INTEGER"),
+        ):
+            if column not in user_columns:
+                conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {column} {ddl_type}"))
                 conn.commit()
 
         client_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(clients)"))}

@@ -5,10 +5,12 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 import backup
 from extensions import db, limiter
-from models import User, Client, ClientAccess, ROLES, ROLE_LABELS, log_activity
+from models import User, Client, ClientAccess, ActionItem, ROLES, ROLE_LABELS, log_activity
 from permissions import admin_required
 
 auth_bp = Blueprint("auth", __name__)
+
+DEACTIVATED_MESSAGE = "Your Scaalex account has been deactivated. Please contact your Scaalex administrator."
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -23,6 +25,13 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if user and user.check_password(password):
+            # Only said after the right password, so it never reveals which
+            # emails exist.
+            if not user.is_active:
+                flash(DEACTIVATED_MESSAGE, "error")
+                return render_template("login.html", current_year=datetime.utcnow().year)
+            user.last_login_at = datetime.utcnow()
+            db.session.commit()
             login_user(user)
             next_url = request.args.get("next")
             return redirect(next_url or url_for("home.index"))
@@ -66,8 +75,18 @@ def team():
     for grant in ClientAccess.query.all():
         access_map[(grant.user_id, grant.client_id)] = grant.access_level
 
+    # Open action items assigned to each person (assignee is free text that
+    # holds the person's name), so the deactivate confirm can offer to hand
+    # them over.
+    open_items = {}
+    for u in users:
+        rows = ActionItem.query.filter(
+            ActionItem.assignee == u.name, ActionItem.status != "Completed",
+        ).all()
+        open_items[u.id] = {"count": len(rows), "clients": len({r.client_id for r in rows})}
+
     return render_template(
-        "team.html", users=users, clients=clients, access_map=access_map,
+        "team.html", users=users, clients=clients, access_map=access_map, open_items=open_items,
         roles=ROLES, role_labels=ROLE_LABELS,
         backup_status=backup.read_status(current_app._get_current_object()),
         backup_configured=backup._is_configured(current_app._get_current_object()),
@@ -189,4 +208,69 @@ def update_access(user_id):
     log_activity(current_user.id, None, "Client access updated", "user", user.id, details=user.name)
     db.session.commit()
     flash(f"Client access updated for {user.name}.", "success")
+    return redirect(url_for("auth.team"))
+
+
+def _can_change_access(target):
+    """Returns an error message if current_user may not activate/deactivate
+    `target`, else None."""
+    if target.id == current_user.id:
+        return "You can't deactivate your own account."
+    if target.role == "owner" and not current_user.is_owner:
+        return "Only an Owner can change another Owner's access."
+    return None
+
+
+@auth_bp.route("/team/<int:user_id>/deactivate", methods=["POST"])
+@login_required
+@admin_required
+def deactivate_user(user_id):
+    user = User.query.get_or_404(user_id)
+    error = _can_change_access(user)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("auth.team"))
+    if user.role == "owner":
+        active_owners = User.query.filter(User.role == "owner", User.deactivated_at.is_(None)).count()
+        if active_owners <= 1:
+            flash("The last active Owner can't be deactivated.", "error")
+            return redirect(url_for("auth.team"))
+    if not user.is_active:
+        return redirect(url_for("auth.team"))
+
+    moved = 0
+    target_id = request.form.get("reassign_to", "").strip()
+    new_owner = User.query.get(int(target_id)) if target_id.isdigit() else None
+    if new_owner and (new_owner.id == user.id or not new_owner.is_active):
+        new_owner = None
+    if new_owner:
+        items = ActionItem.query.filter(ActionItem.assignee == user.name, ActionItem.status != "Completed").all()
+        for item in items:
+            item.assignee = new_owner.name
+        moved = len(items)
+
+    user.deactivated_at = datetime.utcnow()
+    user.deactivated_by_id = current_user.id
+    details = user.name if not moved else f"{user.name} ({moved} open items reassigned to {new_owner.name})"
+    log_activity(current_user.id, None, "Team member deactivated", "user", user.id, details=details)
+    db.session.commit()
+    extra = f", {moved} open item{'s' if moved != 1 else ''} reassigned to {new_owner.name}" if moved else ""
+    flash(f"{user.name} deactivated{extra}.", "success")
+    return redirect(url_for("auth.team"))
+
+
+@auth_bp.route("/team/<int:user_id>/reactivate", methods=["POST"])
+@login_required
+@admin_required
+def reactivate_user(user_id):
+    user = User.query.get_or_404(user_id)
+    error = _can_change_access(user)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("auth.team"))
+    user.deactivated_at = None
+    user.deactivated_by_id = None
+    log_activity(current_user.id, None, "Team member reactivated", "user", user.id, details=user.name)
+    db.session.commit()
+    flash(f"{user.name} reactivated.", "success")
     return redirect(url_for("auth.team"))

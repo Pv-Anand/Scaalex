@@ -905,3 +905,28 @@ tr.selected td { background: var(--grey-50); }
   .dr-overview-stats > div { flex: 1 1 40%; }
   .drp-search { min-width: 0; width: 100%; box-sizing: border-box; }
 }
+
+/* ---- Team: deactivate / reactivate ---- */
+.team-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.team-tab { font: inherit; font-size: 12.5px; padding: 7px 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--white); color: var(--grey-700); cursor: pointer; display: inline-flex; gap: 7px; white-space: nowrap; }
+.team-tab i { font-style: normal; opacity: .65; }
+.team-tab.active { background: var(--black); color: var(--white); border-color: var(--black); font-weight: 500; }
+.team-member { display: flex; align-items: center; gap: 11px; }
+.team-av { width: 32px; height: 32px; border-radius: 50%; background: var(--black); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 600; flex-shrink: 0; }
+.team-av.off { background: var(--grey-200); color: var(--grey-500); }
+.team-name { font-weight: 500; }
+tr.row-deactivated > td { background: var(--grey-50); }
+tr.row-deactivated .team-name { color: var(--grey-500); }
+.chip-deactivated, .chip-active { font-size: 10.5px; font-weight: 500; padding: 2px 9px; border-radius: 20px; display: inline-flex; align-items: center; margin-left: 6px; }
+.chip-deactivated { background: var(--danger-bg, #fbeaea); color: var(--danger); }
+.chip-active { background: var(--success-bg, #eaf4ee); color: var(--success, #1f6b3f); margin-left: 0; }
+.team-switch input:checked ~ .toggle-track { background: var(--success, #1f6b3f); }
+.team-confirm { max-width: 520px; }
+.team-reassign { background: var(--warn-bg, #fbf1de); padding: 11px 13px; display: flex; flex-direction: column; gap: 8px; }
+.team-radio { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--charcoal); }
+.team-radio select { padding: 5px 8px; font-size: 12.5px; }
+.btn-danger-solid { background: var(--danger); border-color: var(--danger); color: var(--white); }
+.team-account-card { display: flex; align-items: center; gap: 14px; background: var(--white); border: 1px solid var(--line); padding: 14px 16px; margin-bottom: 18px; flex-wrap: wrap; }
+.team-account-card.is-off { border-color: var(--danger); }
+.team-dim { opacity: .55; }
+@media (max-width: 960px) { .table-wrap { overflow-x: auto; } }

@@ -58,7 +58,7 @@ def reports(slug):
 @login_required
 def new_milestone(slug):
     client = get_client_or_404(slug)
-    managers = User.query.order_by(User.name).all()
+    managers = User.query.filter(User.deactivated_at.is_(None)).order_by(User.name).all()
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()
@@ -138,7 +138,7 @@ def _parse_date(raw):
 def milestone_detail(slug, milestone_id):
     client = get_client_or_404(slug)
     milestone = Milestone.query.filter_by(id=milestone_id, client_id=client.id).first_or_404()
-    managers = User.query.order_by(User.name).all()
+    managers = User.query.filter(User.deactivated_at.is_(None)).order_by(User.name).all()
     deliverables = milestone.staff_deliverables
     past_requests = (
         milestone.requests.filter(MilestoneRequest.status.in_(["fulfilled", "received", "rejected"])).all()
