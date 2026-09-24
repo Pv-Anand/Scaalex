@@ -40,6 +40,12 @@ class Config:
     ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
 
     FIREFLIES_API_KEY = os.environ.get("FIREFLIES_API_KEY", "").strip()
+    # A meeting that includes any of these addresses is filed under the Sales
+    # tab automatically and never matched to a client project. projects@ stays
+    # the mailbox for the normal project sync, so it needs no setting here.
+    SALES_MEETING_EMAILS = tuple(
+        e.strip().lower() for e in os.environ.get("SALES_MEETING_EMAILS", "sales@scaalex.com").split(",") if e.strip()
+    )
 
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
