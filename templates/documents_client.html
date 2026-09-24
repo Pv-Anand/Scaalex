@@ -24,7 +24,7 @@
 </div>
 
 <div class="card doc-upload-bar">
-  <form method="POST" action="{{ url_for('documents.upload', slug=client.slug) }}" enctype="multipart/form-data" style="display:flex; align-items:flex-end; gap:14px; width:100%;">
+  <form method="POST" action="{{ url_for('documents.upload', slug=client.slug) }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label>Link to Milestone (optional)</label>

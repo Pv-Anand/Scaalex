@@ -568,11 +568,25 @@ a.auth-submit { justify-content: center; text-decoration: none; margin-top: 16px
 .reveal-link:hover { color: var(--grey-700); }
 
 .doc-upload-bar { margin-bottom: 20px; }
-.doc-upload-bar .form-group { flex: 1; margin-bottom: 0; }
-.doc-upload-bar select { height: 34px; box-sizing: border-box; }
-.doc-upload-bar .btn { height: 34px; box-sizing: border-box; padding: 0 18px; flex-shrink: 0; }
+.doc-upload-bar form { display: flex; align-items: flex-end; gap: 14px; width: 100%; }
+.doc-upload-bar .form-group { flex: 1; min-width: 0; margin-bottom: 0; }
+/* The global select padding (10px) is taller than a 34px box can hold, which
+   clipped the text; keep the vertical padding at zero so the height governs. */
+.doc-upload-bar select { height: 38px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+.doc-upload-bar .btn { height: 38px; box-sizing: border-box; padding: 0 18px; flex-shrink: 0; }
+/* The drop box is itself a <label>, so undo the generic ".form-group label"
+   block/margin rules that were pushing it out of line with the selects. */
+.doc-upload-bar .form-group label.doc-upload-box {
+  width: 100%; height: 38px; box-sizing: border-box; padding: 0 12px; margin: 0;
+  font-size: 12.5px; font-weight: 400;
+  border: 1.5px dashed var(--line-strong); border-radius: var(--radius); background: var(--white); color: var(--grey-500);
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+.doc-upload-bar .form-group label.doc-upload-box span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-upload-bar .form-group label.doc-upload-box:hover { border-color: var(--black); background: var(--grey-50); color: var(--black); }
 .doc-upload-box {
-  width: 100%; height: 34px; box-sizing: border-box; padding: 0 10px; font-size: 12.5px;
+  width: 100%; height: 38px; box-sizing: border-box; padding: 0 10px; font-size: 12.5px;
   border: 1.5px dashed var(--line-strong); border-radius: var(--radius); background: var(--white); color: var(--grey-500);
   display: flex; align-items: center; gap: 6px; cursor: pointer;
   transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
@@ -677,6 +691,8 @@ a.auth-submit { justify-content: center; text-decoration: none; margin-top: 16px
 .copy-toast.show { opacity: 1; transform: translateY(0); }
 
 @media (max-width: 960px) {
+  .doc-upload-bar form { flex-direction: column; align-items: stretch; }
+  .doc-upload-bar .btn { width: 100%; justify-content: center; }
   .mobile-topbar {
     display: flex; align-items: center; gap: 14px;
     height: 56px; padding: 0 20px; box-sizing: border-box;
