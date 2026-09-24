@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from sqlalchemy import or_
 from flask_login import login_required, current_user
 
 from extensions import db
-from models import Client, Decision, log_activity
+from models import Client, Decision, Conversation, log_activity
 from routes.clients import get_client_or_404
 
 decisions_bp = Blueprint("decisions", __name__)
@@ -144,3 +144,68 @@ def edit(decision_id):
     db.session.commit()
     flash("Decision updated.", "success")
     return redirect(request.referrer or url_for("decisions.global_list"))
+
+
+def _decision_snapshot(d):
+    return {
+        "client_id": d.client_id, "conversation_id": d.conversation_id, "decision": d.decision,
+        "context": d.context, "owner": d.owner, "status": d.status, "source_label": d.source_label,
+        "date": d.date.isoformat() if d.date else None,
+        "created_at": d.created_at.isoformat() if d.created_at else None,
+    }
+
+
+@decisions_bp.route("/decisions/delete", methods=["POST"])
+@login_required
+def delete_items():
+    """Delete decisions; snapshots are returned so the page can offer Undo."""
+    ids = [int(i) for i in (request.get_json(silent=True) or {}).get("ids", []) if str(i).isdigit()]
+    items = Decision.query.filter(Decision.id.in_(ids)).all() if ids else []
+    if not items:
+        return jsonify(ok=False, error="Nothing to delete."), 404
+    allowed = [d for d in items if current_user.can_edit_client(d.client_id)]
+    if not allowed:
+        return jsonify(ok=False, error="You do not have edit access to these decisions."), 403
+    snapshots = []
+    for d in allowed:
+        snapshots.append(_decision_snapshot(d))
+        log_activity(current_user.id, d.client_id, "Decision deleted", "decision", d.id, details=(d.decision or "")[:200])
+        db.session.delete(d)
+    db.session.commit()
+    return jsonify(ok=True, deleted=len(allowed), skipped=len(items) - len(allowed), snapshots=snapshots)
+
+
+@decisions_bp.route("/decisions/restore", methods=["POST"])
+@login_required
+def restore_items():
+    snapshots = (request.get_json(silent=True) or {}).get("snapshots") or []
+    restored = 0
+    for snap in snapshots[:200]:
+        try:
+            client_id = int(snap["client_id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not Client.query.get(client_id) or not current_user.can_edit_client(client_id):
+            continue
+        conv_id = snap.get("conversation_id")
+        if conv_id and not Conversation.query.filter_by(id=conv_id, client_id=client_id).first():
+            conv_id = None
+
+        def _dt(value):
+            try:
+                return datetime.fromisoformat(value) if value else datetime.utcnow()
+            except ValueError:
+                return datetime.utcnow()
+
+        d = Decision(
+            client_id=client_id, conversation_id=conv_id,
+            decision=str(snap.get("decision") or "")[:500] or "Restored decision",
+            context=snap.get("context"), owner=snap.get("owner"), status=snap.get("status") or "Confirmed",
+            source_label=snap.get("source_label"), date=_dt(snap.get("date")), created_at=_dt(snap.get("created_at")),
+        )
+        db.session.add(d)
+        db.session.flush()
+        log_activity(current_user.id, client_id, "Decision restored", "decision", d.id, details=d.decision[:200])
+        restored += 1
+    db.session.commit()
+    return jsonify(ok=True, restored=restored)

@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from flask_login import login_required, current_user
 
 from brand import BRAND
 from extensions import db
-from models import Client, ActionItem, log_activity
+from models import Client, ActionItem, Conversation, log_activity
 from routes.clients import get_client_or_404
 
 action_items_bp = Blueprint("action_items", __name__)
@@ -171,3 +171,73 @@ def edit(item_id):
     db.session.commit()
     flash("Action item updated.", "success")
     return redirect(request.referrer or url_for("action_items.global_list"))
+
+
+def _item_snapshot(a):
+    return {
+        "client_id": a.client_id, "conversation_id": a.conversation_id, "task": a.task, "owner": a.owner,
+        "assignee": a.assignee, "due_date": a.due_date.isoformat() if a.due_date else None,
+        "priority": a.priority, "status": a.status, "notes": a.notes, "source_label": a.source_label,
+        "needs_confirmation": bool(a.needs_confirmation),
+        "created_at": a.created_at.isoformat() if a.created_at else None,
+    }
+
+
+@action_items_bp.route("/action-items/delete", methods=["POST"])
+@login_required
+def delete_items():
+    """Delete one or more action items. Returns snapshots so the page can offer
+    Undo (see restore_items); the delete itself is real and immediate."""
+    ids = [int(i) for i in (request.get_json(silent=True) or {}).get("ids", []) if str(i).isdigit()]
+    items = ActionItem.query.filter(ActionItem.id.in_(ids)).all() if ids else []
+    if not items:
+        return jsonify(ok=False, error="Nothing to delete."), 404
+    allowed = [a for a in items if current_user.can_edit_client(a.client_id)]
+    if not allowed:
+        return jsonify(ok=False, error="You do not have edit access to these tasks."), 403
+    snapshots = []
+    for a in allowed:
+        snapshots.append(_item_snapshot(a))
+        log_activity(current_user.id, a.client_id, "Action item deleted", "action_item", a.id, details=(a.task or "")[:200])
+        db.session.delete(a)
+    db.session.commit()
+    return jsonify(ok=True, deleted=len(allowed), skipped=len(items) - len(allowed), snapshots=snapshots)
+
+
+@action_items_bp.route("/action-items/restore", methods=["POST"])
+@login_required
+def restore_items():
+    """Undo a delete: recreate the items from the snapshots delete_items returned."""
+    snapshots = (request.get_json(silent=True) or {}).get("snapshots") or []
+    restored = 0
+    for snap in snapshots[:200]:
+        try:
+            client_id = int(snap["client_id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not Client.query.get(client_id) or not current_user.can_edit_client(client_id):
+            continue
+        conv_id = snap.get("conversation_id")
+        if conv_id and not Conversation.query.filter_by(id=conv_id, client_id=client_id).first():
+            conv_id = None
+        try:
+            due = datetime.strptime(snap["due_date"], "%Y-%m-%d").date() if snap.get("due_date") else None
+        except ValueError:
+            due = None
+        try:
+            created = datetime.fromisoformat(snap["created_at"]) if snap.get("created_at") else datetime.utcnow()
+        except ValueError:
+            created = datetime.utcnow()
+        item = ActionItem(
+            client_id=client_id, conversation_id=conv_id, task=str(snap.get("task") or "")[:500] or "Restored task",
+            owner=snap.get("owner"), assignee=snap.get("assignee"), due_date=due,
+            priority=snap.get("priority") or "Medium", status=snap.get("status") or "Not Started",
+            notes=snap.get("notes"), source_label=snap.get("source_label"),
+            needs_confirmation=bool(snap.get("needs_confirmation")), created_at=created,
+        )
+        db.session.add(item)
+        db.session.flush()
+        log_activity(current_user.id, client_id, "Action item restored", "action_item", item.id, details=item.task[:200])
+        restored += 1
+    db.session.commit()
+    return jsonify(ok=True, restored=restored)

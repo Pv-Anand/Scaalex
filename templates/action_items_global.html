@@ -34,9 +34,15 @@
 <datalist id="action-item-people">
   {% for p in people %}<option value="{{ p }}"></option>{% endfor %}
 </datalist>
+<div class="dr-bulkbar" id="task-bulkbar" style="display:none;">
+  <strong><span id="task-bulk-n">0</span> selected</strong>
+  <button type="button" class="dr-bulk-btn danger" onclick="confirmDeleteItems('action-items', selectedTaskIds(), this)">Delete</button>
+  <button type="button" class="dr-bulk-btn dim" style="margin-left:auto;" onclick="clearTaskSelection()">Clear</button>
+</div>
 <div class="action-list">
   {% for a in items %}
   <div id="action-item-row-{{ a.id }}" class="action-row priority-{{ a.priority }} {{ 'is-overdue' if a.is_overdue }} {{ 'is-completed' if a.status == 'Completed' }}">
+    {% if current_user.can_edit_client(a.client_id) %}<input type="checkbox" class="action-row-check task-select" value="{{ a.id }}" onchange="onTaskSelect()" aria-label="Select task">{% endif %}
     <div class="action-row-main">
       <div class="action-row-task">{{ a.task }}</div>
       <div class="action-row-meta">
@@ -125,11 +131,24 @@
         <label>Notes</label>
         <textarea name="notes" rows="2" placeholder="Add context, blockers, or updates on this task">{{ a.notes or '' }}</textarea>
       </div>
-      <div class="form-actions" style="justify-content:flex-end; gap:10px;">
+      <div class="form-actions" style="justify-content:flex-end; gap:10px;" id="task-actions-{{ a.id }}">
+        {% if current_user.can_edit_client(a.client_id) %}
+        <button type="button" class="btn btn-sm btn-danger-outline" style="margin-right:auto;" onclick="showTaskDeleteStrip({{ a.id }}, true)"><svg class="ic-trash" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete task</button>
+        {% endif %}
         <button type="button" class="link-btn small muted" onclick="toggleActionItemRow({{ a.id }})">Cancel</button>
         <button type="submit" class="btn btn-sm">Save Changes</button>
       </div>
     </form>
+    {% if current_user.can_edit_client(a.client_id) %}
+    <div id="task-delete-strip-{{ a.id }}" class="delete-strip" style="display:none;">
+      <div class="delete-strip-text">
+        <div class="delete-strip-title">Delete this task?</div>
+        <div class="small">It is removed from Action Items, Home and the Calendar. The update it came from is not changed. You can undo for 10 seconds.</div>
+      </div>
+      <button type="button" class="btn btn-sm btn-danger-solid" onclick="deleteItems('action-items', [{{ a.id }}])">Delete task</button>
+      <button type="button" class="link-btn small muted" onclick="showTaskDeleteStrip({{ a.id }}, false)">Cancel</button>
+    </div>
+    {% endif %}
   </div>
   {% endfor %}
 </div>

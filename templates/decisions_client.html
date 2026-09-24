@@ -45,6 +45,11 @@
         <button type="button" class="icon-btn" aria-label="Edit decision" onclick="toggleDecisionEdit({{ d.id }})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
         </button>
+        {% if current_user.can_edit_client(client.id) %}
+        <button type="button" class="icon-btn icon-btn-danger" aria-label="Delete decision" title="Delete decision" onclick="confirmDeleteItems('decisions', [{{ d.id }}], this)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        {% endif %}
         <form method="POST" action="{{ url_for('decisions.update_status', decision_id=d.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="status" value="Confirmed">
@@ -85,6 +90,11 @@
             <button type="button" class="icon-btn" aria-label="Edit decision" onclick="toggleDecisionEdit({{ d.id }})">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
             </button>
+            {% if current_user.can_edit_client(client.id) %}
+            <button type="button" class="icon-btn icon-btn-danger" aria-label="Delete decision" title="Delete decision" onclick="confirmDeleteItems('decisions', [{{ d.id }}], this)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            {% endif %}
           </div>
         </div>
         <div class="decision-chips">

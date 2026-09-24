@@ -344,3 +344,102 @@ function copyNotifyField(field) {
     .then(() => showToast('Copied to clipboard'))
     .catch(() => showToast('Could not copy - select and copy manually'));
 }
+
+
+// ---------------------------------------------------------------- delete tasks and decisions
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+    body: JSON.stringify(body || {}),
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* fall through */ }
+  if (!res.ok || data.ok === false) throw new Error(data.error || 'Something went wrong. Please try again.');
+  return data;
+}
+
+function showUndoToast(html, onUndo) {
+  document.querySelectorAll('.undo-toast').forEach(el => el.remove());
+  const el = document.createElement('div');
+  el.className = 'undo-toast';
+  const msg = document.createElement('span');
+  msg.innerHTML = html;
+  el.appendChild(msg);
+  if (onUndo) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Undo';
+    b.onclick = async () => { b.disabled = true; try { await onUndo(); } catch (e) { showToast(e.message); b.disabled = false; } };
+    el.appendChild(b);
+  }
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 10000);
+}
+
+function removeDeletedRow(kind, id) {
+  if (kind === 'action-items') {
+    ['action-item-row-', 'action-item-edit-'].forEach(prefix => { const el = document.getElementById(prefix + id); if (el) el.remove(); });
+  } else {
+    const edit = document.getElementById('decision-edit-' + id);
+    const card = edit && (edit.closest('.decision-timeline-item') || edit.closest('.decision-card'));
+    if (card) card.remove();
+  }
+}
+
+async function deleteItems(kind, ids) {
+  if (!ids.length) return;
+  const closePop = document.querySelector('.confirm-pop');
+  if (closePop) closePop.remove();
+  let data;
+  try { data = await postJSON('/' + kind + '/delete', { ids }); }
+  catch (e) { showToast(e.message); return; }
+  ids.forEach(id => removeDeletedRow(kind, id));
+  if (typeof clearTaskSelection === 'function') clearTaskSelection();
+  const noun = kind === 'action-items' ? 'task' : 'decision';
+  showUndoToast(`${data.deleted} ${noun}${data.deleted === 1 ? '' : 's'} deleted`, async () => {
+    await postJSON('/' + kind + '/restore', { snapshots: data.snapshots });
+    location.reload();
+  });
+}
+
+function confirmDeleteItems(kind, ids, anchor) {
+  if (!ids.length) return;
+  const old = document.querySelector('.confirm-pop');
+  if (old) old.remove();
+  const noun = kind === 'action-items' ? 'task' : 'decision';
+  const what = ids.length === 1 ? 'this ' + noun : ids.length + ' ' + noun + 's';
+  const pop = document.createElement('div');
+  pop.className = 'confirm-pop';
+  pop.innerHTML = `<div class="confirm-pop-title">Delete ${what}?</div>
+    <p>${ids.length === 1 ? 'It is' : 'They are'} removed from the lists. The update ${ids.length === 1 ? 'it' : 'they'} came from is not changed. You can undo for 10 seconds.</p>
+    <div class="confirm-pop-actions"><button type="button" class="btn btn-sm btn-danger-solid" data-go>Delete</button><button type="button" class="link-btn small muted" data-cancel>Cancel</button></div>`;
+  document.body.appendChild(pop);
+  const r = anchor.getBoundingClientRect();
+  pop.style.top = (window.scrollY + r.bottom + 8) + 'px';
+  pop.style.left = Math.max(12, Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - 300)) + 'px';
+  pop.querySelector('[data-cancel]').onclick = () => pop.remove();
+  pop.querySelector('[data-go]').onclick = (ev) => { ev.target.disabled = true; deleteItems(kind, ids); };
+  setTimeout(() => document.addEventListener('click', function once(e) {
+    if (!pop.contains(e.target) && e.target !== anchor && !anchor.contains(e.target)) { pop.remove(); document.removeEventListener('click', once); }
+  }), 0);
+}
+
+function showTaskDeleteStrip(id, show) {
+  const strip = document.getElementById('task-delete-strip-' + id);
+  const actions = document.getElementById('task-actions-' + id);
+  if (strip) strip.style.display = show ? 'flex' : 'none';
+  if (actions) actions.style.display = show ? 'none' : 'flex';
+}
+
+function selectedTaskIds() { return [...document.querySelectorAll('.task-select:checked')].map(c => Number(c.value)); }
+function onTaskSelect() {
+  const n = selectedTaskIds().length;
+  const bar = document.getElementById('task-bulkbar');
+  if (bar) { bar.style.display = n ? 'flex' : 'none'; document.getElementById('task-bulk-n').textContent = n; }
+  document.querySelectorAll('.action-row').forEach(row => {
+    const cb = row.querySelector('.task-select');
+    row.classList.toggle('selected', !!(cb && cb.checked));
+  });
+}
+function clearTaskSelection() { document.querySelectorAll('.task-select').forEach(c => { c.checked = false; }); onTaskSelect(); }
