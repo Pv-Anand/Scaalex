@@ -7,7 +7,7 @@ from extensions import db
 from models import ClientContact, DataRoomFolder, Document, log_activity
 from routes.clients import get_client_or_404
 from routes.documents import save_upload
-from data_room import Tree, TEMPLATES, apply_template, build_client_view
+from data_room import Tree, SERVICES, SERVICE_ORDER, TOP_ORDER, ENGAGEMENT, WORKING_PAPERS, apply_template, build_client_view, guess_services
 
 data_room_bp = Blueprint("data_room", __name__, url_prefix="/clients/<slug>/data-room")
 
@@ -80,8 +80,16 @@ def page(slug):
     contacts = client.contacts.filter_by(portal_access=True).all()
     view = build_client_view(client.id, tree, folder_id, request.args.get("q", "")) if preview else None
 
+    picker_data = {
+        "services": {k: {"name": v["name"], "folders": v["folders"]} for k, v in SERVICES.items()},
+        "order": SERVICE_ORDER, "topOrder": TOP_ORDER, "engagement": ENGAGEMENT, "workingPapers": WORKING_PAPERS,
+        "picker": request.args.get("picker") == "1",
+        "preselected": [] if request.args.get("picker") == "1" else guess_services(client.engagement_type),
+    }
     return render_template(
         "data_room.html", client=client, active_tab="documents", tree=tree,
+        services=SERVICES, service_order=SERVICE_ORDER, picker_data=picker_data,
+        preselected=guess_services(client.engagement_type), picker=request.args.get("picker") == "1",
         selected=selected, docs=docs, subfolders=subfolders, preview=preview,
         unfiled_count=unfiled, filed_count=len(all_docs) - unfiled, all_count=len(all_docs),
         visible_count=visible_count, total_count=total_count,
@@ -121,13 +129,13 @@ def create_folder(slug):
 @login_required
 def use_template(slug):
     client = get_client_or_404(slug)
-    key = _body().get("template")
-    if key == "blank":
-        return jsonify(ok=True, created=0)
-    if key not in TEMPLATES:
-        return _fail("Unknown template.")
-    created = apply_template(client.id, key)
-    _log(client, "Data Room structure created", None, details=f"{key}: {created} folders")
+    keys = _body().get("services") or []
+    keys = [k for k in keys if k in SERVICES]
+    if not keys:
+        return _fail("Choose at least one service.")
+    created = apply_template(client.id, keys)
+    names = ", ".join(SERVICES[k]["name"] for k in SERVICE_ORDER if k in keys)
+    _log(client, "Data Room structure created", None, details=f"{names}: {created} folders")
     db.session.commit()
     return jsonify(ok=True, created=created)
 

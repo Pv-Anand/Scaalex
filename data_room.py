@@ -12,29 +12,86 @@ from sqlalchemy import func
 from extensions import db
 from models import DataRoomFolder, Document
 
-# name, subfolders, visible_to_client
-TEMPLATES = {
-    "ma": [
-        ("Corporate and Legal", ["Incorporation", "Shareholder Agreements"], True),
-        ("Financials", [], True),
-        ("Tax and Compliance", [], True),
-        ("Commercial", [], True),
-        ("HR", [], True),
-        ("IP", [], True),
-        ("Deal Documents", [], True),
-        ("Advisor Working Papers", [], False),
-    ],
-    "education": [
-        ("Company and Legal", ["Incorporation", "Investor Agreements"], True),
-        ("Financials", [], True),
-        ("Programs and Curriculum", [], True),
-        ("Faculty and HR", [], True),
-        ("Accreditation and Compliance", [], True),
-        ("Students and Fees", [], True),
-        ("Deal Documents", [], True),
-        ("Advisor Working Papers", [], False),
-    ],
+# A Data Room is built from the services we deliver to the client. Each
+# service brings top-level folders (name -> subfolders); folders that several
+# services share are created once with their subfolders merged.
+SERVICES = {
+    "ma": {
+        "name": "M&A and Fundraise",
+        "desc": "Sell-side, buy-side and capital raise. A diligence-ready room for buyers and investors.",
+        "folders": {
+            "Corporate and Legal": ["Incorporation", "Shareholder Agreements"],
+            "Financials": ["Historical Financials", "Financial Model"],
+            "Commercial": [],
+            "HR and IP": [],
+            "Deal Documents": [],
+        },
+    },
+    "cfo": {
+        "name": "CFO Services",
+        "desc": "Outsourced finance: monthly MIS, budgets, cash forecasts and audit support.",
+        "folders": {
+            "Financials": ["MIS Packs", "Budgets and Forecasts", "Cash Flow", "Audit and Accounts"],
+            "Board Reporting": [],
+        },
+    },
+    "comp": {
+        "name": "Compliance",
+        "desc": "Statutory calendar, GST and tax, company law and sector regulators such as RERA.",
+        "folders": {
+            "Compliance": ["Calendar", "GST and Tax", "Company Law", "Sector Regulatory", "Notices and Audit"],
+        },
+    },
+    "adv": {
+        "name": "Advisory",
+        "desc": "Diagnostics, debt and investor work, strategy and board support.",
+        "folders": {
+            "Advisory": ["Diagnostic", "Debt and Investors", "Strategy and Plans"],
+            "Board Reporting": [],
+        },
+    },
 }
+SERVICE_ORDER = ["ma", "cfo", "comp", "adv"]
+
+# Top-level order in a finished room; Engagement is always first and the
+# hidden working-papers folder always last.
+TOP_ORDER = [
+    "Corporate and Legal", "Financials", "Compliance", "Commercial", "HR and IP",
+    "Advisory", "Deal Documents", "Board Reporting",
+]
+ENGAGEMENT = "Engagement"
+WORKING_PAPERS = "Advisor Working Papers"
+
+# Words in a client's engagement type that pre-tick a service.
+SERVICE_HINTS = {
+    "ma": ("m&a", "fundrais", "investment banking", "capital raise"),
+    "cfo": ("cfo", "finance"),
+    "comp": ("compliance", "regulatory"),
+    "adv": ("advisory", "advisor"),
+}
+
+
+def guess_services(engagement_type):
+    text = (engagement_type or "").lower()
+    return [k for k in SERVICE_ORDER if any(h in text for h in SERVICE_HINTS[k])]
+
+
+def build_structure(keys):
+    """(name, subfolders, visible_to_client) for the chosen services, merged."""
+    keys = [k for k in SERVICE_ORDER if k in set(keys)]
+    if not keys:
+        return []
+    merged = {}
+    for k in keys:
+        for name, subs in SERVICES[k]["folders"].items():
+            bucket = merged.setdefault(name, [])
+            bucket.extend(x for x in subs if x not in bucket)
+    out = [(ENGAGEMENT, [], True)]
+    for name in TOP_ORDER:
+        if name in merged:
+            out.append((name, merged[name], True))
+    out.append((WORKING_PAPERS, [], False))
+    return out
 
 
 class Tree:
@@ -129,21 +186,32 @@ def visible_documents(client_id, tree):
     )
 
 
-def apply_template(client_id, key):
+def apply_template(client_id, keys):
+    """Create the folders for the chosen services. Safe to run again to add
+    services later: existing folders are kept, only missing ones (and missing
+    subfolders of existing ones) are created."""
     tree = Tree(client_id)
-    existing = {(f.parent_id, f.name.lower()) for f in tree.by_id.values()}
+    tops = {f.name.lower(): f for f in tree.by_id.values() if f.parent_id is None}
     position = tree.next_position(None)
     created = 0
-    for name, subfolders, visible in TEMPLATES[key]:
-        if (None, name.lower()) in existing:
-            continue
-        parent = DataRoomFolder(client_id=client_id, name=name, visible_to_client=visible, position=position)
-        db.session.add(parent)
-        db.session.flush()
-        position += 1
-        created += 1
-        for i, sub in enumerate(subfolders):
-            db.session.add(DataRoomFolder(client_id=client_id, parent_id=parent.id, name=sub, position=i))
+    for name, subfolders, visible in build_structure(keys):
+        parent = tops.get(name.lower())
+        if parent is None:
+            parent = DataRoomFolder(client_id=client_id, name=name, visible_to_client=visible, position=position)
+            db.session.add(parent)
+            db.session.flush()
+            position += 1
+            created += 1
+            have = set()
+            sub_pos = 0
+        else:
+            have = {f.name.lower() for f in tree.children.get(parent.id, [])}
+            sub_pos = tree.next_position(parent.id)
+        for sub in subfolders:
+            if sub.lower() in have:
+                continue
+            db.session.add(DataRoomFolder(client_id=client_id, parent_id=parent.id, name=sub, position=sub_pos))
+            sub_pos += 1
             created += 1
     return created
 

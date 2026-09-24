@@ -32,26 +32,43 @@
   {% include "_data_room_client_view.html" %}
 </div>
 
-{% elif not tree.by_id %}
-<div class="dr-start">
-  <h3>Start this client's Data Room</h3>
-  <p class="small muted" style="margin-bottom:18px;">Pick a structure and the folders are created in one click. Rename or delete anything you do not need.</p>
-  <div class="dr-start-grid">
-    <button type="button" class="dr-start-card" onclick="DR.useTemplate('ma')">
-      <strong>M&amp;A / Fundraise</strong>
-      <span>Corporate and Legal, Financials, Tax and Compliance, Commercial, HR, IP, Deal Documents</span>
+{% elif not tree.by_id or picker %}
+<div class="dr-start dr-picker" id="dr-picker">
+  <div class="dr-picker-main">
+    <h3>{{ 'Add services to this Data Room' if picker else 'What are we doing for this client?' }}</h3>
+    <p class="small muted" style="margin-bottom:18px;">Tick every service in the engagement. {% if picker %}Only the folders that are missing are added; nothing existing is moved or deleted.{% else %}Folders are created in one click and you can rename, add or delete anything afterwards.{% endif %}</p>
+    <div class="dr-svc-grid">
+      {% for key in service_order %}
+      <button type="button" class="dr-svc" id="dr-svc-{{ key }}" data-key="{{ key }}" aria-pressed="false" onclick="DR.toggleService('{{ key }}')">
+        <span class="dr-svc-ck"></span>
+        <span class="dr-svc-body"><strong>{{ services[key].name }}</strong><span class="dr-svc-desc">{{ services[key].desc }}</span>
+          <span class="dr-svc-chips">{% for top in services[key].folders %}<span>{{ top }}</span>{% endfor %}</span></span>
+      </button>
+      {% endfor %}
+    </div>
+    {% if not picker %}
+    <div class="dr-or"><span>or</span></div>
+    <button type="button" class="dr-scratch" id="dr-scratch" aria-pressed="false" onclick="DR.chooseScratch()">
+      <span class="dr-svc-ck round"></span>
+      <span class="dr-scratch-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></span>
+      <span class="dr-svc-body"><strong>Build from Scratch</strong><span class="dr-svc-desc">Start with an empty room and create your own folders. Nothing is added for you, not even Engagement.</span></span>
     </button>
-    <button type="button" class="dr-start-card" onclick="DR.useTemplate('education')">
-      <strong>Education / Academy</strong>
-      <span>Company and Legal, Financials, Programs and Curriculum, Faculty and HR, Accreditation and Compliance, Students and Fees, Deal Documents</span>
-    </button>
-    <button type="button" class="dr-start-card" onclick="DR.startBlank()">
-      <strong>Blank</strong>
-      <span>Start with an empty room and create your own folders.</span>
-    </button>
+    {% endif %}
+    <p class="small muted mt-16">Ticking services also adds an Engagement folder and a hidden Advisor Working Papers folder that clients never see.</p>
+    {% if unfiled_count and not picker %}<p class="small muted">{{ unfiled_count }} existing document{{ 's' if unfiled_count != 1 }} can be filed once folders exist.</p>{% endif %}
   </div>
-  {% if unfiled_count %}<p class="small muted mt-16">{{ unfiled_count }} existing document{{ 's' if unfiled_count != 1 }} can be filed once folders exist.</p>{% endif %}
+  <aside class="dr-picker-preview">
+    <div class="dr-picker-head"><strong>{{ client.name }} Data Room</strong><span class="small muted" id="dr-prev-sub"></span></div>
+    <div class="small muted" id="dr-prev-note" style="margin-bottom:10px;"></div>
+    <div id="dr-prev-list"></div>
+    <div class="dr-picker-actions">
+      <button type="button" class="btn" id="dr-create-btn" disabled onclick="DR.createStructure()">Create folders</button>
+      {% if picker %}<a href="{{ url_for('data_room.page', slug=client.slug) }}" class="small muted dr-nowrap">Cancel</a>
+      {% else %}<button type="button" class="link-btn small muted dr-nowrap" onclick="DR.chooseScratch()">Or build from scratch</button>{% endif %}
+    </div>
+  </aside>
 </div>
+<script id="dr-picker-data" type="application/json">{{ picker_data|tojson }}</script>
 
 {% else %}
 <div class="dr-layout">
@@ -59,6 +76,7 @@
   <aside class="dr-tree" id="dr-tree">
     <div class="dr-tree-head">
       <span>Folders</span>
+      <a href="{{ url_for('data_room.page', slug=client.slug, picker=1) }}" class="dr-add-services dr-nowrap">Add services</a>
       <button type="button" class="dr-chip {{ 'vis' if client.data_room_enabled else 'off' }}" id="dr-sees-chip" onclick="DR.openSharePanel(this)">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
         Client sees <span id="dr-sees-n">{{ visible_count }}</span> of {{ total_count }} &rsaquo;

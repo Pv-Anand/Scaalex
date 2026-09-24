@@ -428,9 +428,109 @@ const DR = (function () {
   }
 
   // ------------------------------------------------------------ templates + master + access
-  async function useTemplate(key) {
-    const data = await post('/folders/template', { template: key });
-    commit({ message: `${data.created} folders created. Rename or delete what you do not need.` });
+  // Service-based structure picker (empty Data Room, or "Add services" later).
+  const picker = { sel: new Set(), scratch: false, data: null };
+
+  function initPicker() {
+    const el = document.getElementById('dr-picker-data');
+    if (!el) return;
+    try { picker.data = JSON.parse(el.textContent); } catch (e) { return; }
+    (picker.data.preselected || []).forEach(k => picker.sel.add(k));
+    renderPicker();
+  }
+
+  function buildStructure(keys) {
+    const d = picker.data;
+    const chosen = d.order.filter(k => keys.has(k));
+    if (!chosen.length) return [];
+    const merged = {};
+    chosen.forEach(k => {
+      Object.entries(d.services[k].folders).forEach(([name, subs]) => {
+        const bucket = merged[name] = merged[name] || [];
+        subs.forEach(x => { if (bucket.indexOf(x) < 0) bucket.push(x); });
+      });
+    });
+    const out = [{ name: d.engagement, subs: [], visible: true }];
+    d.topOrder.forEach(name => { if (merged[name]) out.push({ name, subs: merged[name], visible: true }); });
+    out.push({ name: d.workingPapers, subs: [], visible: false });
+    return out;
+  }
+
+  const EYE_ON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_OFF = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3l18 18M10.6 5.1A10 10 0 0112 5c6.4 0 10 7 10 7a17 17 0 01-3.2 4M6.4 6.5C3.6 8.3 2 12 2 12s3.6 7 10 7c1.6 0 3-.4 4.2-1"/></svg>';
+
+  function renderPicker() {
+    if (!picker.data) return;
+    document.querySelectorAll('.dr-svc').forEach(b => {
+      const on = picker.sel.has(b.dataset.key);
+      b.classList.toggle('sel', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    const scratch = document.getElementById('dr-scratch');
+    if (scratch) { scratch.classList.toggle('sel', picker.scratch); scratch.setAttribute('aria-pressed', picker.scratch ? 'true' : 'false'); }
+
+    const list = document.getElementById('dr-prev-list');
+    const sub = document.getElementById('dr-prev-sub');
+    const note = document.getElementById('dr-prev-note');
+    const btn = document.getElementById('dr-create-btn');
+    list.innerHTML = '';
+    if (picker.scratch) {
+      sub.textContent = 'Empty';
+      note.textContent = '';
+      list.innerHTML = '<div class="dr-prev-empty"><strong>An empty Data Room</strong><span>You will land on the folder tree with the first folder name ready to type.</span></div>';
+      btn.textContent = 'Create empty Data Room'; btn.disabled = false;
+      return;
+    }
+    const structure = buildStructure(picker.sel);
+    if (!structure.length) {
+      sub.textContent = '';
+      note.textContent = '';
+      list.innerHTML = '<div class="dr-prev-empty"><span>Tick a service to see the folders that will be created.</span></div>';
+      btn.textContent = 'Create folders'; btn.disabled = true;
+      return;
+    }
+    const total = structure.reduce((n, f) => n + 1 + f.subs.length, 0);
+    sub.textContent = picker.data.order.filter(k => picker.sel.has(k)).map(k => picker.data.services[k].name).join(' + ');
+    note.textContent = `${total} folders. The eye shows what the client will see once it is on.`;
+    structure.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'dr-prev-row top' + (f.visible ? '' : ' hid');
+      row.innerHTML = `<span class="n">${esc(f.name)}</span><span class="c">${f.subs.length || ''}</span><span class="eye ${f.visible ? '' : 'off'}">${f.visible ? EYE_ON : EYE_OFF}</span>`;
+      list.appendChild(row);
+      f.subs.forEach(name => {
+        const r = document.createElement('div');
+        r.className = 'dr-prev-row sub';
+        r.innerHTML = `<span class="n">${esc(name)}</span><span class="eye">${EYE_ON}</span>`;
+        list.appendChild(r);
+      });
+    });
+    btn.textContent = picker.data.picker ? `Add missing folders` : `Create ${total} folders`;
+    btn.disabled = false;
+  }
+
+  function toggleService(key) {
+    picker.scratch = false;
+    if (picker.sel.has(key)) picker.sel.delete(key); else picker.sel.add(key);
+    renderPicker();
+  }
+
+  function chooseScratch() {
+    picker.scratch = true;
+    picker.sel.clear();
+    renderPicker();
+  }
+
+  async function createStructure() {
+    if (picker.scratch) { startBlank(); return; }
+    const services = picker.data.order.filter(k => picker.sel.has(k));
+    if (!services.length) return;
+    const btn = document.getElementById('dr-create-btn');
+    btn.disabled = true;
+    try {
+      const data = await post('/folders/template', { services });
+      remember({ message: `${data.created} folder${data.created === 1 ? '' : 's'} created. Rename or delete what you do not need.` });
+      location.href = location.pathname;
+    } catch (e) { btn.disabled = false; showToast('Could not create the folders. Please try again.'); }
   }
 
   async function startBlank() {
@@ -623,12 +723,13 @@ const DR = (function () {
       if (rename) { sessionStorage.removeItem('drRename'); renameFolder(Number(rename)); }
     } catch (e) { /* ignore */ }
     setupDnD();
+    initPicker();
   });
 
   return {
     setVisibility, toggleVisibility, bulkVisibility, newFolder, renameFolder, deleteFolder, bulkDelete, bulkMove,
     moveFolderPicker, folderMenu, docMenu, pickFolder, moveDocs, selectedDocIds, onDocSelect, toggleAllDocs,
-    clearDocSelection, onFolderSelect, uploadFiles, useTemplate, startBlank, setMaster, setContactAccess,
+    clearDocSelection, onFolderSelect, uploadFiles, toggleService, chooseScratch, createStructure, startBlank, setMaster, setContactAccess,
     openSharePanel, notify,
   };
 })();
