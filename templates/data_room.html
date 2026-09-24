@@ -77,10 +77,6 @@
     <div class="dr-tree-head">
       <span>Folders</span>
       <a href="{{ url_for('data_room.page', slug=client.slug, picker=1) }}" class="dr-add-services dr-nowrap">Add services</a>
-      <button type="button" class="dr-chip {{ 'vis' if client.data_room_enabled else 'off' }}" id="dr-sees-chip" onclick="DR.openSharePanel(this)">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
-        Client sees <span id="dr-sees-n">{{ visible_count }}</span> of {{ total_count }} &rsaquo;
-      </button>
     </div>
 
     <div class="dr-bulkbar dr-bulkbar-folders" id="dr-folder-bulk" style="display:none;">
