@@ -303,7 +303,7 @@ async function openNotifyModal(btn) {
 }
 
 function linkifyPortalUrl(text) {
-  return text.replace(/((https?:\/\/)?[a-z0-9.-]+\/client-login\/[a-z0-9-]+)/gi, '<span class="notify-portal-link">$1</span>');
+  return text.replace(/((https?:\/\/)?[a-z0-9.:-]+\/client-login\/[a-z0-9-]+(\/[a-z0-9-]+)*\/?)/gi, '<span class="notify-portal-link">$1</span>');
 }
 
 const copyIconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke-linecap="round"/></svg>';

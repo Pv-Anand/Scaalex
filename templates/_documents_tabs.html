@@ -1,0 +1,4 @@
+<div class="flex-gap mb-24">
+  <a href="{{ url_for('documents.client_list', slug=client.slug) }}" class="pill-link {{ 'active' if active_subtab == 'all' }}">All Documents <span class="pill-count">{{ docs_total }}</span></a>
+  <a href="{{ url_for('data_room.page', slug=client.slug) }}" class="pill-link {{ 'active' if active_subtab == 'data_room' }}">Data Room <span class="pill-count">{{ docs_filed }}</span></a>
+</div>

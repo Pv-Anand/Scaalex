@@ -102,6 +102,10 @@ class Client(db.Model):
     # URL) so the client-facing link can be edited/rotated independently.
     portal_slug = db.Column(db.String(200), unique=True)
 
+    # Master switch for the client-facing Data Room; per-contact access and
+    # per-folder visibility only matter once this is on.
+    data_room_enabled = db.Column(db.Boolean, default=False)
+
     contacts = db.relationship(
         "ClientContact", backref="client", lazy="dynamic",
         cascade="all, delete-orphan",
@@ -201,6 +205,10 @@ class ClientContact(db.Model):
     must_change_password = db.Column(db.Boolean, default=True)
     last_login_at = db.Column(db.DateTime)
     terms_accepted_at = db.Column(db.DateTime)
+
+    # Needs portal_access too - a contact cannot open the Data Room without
+    # being able to sign in. Off by default so nobody sees documents by accident.
+    data_room_access = db.Column(db.Boolean, default=False)
 
     created_at = db.Column(db.DateTime, default=_now)
 
@@ -386,6 +394,25 @@ class MilestoneRequest(db.Model):
     response_document = db.relationship("Document", foreign_keys=[response_document_id])
 
 
+class DataRoomFolder(db.Model):
+    """A folder in a client's Data Room. Folders nest via parent_id; a folder
+    is only shown to the client if it and every ancestor is visible_to_client.
+    Deleting is soft (deleted_at) so the action can be undone."""
+
+    __tablename__ = "data_room_folders"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("data_room_folders.id"))
+    name = db.Column(db.String(200), nullable=False)
+    visible_to_client = db.Column(db.Boolean, default=True, nullable=False)
+    position = db.Column(db.Integer, default=0, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=_now)
+
+    documents = db.relationship("Document", backref="folder", lazy="dynamic", foreign_keys="Document.folder_id")
+
+
 class Document(db.Model):
     __tablename__ = "documents"
 
@@ -393,6 +420,9 @@ class Document(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False)
     conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"))
     milestone_id = db.Column(db.Integer, db.ForeignKey("milestones.id"))
+    # Filing a document into the Data Room is a label, not a copy: at most one
+    # folder, and NULL means "not filed" (internal, never shown to the client).
+    folder_id = db.Column(db.Integer, db.ForeignKey("data_room_folders.id"))
 
     file_name = db.Column(db.String(300), nullable=False)
     stored_name = db.Column(db.String(300), nullable=False)

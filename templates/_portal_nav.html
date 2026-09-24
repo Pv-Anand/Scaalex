@@ -1,0 +1,18 @@
+<div class="portal-topbar">
+  <div class="portal-brand">
+    <img src="{{ url_for('static', filename='images/favicon-navy-mark.png') }}" alt="Scaalex" class="portal-brand-mark">
+    <span>Scaalex</span>
+    <span style="color:var(--line-strong); font-weight:400;">|</span>
+    <span style="font-weight:400; color:var(--grey-700);">{{ client.name }}</span>
+  </div>
+  <div class="flex-gap">
+    <span class="small muted portal-signedin">Signed in as <strong style="color:var(--charcoal);">{{ contact.name }}</strong></span>
+    <a href="{{ url_for('portal.logout', portal_slug=client.portal_slug) }}" class="small muted">Sign out</a>
+  </div>
+</div>
+{% if client.data_room_enabled and contact.data_room_access %}
+<div class="portal-tabs">
+  <a href="{{ url_for('portal.timeline', portal_slug=client.portal_slug) }}" class="{{ 'active' if portal_tab == 'progress' }}">Progress</a>
+  <a href="{{ url_for('portal.data_room', portal_slug=client.portal_slug) }}" class="{{ 'active' if portal_tab == 'data_room' }}">Data Room</a>
+</div>
+{% endif %}

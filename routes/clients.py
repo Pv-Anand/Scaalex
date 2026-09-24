@@ -214,9 +214,14 @@ def profile(slug):
     if active_subtab not in ("access", "billing"):
         active_subtab = "access"
     contacts = client.contacts.order_by(ClientContact.is_primary.desc(), ClientContact.created_at.asc()).all()
+    from data_room import Tree
+    tree = Tree(client.id)
+    dr_visible, dr_total = tree.counts()
+    dr_docs = sum(tree.direct.values())
     return render_template(
         "client_profile.html", client=client, active_tab="profile",
         contacts=contacts, active_subtab=active_subtab,
+        dr_visible=dr_visible, dr_total=dr_total, dr_docs=dr_docs,
     )
 
 

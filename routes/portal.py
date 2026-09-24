@@ -17,6 +17,7 @@ from werkzeug.utils import secure_filename
 from extensions import db, limiter
 from models import Client, ClientContact, Milestone, MilestoneRequest, Document, log_portal_activity
 from routes.documents import _allowed
+from data_room import Tree, can_contact_open, build_client_view
 
 portal_bp = Blueprint("portal", __name__, url_prefix="/client-login/<portal_slug>")
 
@@ -228,10 +229,45 @@ def respond_to_request(portal_slug, client, contact, request_id):
     return redirect(url_for("portal.timeline", portal_slug=portal_slug))
 
 
+def _contact_can_download(doc, client, contact, tree):
+    """A portal contact may only fetch a file the portal actually offers them:
+    a Data Room file in a folder they can see, a staff deliverable on a
+    completed milestone that is visible to them, or something their own team
+    uploaded. Everything else (internal working files, other milestones'
+    deliverables) is 404 even if the document id is guessed."""
+    if doc.folder_id and can_contact_open(client, contact) and doc.folder_id in tree.visible_ids():
+        return True
+    if doc.uploaded_by_contact_id:
+        uploader = ClientContact.query.get(doc.uploaded_by_contact_id)
+        return bool(uploader and uploader.client_id == client.id)
+    milestone = doc.milestone
+    return bool(
+        milestone and milestone.client_id == client.id and milestone.visible_to_client
+        and milestone.status == "completed"
+    )
+
+
+@portal_bp.route("/data-room")
+@portal_login_required
+def data_room(portal_slug, client, contact):
+    if not can_contact_open(client, contact):
+        abort(404)
+    tree = Tree(client.id)
+    view = build_client_view(client.id, tree, request.args.get("folder", type=int), request.args.get("q", ""))
+    return render_template(
+        "portal_data_room.html", client=client, contact=contact, view=view, portal_tab="data_room",
+        link=lambda fid=None: url_for("portal.data_room", portal_slug=client.portal_slug, folder=fid),
+        search_action=url_for("portal.data_room", portal_slug=client.portal_slug), search_hidden={},
+        download_url=lambda d: url_for("portal.download", portal_slug=client.portal_slug, doc_id=d.id),
+    )
+
+
 @portal_bp.route("/documents/<int:doc_id>/download")
 @portal_login_required
 def download(portal_slug, client, contact, doc_id):
     doc = Document.query.filter_by(id=doc_id, client_id=client.id).first_or_404()
+    if not _contact_can_download(doc, client, contact, Tree(client.id)):
+        abort(404)
     log_portal_activity(contact.id, client.id, "Downloaded file", "document", doc.id, details=doc.file_name)
     db.session.commit()
     return send_from_directory(

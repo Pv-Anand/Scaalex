@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Data Room - {{ client.name }}{% endblock %}
+{% block content %}
+{% include "_client_subnav.html" %}
+
+<h2 class="section-title" style="margin-bottom:4px;">Documents</h2>
+<p class="small muted mb-16">The curated, folder-organised set of documents. Anything filed here that is visible to the client appears on their portal as their permanent reference library.</p>
+{% set active_subtab = 'data_room' %}{% set docs_total = all_count %}{% set docs_filed = filed_count %}
+<div class="dr-tabs-row">
+  {% include "_documents_tabs.html" %}
+  <div class="dr-seg mb-24">
+    <a href="{{ url_for('data_room.page', slug=client.slug, folder=selected.id if selected) }}" class="{{ '' if preview else 'on' }}">Staff view</a>
+    <a href="{{ url_for('data_room.page', slug=client.slug, preview=1, folder=selected.id if selected and tree.effective_visible(selected)) }}" class="{{ 'on' if preview else '' }}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>Preview as client</a>
+  </div>
+</div>
+
+{% if not client.data_room_enabled %}
+<div class="dr-notice" id="dr-off-notice">
+  <div><strong>Data Room is off for {{ client.name }}.</strong> Clients cannot see it yet, so you can set it up in private. Turn it on when you are ready, then choose who has access under Client Profile.</div>
+  <button type="button" class="btn btn-sm" onclick="DR.setMaster(true)">Turn on</button>
+</div>
+{% endif %}
+
+{% if preview %}
+<div class="dr-preview-banner">
+  <span><strong>Previewing as {{ preview_contact.name if preview_contact else client.name }}.</strong> This is exactly what they see.</span>
+  <a href="{{ url_for('data_room.page', slug=client.slug) }}">Exit preview</a>
+</div>
+<div class="dr-preview-wrap">
+  {% set root_label = 'Data Room' %}
+  {% include "_data_room_client_view.html" %}
+</div>
+
+{% elif not tree.by_id %}
+<div class="dr-start">
+  <h3>Start this client's Data Room</h3>
+  <p class="small muted" style="margin-bottom:18px;">Pick a structure and the folders are created in one click. Rename or delete anything you do not need.</p>
+  <div class="dr-start-grid">
+    <button type="button" class="dr-start-card" onclick="DR.useTemplate('ma')">
+      <strong>M&amp;A / Fundraise</strong>
+      <span>Corporate and Legal, Financials, Tax and Compliance, Commercial, HR, IP, Deal Documents</span>
+    </button>
+    <button type="button" class="dr-start-card" onclick="DR.useTemplate('education')">
+      <strong>Education / Academy</strong>
+      <span>Company and Legal, Financials, Programs and Curriculum, Faculty and HR, Accreditation and Compliance, Students and Fees, Deal Documents</span>
+    </button>
+    <button type="button" class="dr-start-card" onclick="DR.startBlank()">
+      <strong>Blank</strong>
+      <span>Start with an empty room and create your own folders.</span>
+    </button>
+  </div>
+  {% if unfiled_count %}<p class="small muted mt-16">{{ unfiled_count }} existing document{{ 's' if unfiled_count != 1 }} can be filed once folders exist.</p>{% endif %}
+</div>
+
+{% else %}
+<div class="dr-layout">
+  <!-- Folder tree -->
+  <aside class="dr-tree" id="dr-tree">
+    <div class="dr-tree-head">
+      <span>Folders</span>
+      <button type="button" class="dr-chip {{ 'vis' if client.data_room_enabled else 'off' }}" id="dr-sees-chip" onclick="DR.openSharePanel(this)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        Client sees <span id="dr-sees-n">{{ visible_count }}</span> of {{ total_count }} &rsaquo;
+      </button>
+    </div>
+
+    <div class="dr-bulkbar dr-bulkbar-folders" id="dr-folder-bulk" style="display:none;">
+      <strong><span id="dr-bulk-n">0</span> folders</strong>
+      <button type="button" class="dr-bulk-btn primary" onclick="DR.bulkVisibility(true)">Show to client</button>
+      <button type="button" class="dr-bulk-btn" onclick="DR.bulkVisibility(false)">Hide from client</button>
+      <button type="button" class="dr-bulk-btn dim" onclick="DR.bulkMove(this)">Move</button>
+      <button type="button" class="dr-bulk-btn dim" onclick="DR.bulkDelete()">Delete</button>
+    </div>
+
+    <div id="dr-rows">
+      {% for f, depth in tree.flat() %}
+      {% set locked = tree.hidden_by_ancestor(f) %}
+      <div class="dr-row {{ 'sel' if selected and selected.id == f.id }} {{ 'staff-only' if not f.visible_to_client or locked }}" data-id="{{ f.id }}" data-parent="{{ f.parent_id or '' }}" draggable="true" style="padding-left:{{ 8 + depth * 20 }}px;">
+        <input type="checkbox" class="dr-cbx dr-row-check" onchange="DR.onFolderSelect()" aria-label="Select {{ f.name }}">
+        <a class="dr-row-link" href="{{ url_for('data_room.page', slug=client.slug, folder=f.id) }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke-linejoin="round"/></svg>
+          <span class="dr-row-name">{{ f.name }}</span>
+          <span class="dr-row-count">{{ tree.doc_count(f.id) }}</span>
+        </a>
+        <span class="dr-row-actions">
+          {% if locked %}<span class="dr-via" title="Hidden because a parent folder is hidden">Hidden via parent</span>{% endif %}
+          <button type="button" class="dr-kebab" onclick="DR.folderMenu({{ f.id }}, this)" aria-label="Folder options">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+          </button>
+          <button type="button" class="dr-eye {{ 'on' if f.visible_to_client and not locked else 'off' }} {{ 'lock' if locked }}" {{ 'disabled' if locked }} onclick="DR.toggleVisibility({{ f.id }})" title="{{ 'Visible to client - click to hide' if f.visible_to_client and not locked else ('Hidden via parent' if locked else 'Staff only - click to share') }}">
+            {% if f.visible_to_client and not locked %}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            {% elif locked %}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3" stroke-linecap="round"/></svg>
+            {% else %}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 5.2A10 10 0 0112 5c6 0 10 7 10 7a17 17 0 01-3.2 4M6.1 6.1A17 17 0 002 12s4 7 10 7a9.7 9.7 0 004.1-.9" stroke-linecap="round"/></svg>
+            {% endif %}
+          </button>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="dr-new" onclick="DR.newFolder(null)">+ New folder</button>
+
+    {% if unfiled_count %}
+    <a class="dr-unfiled" href="{{ url_for('documents.client_list', slug=client.slug, folder='unfiled') }}">
+      <span><strong>{{ unfiled_count }} document{{ 's' if unfiled_count != 1 }}</strong> not filed yet</span><span>Review &rarr;</span>
+    </a>
+    {% endif %}
+  </aside>
+
+  <!-- Content -->
+  <section class="dr-content" id="dr-content" data-folder-id="{{ selected.id if selected else '' }}">
+    {% if selected %}
+      {% set locked = tree.hidden_by_ancestor(selected) %}
+      {% set shown = selected.visible_to_client and not locked %}
+      <div class="dr-content-head">
+        <div class="dr-crumbs">
+          <a href="{{ url_for('data_room.page', slug=client.slug) }}">Data Room</a>
+          {% for f in tree.path(selected.id) %}<span>/</span>{% if not loop.last %}<a href="{{ url_for('data_room.page', slug=client.slug, folder=f.id) }}">{{ f.name }}</a>{% else %}<strong>{{ f.name }}</strong>{% endif %}{% endfor %}
+        </div>
+        <div class="dr-actions">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="DR.renameFolder({{ selected.id }})">Rename</button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="DR.moveFolderPicker({{ selected.id }}, this)">Move</button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="DR.newFolder({{ selected.id }})">New subfolder</button>
+          <label class="btn btn-sm" style="cursor:pointer;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M12 4L7 9M12 4l5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>Upload
+            <input type="file" multiple style="display:none;" onchange="DR.uploadFiles(this.files, {{ selected.id }}); this.value='';">
+          </label>
+        </div>
+      </div>
+
+      <div class="dr-vis-card {{ 'shown' if shown }}">
+        <span class="dr-vis-icon">
+          {% if shown %}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          {% else %}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3" stroke-linecap="round"/></svg>{% endif %}
+        </span>
+        <div style="flex:1;">
+          <div class="dr-vis-title">{{ 'Visible to the client' if shown else 'Hidden from the client' }}</div>
+          <div class="small muted">
+            {% if locked %}Hidden because a parent folder is hidden. Show "{{ tree.parent_of(selected).name }}" first to share this one.
+            {% elif shown %}The client can see this folder and its {{ tree.doc_count(selected.id) }} document{{ 's' if tree.doc_count(selected.id) != 1 }}{% if not client.data_room_enabled %} once the Data Room is turned on{% endif %}.
+            {% else %}Only Scaalex staff can see this folder and its {{ tree.doc_count(selected.id) }} document{{ 's' if tree.doc_count(selected.id) != 1 }}.{% endif %}
+          </div>
+        </div>
+        <div class="dr-seg">
+          <button type="button" class="{{ 'on' if not shown }}" {{ 'disabled' if locked }} onclick="DR.setVisibility({{ selected.id }}, false)">Staff only</button>
+          <button type="button" class="g {{ 'on' if shown }}" {{ 'disabled' if locked }} onclick="DR.setVisibility({{ selected.id }}, true)">Visible to client</button>
+        </div>
+      </div>
+
+      {% if subfolders %}
+      <div class="dr-subfolders">
+        {% for s in subfolders %}
+        <a class="dr-subfolder" href="{{ url_for('data_room.page', slug=client.slug, folder=s.id) }}" data-drop-folder="{{ s.id }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke-linejoin="round"/></svg>
+          {{ s.name }} <span class="muted small">{{ tree.doc_count(s.id) }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="dr-drop" id="dr-drop" data-folder-id="{{ selected.id }}">Drop files here to add them to this folder, or drag documents onto any folder in the tree</div>
+
+      {% if docs %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Added</th><th>By</th><th></th></tr></thead>
+          <tbody>
+            {% for d in docs %}
+            <tr data-doc-id="{{ d.id }}" draggable="true" class="dr-doc-row">
+              <td>
+                <div class="doc-file-cell">
+                  <div class="doc-file-icon"><svg width="15" height="15" viewBox="0 0 18 18" fill="none"><path d="M6 2.5h4l3.5 3.5v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-11a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 2.5V6h3.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+                  <div style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">{{ d.file_name }}</div>
+                </div>
+              </td>
+              <td style="white-space:nowrap;">{{ d.uploaded_at.strftime('%d %b %Y') }}</td>
+              <td style="white-space:nowrap;">{{ d.uploader_name }} <span class="badge badge-type">{{ d.uploader_role }}</span></td>
+              <td style="white-space:nowrap; text-align:right;">
+                <a href="{{ url_for('documents.download', doc_id=d.id) }}" class="icon-btn" aria-label="Download" title="Download">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12M12 16l-4-4M12 16l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke-linecap="round"/></svg>
+                </a>
+                <button type="button" class="icon-btn" onclick="DR.docMenu({{ d.id }}, this)" aria-label="Document options">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:36px 24px;"><h3>{{ 'No documents in this folder yet' }}</h3><p class="small">Upload files here, or file existing documents from the All Documents tab.</p></div>
+      {% endif %}
+      <p class="small muted mt-8">Drag any row onto a folder in the tree to move it. Removing a document from a folder never deletes the file.</p>
+
+    {% else %}
+      <div class="dr-content-head">
+        <div class="dr-crumbs"><strong>Data Room</strong></div>
+        <div class="dr-actions">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="DR.newFolder(null)">New folder</button>
+        </div>
+      </div>
+      <div class="dr-overview">
+        <div class="dr-overview-stats">
+          <div><div class="num">{{ total_count }}</div><div class="label">Folders</div></div>
+          <div><div class="num">{{ filed_count }}</div><div class="label">Documents filed</div></div>
+          <div><div class="num">{{ visible_count }}</div><div class="label">Visible to client</div></div>
+        </div>
+        <p class="small muted" style="margin-bottom:12px;">Choose a folder on the left to see and manage what is inside it. Click the eye next to a folder to control whether the client can see it.</p>
+        <div class="dr-subfolders">
+          {% for s in subfolders %}
+          <a class="dr-subfolder" href="{{ url_for('data_room.page', slug=client.slug, folder=s.id) }}" data-drop-folder="{{ s.id }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke-linejoin="round"/></svg>
+            {{ s.name }} <span class="muted small">{{ tree.doc_count(s.id) }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% include "_data_room_boot.html" %}
+{% endblock %}

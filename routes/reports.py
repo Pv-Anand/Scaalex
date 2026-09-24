@@ -324,7 +324,8 @@ def attach_deliverable(slug, milestone_id):
 ACCESS_ACTIONS = {
     "Portal access granted", "Portal access revoked", "Password set",
     "Primary contact changed", "Client contact added", "Client contact removed",
-    "Terms accepted",
+    "Terms accepted", "Data Room access granted", "Data Room access revoked",
+    "Data Room turned on", "Data Room turned off",
 }
 
 
@@ -347,6 +348,11 @@ def _annotate_log_entry(entry, client):
         entry.dot_class = "dot-log-document"
         entry.view_url = url_for("documents.client_list", slug=client.slug)
         entry.view_label = "View document"
+    elif entry.entity_type == "data_room_folder":
+        entry.log_category = "document"
+        entry.dot_class = "dot-log-document"
+        entry.view_url = url_for("data_room.page", slug=client.slug, folder=entry.entity_id) if entry.entity_id else url_for("data_room.page", slug=client.slug)
+        entry.view_label = "View Data Room"
     elif entry.entity_type == "decision":
         entry.log_category = "decision"
         entry.dot_class = "dot-decision"

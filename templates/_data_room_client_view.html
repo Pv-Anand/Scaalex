@@ -1,0 +1,70 @@
+{# Client-facing Data Room body. Expects: view, link(folder_id), search_action, search_hidden, download_url(doc), root_label #}
+{% set current = view.current %}
+<div class="drp">
+  <div class="drp-crumbs">
+    {% if current or view.q %}<a href="{{ link() }}">{{ root_label|default('Data Room') }}</a>{% else %}<strong>{{ root_label|default('Data Room') }}</strong>{% endif %}
+    {% for f in view.crumbs %}<span>/</span>{% if not loop.last %}<a href="{{ link(f.id) }}">{{ f.name }}</a>{% else %}<strong>{{ f.name }}</strong>{% endif %}{% endfor %}
+    {% if view.q %}<span>/</span><strong>Search</strong>{% endif %}
+  </div>
+
+  <div class="drp-head">
+    <div>
+      <div class="drp-eyebrow">Your documents</div>
+      <h1 class="drp-title">{{ current.name if current else (root_label|default('Data Room')) }}</h1>
+    </div>
+    <form method="get" action="{{ search_action }}" class="drp-search">
+      {% for k, v in search_hidden.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5" stroke-linecap="round"/></svg>
+      <input type="search" name="q" value="{{ view.q }}" placeholder="Search all documents">
+    </form>
+  </div>
+  <div class="drp-sub">
+    {% if view.updated %}Everything Scaalex has organised for you, in one place. Last updated {{ view.updated.strftime('%d %b %Y') }}.{% else %}Everything Scaalex organises for you will appear here.{% endif %}
+  </div>
+
+  {% if not view.has_folders %}
+  <div class="empty-state"><h3>Nothing here yet</h3><p>Scaalex has not shared any folders yet. They will appear here as soon as they are ready.</p></div>
+  {% else %}
+
+  {% if view.subfolders and not view.q %}
+  <div class="drp-grid">
+    {% for s in view.subfolders %}
+    <a class="drp-folder" href="{{ link(s.folder.id) }}">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+      <div>
+        <div class="drp-folder-name">{{ s.folder.name }}</div>
+        <div class="drp-folder-meta">{{ s.files }} file{{ 's' if s.files != 1 }}{% if s.folders %} &middot; {{ s.folders }} folder{{ 's' if s.folders != 1 }}{% endif %}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="drp-list-label">
+    {% if view.mode == 'search' %}{{ view.docs|length }} result{{ 's' if view.docs|length != 1 }} for "{{ view.q }}"
+    {% elif view.mode == 'folder' %}Files in this folder
+    {% else %}Recently added{% endif %}
+  </div>
+  {% if view.docs %}
+  <div class="drp-list">
+    {% for d in view.docs %}
+    <div class="drp-doc">
+      <div class="doc-file-icon">
+        <svg width="15" height="15" viewBox="0 0 18 18" fill="none"><path d="M6 2.5h4l3.5 3.5v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-11a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 2.5V6h3.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="drp-doc-main">
+        <div class="drp-doc-name">{{ d.file_name }}</div>
+        {% if view.mode != 'folder' %}<div class="drp-doc-meta"><a href="{{ link(d.folder_id) }}">{{ view.labels.get(d.id) }}</a></div>{% endif %}
+      </div>
+      <div class="drp-doc-date">{{ d.uploaded_at.strftime('%d %b %Y') }}</div>
+      <a href="{{ download_url(d) }}" class="icon-btn" aria-label="Download {{ d.file_name }}" title="Download">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12M12 16l-4-4M12 16l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke-linecap="round"/></svg>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="drp-empty">{% if view.mode == 'search' %}No documents match "{{ view.q }}".{% elif view.mode == 'folder' %}This folder has no files yet.{% else %}No files yet.{% endif %}</div>
+  {% endif %}
+  {% endif %}
+</div>

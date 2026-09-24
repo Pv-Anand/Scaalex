@@ -99,11 +99,28 @@
 
 <div class="section">
   <h2 class="section-title" style="margin-bottom:4px;">Client Portal Access</h2>
-  <p class="small muted mb-16" style="max-width:620px; line-height:1.55;">Give client contacts view-only access to their engagement timeline at a private URL.</p>
+  <p class="small muted mb-16" style="max-width:620px; line-height:1.55;">Give client contacts view-only access to their engagement timeline at a private URL and, if enabled, their Data Room.</p>
+
+  <div class="dr-master">
+    <span class="dr-master-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke-linejoin="round"/></svg>
+    </span>
+    <div style="flex:1;">
+      <div style="font-size:13.5px; font-weight:600;">Data Room for {{ client.name }}</div>
+      <div class="small muted" style="margin-top:2px;">
+        {% if client.data_room_enabled %}{{ dr_visible }} of {{ dr_total }} folders visible to the client &middot; {{ dr_docs }} document{{ 's' if dr_docs != 1 }} &middot; {% else %}Off. Nobody at this client can see it. Folders and files are kept. &middot; {% endif %}<a href="{{ url_for('data_room.page', slug=client.slug) }}" style="text-decoration:underline;">Manage folders</a>
+      </div>
+    </div>
+    <span class="badge {{ 'badge-status-completed' if client.data_room_enabled else 'badge-type' }}">{{ 'On' if client.data_room_enabled else 'Off' }}</span>
+    <label class="toggle-switch">
+      <input type="checkbox" onchange="DR.setMaster(this.checked)" {{ 'checked' if client.data_room_enabled }} aria-label="Data Room for this client">
+      <span class="toggle-track"><span class="toggle-knob"></span></span>
+    </label>
+  </div>
 
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>Contact</th><th>Email</th><th>Phone</th><th>Portal Access</th><th></th></tr></thead>
+      <thead><tr><th>Contact</th><th>Email</th><th>Phone</th><th>Portal Access</th><th>Data Room</th><th></th></tr></thead>
       <tbody>
         {% for c in contacts %}
         <tr>
@@ -122,10 +139,17 @@
               </label>
             </form>
           </td>
-          <td class="small muted">{% if c.portal_access %}{% if c.must_change_password %}Invited, not signed in yet{% else %}Active{% endif %}{% else %}No access{% endif %}</td>
+          <td>
+            <label class="toggle-switch {{ 'dr-dim' if not client.data_room_enabled }}" title="{{ '' if c.portal_access else 'Turn on portal access first' }}">
+              <input type="checkbox" onchange="DR.setContactAccess({{ c.id }}, this.checked, {{ c.name|tojson|forceescape }})" {{ 'checked' if c.data_room_access }} {{ 'disabled' if not c.portal_access }} aria-label="Data Room access for {{ c.name }}">
+              <span class="toggle-track"><span class="toggle-knob"></span></span>
+            </label>
+            {% if not c.portal_access %}<div class="small muted" style="margin-top:3px;">Turn on portal access first</div>{% endif %}
+          </td>
+          <td class="small muted">{% if c.portal_access %}{% if c.must_change_password %}Invited, not signed in yet{% elif c.data_room_access and client.data_room_enabled %}Active, Data Room on{% elif c.data_room_access %}Active, Data Room off for client{% else %}Timeline only{% endif %}{% else %}No access{% endif %}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" class="muted small">No team members yet - add one above first.</td></tr>
+        <tr><td colspan="6" class="muted small">No team members yet - add one above first.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -278,4 +302,8 @@ function toggleEngagementEdit() {
 }
 </script>
 {% endif %}
+{% endblock %}
+{% block scripts %}
+<script id="dr-data" type="application/json">{{ {"slug": client.slug, "clientId": client.id, "clientName": client.name, "master": client.data_room_enabled, "folders": [], "selectedId": None}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/data_room.js') }}"></script>
 {% endblock %}

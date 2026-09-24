@@ -1,0 +1,6 @@
+{% set dr_folders = [] %}
+{% for f, depth in tree.flat() %}
+{% set _ = dr_folders.append({"id": f.id, "name": f.name, "parent_id": f.parent_id, "depth": depth, "visible": f.visible_to_client, "hidden_by_ancestor": tree.hidden_by_ancestor(f), "count": tree.doc_count(f.id)}) %}
+{% endfor %}
+<script id="dr-data" type="application/json">{{ {"slug": client.slug, "clientId": client.id, "clientName": client.name, "master": client.data_room_enabled, "folders": dr_folders, "selectedId": selected.id if selected is defined and selected else None}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/data_room.js') }}"></script>

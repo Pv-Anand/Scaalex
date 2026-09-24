@@ -49,6 +49,7 @@ def create_app(config_class=Config):
     from routes.calendar_board import calendar_board_bp
     from routes.portal import portal_bp, portal_hub_bp
     from routes.notify import notify_bp
+    from routes.data_room import data_room_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(home_bp)
@@ -67,6 +68,7 @@ def create_app(config_class=Config):
     app.register_blueprint(portal_bp)
     app.register_blueprint(portal_hub_bp)
     app.register_blueprint(notify_bp)
+    app.register_blueprint(data_room_bp)
 
     @app.context_processor
     def inject_globals():
@@ -169,7 +171,7 @@ def _ensure_schema_migrations(app):
         for column, ddl_type in (
             ("registered_name", "VARCHAR(300)"), ("address", "TEXT"),
             ("website", "VARCHAR(300)"), ("gst_number", "VARCHAR(40)"),
-            ("portal_slug", "VARCHAR(200)"),
+            ("portal_slug", "VARCHAR(200)"), ("data_room_enabled", "BOOLEAN DEFAULT 0"),
         ):
             if column not in client_columns:
                 conn.execute(db.text(f"ALTER TABLE clients ADD COLUMN {column} {ddl_type}"))
@@ -192,7 +194,7 @@ def _ensure_schema_migrations(app):
         for column, ddl_type in (
             ("portal_access", "BOOLEAN DEFAULT 0"), ("password_hash", "VARCHAR(255)"),
             ("must_change_password", "BOOLEAN DEFAULT 1"), ("last_login_at", "DATETIME"),
-            ("terms_accepted_at", "DATETIME"),
+            ("terms_accepted_at", "DATETIME"), ("data_room_access", "BOOLEAN DEFAULT 0"),
         ):
             if column not in contact_columns:
                 conn.execute(db.text(f"ALTER TABLE client_contacts ADD COLUMN {column} {ddl_type}"))
@@ -200,7 +202,7 @@ def _ensure_schema_migrations(app):
 
         document_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(documents)"))}
         for column, ddl_type in (
-            ("milestone_id", "INTEGER"), ("uploaded_by_contact_id", "INTEGER"),
+            ("milestone_id", "INTEGER"), ("uploaded_by_contact_id", "INTEGER"), ("folder_id", "INTEGER"),
         ):
             if column not in document_columns:
                 conn.execute(db.text(f"ALTER TABLE documents ADD COLUMN {column} {ddl_type}"))

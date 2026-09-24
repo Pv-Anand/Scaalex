@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, url_for, abort
 from flask_login import login_required, current_user
 
 from extensions import db, limiter
-from models import ActionItem, Decision, Milestone, log_activity
+from models import ActionItem, Client, DataRoomFolder, Decision, Milestone, log_activity
 from ai.notify_draft import draft_notify
 from ai.anthropic_client import AIConfigError, AIRequestError
 
@@ -17,16 +17,16 @@ def _contact_first_name(client):
     return contact.name.split()[0] if contact else "there"
 
 
-def _portal_url(client):
-    return url_for("portal.timeline", portal_slug=client.portal_slug, _external=True)
+def _portal_url(client, endpoint="portal.timeline"):
+    return url_for(endpoint, portal_slug=client.portal_slug, _external=True)
 
 
-def _draft(item_type, state, item_title, client, extra_context=None):
+def _draft(item_type, state, item_title, client, extra_context=None, endpoint="portal.timeline"):
     try:
         result = draft_notify(
             item_type, state, item_title, client.name,
             _contact_first_name(client), current_user.name.split()[0],
-            _portal_url(client), extra_context=extra_context,
+            _portal_url(client, endpoint), extra_context=extra_context,
         )
     except AIConfigError as exc:
         return jsonify({"error": str(exc)}), 200
@@ -74,5 +74,32 @@ def milestone(milestone_id):
     extra = f"We're waiting on: {m.active_request.message}" if m.active_request else None
     resp = _draft("milestone", state, m.title, m.client, extra_context=extra)
     log_activity(current_user.id, m.client_id, "Client notify draft generated", "milestone", m.id)
+    db.session.commit()
+    return resp
+
+
+@notify_bp.route("/notify/data-room/<int:client_id>")
+@login_required
+@limiter.limit("20 per minute")
+def data_room(client_id):
+    client = Client.query.get_or_404(client_id)
+    if not current_user.can_view_client(client.id):
+        abort(403)
+    resp = _draft("data room", "completed", "their Data Room is now available", client, endpoint="portal.data_room")
+    log_activity(current_user.id, client.id, "Client notify draft generated", "data_room_folder", None)
+    db.session.commit()
+    return resp
+
+
+@notify_bp.route("/notify/data-room-folder/<int:folder_id>")
+@login_required
+@limiter.limit("20 per minute")
+def data_room_folder(folder_id):
+    folder = DataRoomFolder.query.filter_by(id=folder_id, deleted_at=None).first_or_404()
+    if not current_user.can_view_client(folder.client_id):
+        abort(403)
+    client = Client.query.get_or_404(folder.client_id)
+    resp = _draft("data room folder", "completed", f'the "{folder.name}" folder in their Data Room', client, endpoint="portal.data_room")
+    log_activity(current_user.id, client.id, "Client notify draft generated", "data_room_folder", folder.id)
     db.session.commit()
     return resp

@@ -4,7 +4,9 @@
 {% include "_client_subnav.html" %}
 
 <h2 class="section-title" style="margin-bottom:4px;">Documents</h2>
-<p class="small muted mb-24">Every file exchanged on this engagement - what Scaalex has shared, and what the client has sent back - with the date, who, and why.</p>
+<p class="small muted mb-16">Every file exchanged on this engagement - what Scaalex has shared, and what the client has sent back - with the date, who, and why.</p>
+{% set active_subtab = 'all' %}{% set docs_total = total_count %}{% set docs_filed = filed_count %}
+{% include "_documents_tabs.html" %}
 
 <div class="stat-row">
   <div class="stat-cell">
@@ -66,15 +68,30 @@
     <option value="{{ m.id }}" {{ 'selected' if current_milestone_id == m.id }}>{{ m.title }}</option>
     {% endfor %}
   </select>
+  <select name="folder" onchange="this.form.submit()">
+    <option value="">All Folders</option>
+    <option value="unfiled" {{ 'selected' if current_folder == 'unfiled' }}>Not filed ({{ unfiled_count }})</option>
+    {% for f, depth in tree.flat() %}
+    <option value="{{ f.id }}" {{ 'selected' if current_folder == f.id|string }}>{{ '\u00a0\u00a0' * depth }}{{ f.name }}</option>
+    {% endfor %}
+  </select>
 </form>
+
+<div class="dr-bulkbar" id="doc-bulkbar" style="display:none;">
+  <strong><span id="doc-bulk-n">0</span> selected</strong>
+  <button type="button" class="dr-bulk-btn primary" onclick="DR.pickFolder(DR.selectedDocIds(), this, {reloadAfter: true})">Move to Data Room folder &#9662;</button>
+  <button type="button" class="dr-bulk-btn" onclick="DR.moveDocs(DR.selectedDocIds(), null, {reloadAfter: true})">Remove from Data Room</button>
+  <button type="button" class="dr-bulk-btn dim" style="margin-left:auto;" onclick="DR.clearDocSelection()">Clear</button>
+</div>
 
 {% if documents %}
 <div class="table-wrap">
   <table class="table">
-    <thead><tr><th>File</th><th>Date</th><th>Uploaded By</th><th>Why</th><th></th></tr></thead>
+    <thead><tr><th style="width:34px;"><input type="checkbox" class="dr-cbx" onchange="DR.toggleAllDocs(this.checked)" aria-label="Select all"></th><th>File</th><th>Data Room folder</th><th>Date</th><th>Uploaded By</th><th>Why</th><th></th></tr></thead>
     <tbody>
       {% for d in documents %}
-      <tr>
+      <tr data-doc-id="{{ d.id }}">
+        <td><input type="checkbox" class="dr-cbx doc-select" value="{{ d.id }}" onchange="DR.onDocSelect()" aria-label="Select {{ d.file_name }}"></td>
         <td>
           <div class="doc-file-cell">
             <div class="doc-file-icon">
@@ -86,6 +103,12 @@
             </div>
             <div style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ d.file_name }}</div>
           </div>
+        </td>
+        <td>
+          {% set label = folder_labels.get(d.id) %}
+          <button type="button" class="dr-folder-chip {{ '' if label else 'unfiled' }}" onclick="DR.pickFolder([{{ d.id }}], this, {reloadAfter: true})" title="{{ label or 'Not filed - click to file in the Data Room' }}">
+            {% if label %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><span class="dr-chip-text">{{ label }}</span>{% else %}Not filed{% endif %}
+          </button>
         </td>
         <td style="white-space:nowrap;">{{ d.uploaded_at.strftime('%d %b %Y') }}</td>
         <td style="white-space:nowrap;">{{ d.uploader_name }} <span class="badge badge-type">{{ d.uploader_role }}</span></td>
@@ -113,6 +136,7 @@
 {% endif %}
 {% endblock %}
 {% block scripts %}
+{% include "_data_room_boot.html" %}
 <script>
 function updateDocUploadLabel(input) {
   const label = document.getElementById('doc-upload-filename');
