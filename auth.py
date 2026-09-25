@@ -75,7 +75,12 @@ def account():
 @login_required
 @admin_required
 def team():
-    users = User.query.filter(User.deleted_at.is_(None)).order_by(User.name).all()
+    # Owners first, then Administrators, then Executives; alphabetical inside each.
+    role_rank = {"owner": 0, "admin": 1, "executive": 2}
+    users = sorted(
+        User.query.filter(User.deleted_at.is_(None)).all(),
+        key=lambda u: (role_rank.get(u.role, 3), (u.name or "").lower()),
+    )
     clients = Client.query.order_by(Client.name).all()
 
     access_map = {}
