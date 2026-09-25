@@ -179,6 +179,52 @@
             {% endif %}
           </div>
 
+          {% if current_user.is_owner and not (u.role == 'owner' and u.is_active and active_owner_count <= 1) %}
+          <div class="team-danger">
+            <div style="flex:1;">
+              <div class="team-danger-title">Delete user</div>
+              <div class="small" style="line-height:1.5;">Removes {{ u.name.split(' ')[0] }} for good{% if oi.count or oi.milestones %}. Their open work goes to someone you choose{% endif %}. {% if u.is_active %}Deactivate instead if you might want them back.{% endif %}</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger-outline" onclick="toggleDeleteUser({{ u.id }})">Delete user...</button>
+          </div>
+          <form method="POST" action="{{ url_for('auth.delete_user', user_id=u.id) }}" id="delete-user-{{ u.id }}" class="team-delete-panel" style="display:none;" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="team-delete-head">Delete {{ u.name }}?</div>
+            <div class="small" style="margin-bottom:12px;">{{ u.email }} &middot; {{ u.role_label }}</div>
+            {% if oi.count or oi.milestones %}
+            <div class="team-delete-sec">
+              <div class="team-delete-h">Who takes over their open work</div>
+              <ul class="team-delete-list">
+                {% if oi.count %}<li><b>{{ oi.count }} open task{{ 's' if oi.count != 1 }}</b> across {{ oi.clients }} client{{ 's' if oi.clients != 1 }} ({{ oi.client_names|join(', ') }})</li>{% endif %}
+                {% if oi.milestones %}<li><b>{{ oi.milestones }} open milestone{{ 's' if oi.milestones != 1 }}</b> where they are the reporting manager, shown to clients on their portal</li>{% endif %}
+              </ul>
+              <label class="team-delete-label" for="reassign-{{ u.id }}">Reassign all of it to</label>
+              <select name="reassign_to" id="reassign-{{ u.id }}" onchange="checkDeleteUser({{ u.id }})" data-needed="1">
+                <option value="">Choose a person</option>
+                {% for o in users if o.is_active and o.id != u.id %}<option value="{{ o.id }}">{{ o.name }} ({{ o.role_label }})</option>{% endfor %}
+              </select>
+              <div class="small" style="margin-top:4px;">Only active team members are listed.</div>
+            </div>
+            {% endif %}
+            <div class="team-delete-sec">
+              <div class="team-delete-h">What stays</div>
+              <ul class="team-delete-list"><li>Updates, decisions, documents and log entries they wrote stay in the app, with their name marked <b>(removed)</b>. Completed tasks are unchanged.</li></ul>
+              <div class="team-delete-h" style="margin-top:10px;">What is removed</div>
+              <ul class="team-delete-list"><li>Their login, password and access to every client.</li></ul>
+            </div>
+            <div class="team-delete-confirm">
+              <div class="team-danger-title">This cannot be undone.</div>
+              <label class="team-delete-label" for="confirm-{{ u.id }}">Type their email to confirm</label>
+              <input type="text" name="confirm_email" id="confirm-{{ u.id }}" placeholder="{{ u.email }}" oninput="checkDeleteUser({{ u.id }})" data-email="{{ u.email|lower }}">
+              <div style="display:flex; gap:12px; align-items:center; margin-top:14px; flex-wrap:wrap;">
+                <button type="submit" class="btn btn-sm btn-danger-solid" id="delete-go-{{ u.id }}" disabled>Delete permanently</button>
+                <button type="button" class="link-btn small muted" onclick="toggleDeleteUser({{ u.id }})">Cancel</button>
+                {% if u.is_active and not locked_reason %}<button type="button" class="link-btn small muted" style="margin-left:auto;" onclick="toggleDeleteUser({{ u.id }}); toggleManage({{ u.id }}); openDeactivate({{ u.id }});">Deactivate instead</button>{% endif %}
+              </div>
+            </div>
+          </form>
+          {% endif %}
+
           <div class="{{ 'team-dim' if not u.is_active }}">
           <form method="POST" action="{{ url_for('auth.update_role', user_id=u.id) }}" style="display:flex; align-items:flex-end; gap:14px; margin-bottom:18px;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -286,6 +332,16 @@ function toggleAddUser() {
 function toggleResetPassword(userId) {
   const row = document.getElementById('reset-password-row-' + userId);
   row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+function toggleDeleteUser(userId) {
+  const el = document.getElementById('delete-user-' + userId);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function checkDeleteUser(userId) {
+  const email = document.getElementById('confirm-' + userId);
+  const pick = document.getElementById('reassign-' + userId);
+  const ok = email.value.trim().toLowerCase() === email.dataset.email && (!pick || pick.value !== '');
+  document.getElementById('delete-go-' + userId).disabled = !ok;
 }
 function openDeactivate(userId) {
   const row = document.getElementById('deactivate-row-' + userId);

@@ -50,6 +50,9 @@ class User(UserMixin, db.Model):
     # NULL means active, so existing rows stay active without a backfill.
     deactivated_at = db.Column(db.DateTime)
     deactivated_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    # Set when an Owner deletes the person: the login is gone but the row stays
+    # so everything they wrote keeps its author (shown as "(removed)").
+    deleted_at = db.Column(db.DateTime)
 
     @property
     def is_active(self):

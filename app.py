@@ -198,6 +198,7 @@ def _ensure_schema_migrations(app):
         user_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(users)"))}
         for column, ddl_type in (
             ("last_login_at", "DATETIME"), ("deactivated_at", "DATETIME"), ("deactivated_by_id", "INTEGER"),
+            ("deleted_at", "DATETIME"),
         ):
             if column not in user_columns:
                 conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {column} {ddl_type}"))

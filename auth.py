@@ -1,13 +1,13 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify, abort
 from flask_login import login_user, logout_user, login_required, current_user
 
 import backup
 import requests
 from brand import BRAND
 from extensions import db, limiter
-from models import User, Client, ClientAccess, ActionItem, CalendarConnection, AuditLog, AppSetting, ROLES, ROLE_LABELS, log_activity
+from models import User, Client, ClientAccess, ActionItem, Milestone, CalendarConnection, AuditLog, AppSetting, ROLES, ROLE_LABELS, log_activity
 from permissions import admin_required
 from ai.google_calendar_client import CalendarRequestError, scopes_allow_sending, send_gmail
 from routes.calendar import get_valid_access_token
@@ -75,7 +75,7 @@ def account():
 @login_required
 @admin_required
 def team():
-    users = User.query.order_by(User.name).all()
+    users = User.query.filter(User.deleted_at.is_(None)).order_by(User.name).all()
     clients = Client.query.order_by(Client.name).all()
 
     access_map = {}
@@ -90,7 +90,13 @@ def team():
         rows = ActionItem.query.filter(
             ActionItem.assignee == u.name, ActionItem.status != "Completed",
         ).all()
-        open_items[u.id] = {"count": len(rows), "clients": len({r.client_id for r in rows})}
+        milestones = Milestone.query.filter(
+            Milestone.reporting_manager_id == u.id, Milestone.status != "completed",
+        ).count()
+        open_items[u.id] = {
+            "count": len(rows), "clients": len({r.client_id for r in rows}), "milestones": milestones,
+            "client_names": sorted({r.client.name for r in rows}),
+        }
 
     return render_template(
         "team.html", users=users, clients=clients, access_map=access_map, open_items=open_items,
@@ -388,3 +394,63 @@ def test_email():
     log_activity(current_user.id, None, "Test email sent", "user", current_user.id, details=current_user.email)
     db.session.commit()
     return jsonify(ok=True, sent_to=current_user.email)
+
+
+@auth_bp.route("/team/<int:user_id>/delete", methods=["POST"])
+@login_required
+def delete_user(user_id):
+    """Delete a team member for good. Owner only. Their open tasks and open
+    milestones go to a chosen active person; the login, password and client
+    access are removed and the email is freed. The row itself stays (renamed
+    "(removed)") so everything they wrote keeps its author."""
+    if not current_user.is_owner:
+        abort(403)
+    user = User.query.filter(User.id == user_id, User.deleted_at.is_(None)).first_or_404()
+    back = redirect(url_for("auth.team"))
+    if user.id == current_user.id:
+        flash("You can't delete your own account.", "error")
+        return back
+    if user.role == "owner":
+        others = User.query.filter(
+            User.role == "owner", User.deactivated_at.is_(None), User.deleted_at.is_(None), User.id != user.id,
+        ).count()
+        if others < 1:
+            flash("The last active Owner can't be deleted.", "error")
+            return back
+    if request.form.get("confirm_email", "").strip().lower() != (user.email or "").lower():
+        flash("Nobody was deleted: the email you typed did not match.", "error")
+        return back
+
+    open_tasks = ActionItem.query.filter(ActionItem.assignee == user.name, ActionItem.status != "Completed").all()
+    open_milestones = Milestone.query.filter(
+        Milestone.reporting_manager_id == user.id, Milestone.status != "completed",
+    ).all()
+    new_owner = None
+    if open_tasks or open_milestones:
+        target = request.form.get("reassign_to", "").strip()
+        new_owner = User.query.get(int(target)) if target.isdigit() else None
+        if (not new_owner or new_owner.id == user.id or not new_owner.is_active or new_owner.deleted_at):
+            flash("Nobody was deleted: choose an active person to take over their open work.", "error")
+            return back
+        for task in open_tasks:
+            task.assignee = new_owner.name
+        for m in open_milestones:
+            m.reporting_manager_id = new_owner.id
+
+    name, email = user.name, user.email
+    ClientAccess.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    user.deleted_at = datetime.utcnow()
+    user.deactivated_at = user.deactivated_at or datetime.utcnow()
+    user.deactivated_by_id = current_user.id
+    user.name = f"{name} (removed)"
+    user.email = f"removed-{user.id}@removed.invalid"
+    user.password_hash = "!"
+    user.role = "executive"
+    moved = f"{len(open_tasks)} task{'s' if len(open_tasks) != 1 else ''} and {len(open_milestones)} milestone{'s' if len(open_milestones) != 1 else ''} reassigned to {new_owner.name}" if new_owner else "no open work"
+    log_activity(current_user.id, None, "User deleted", "user", user.id, details=f"{name} ({email}): {moved}")
+    db.session.commit()
+    if new_owner:
+        flash(f"{name} deleted. {len(open_tasks)} task{'s' if len(open_tasks) != 1 else ''} and {len(open_milestones)} milestone{'s' if len(open_milestones) != 1 else ''} now belong to {new_owner.name}.", "success")
+    else:
+        flash(f"{name} deleted.", "success")
+    return back
