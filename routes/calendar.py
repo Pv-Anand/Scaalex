@@ -87,6 +87,7 @@ def oauth_callback():
         refresh_token=tokens.get("refresh_token", ""),
         token_expiry=expiry,
         connected_by_id=current_user.id,
+        scopes=tokens.get("scope", ""),
     )
     db.session.add(conn)
     log_activity(current_user.id, None, "Google Calendar connected", "calendar_connection", details=email)

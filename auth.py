@@ -6,8 +6,9 @@ from flask_login import login_user, logout_user, login_required, current_user
 import backup
 from brand import BRAND
 from extensions import db, limiter
-from models import User, Client, ClientAccess, ActionItem, ROLES, ROLE_LABELS, log_activity
+from models import User, Client, ClientAccess, ActionItem, CalendarConnection, ROLES, ROLE_LABELS, log_activity
 from permissions import admin_required
+from ai.google_calendar_client import scopes_allow_sending
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -88,6 +89,8 @@ def team():
 
     return render_template(
         "team.html", users=users, clients=clients, access_map=access_map, open_items=open_items,
+        google_connection=CalendarConnection.query.first(),
+        google_can_send=bool(CalendarConnection.query.first() and scopes_allow_sending(CalendarConnection.query.first().scopes)),
         roles=ROLES, role_labels=ROLE_LABELS,
         backup_status=backup.read_status(current_app._get_current_object()),
         backup_configured=backup._is_configured(current_app._get_current_object()),

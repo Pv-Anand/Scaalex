@@ -568,6 +568,9 @@ class CalendarConnection(db.Model):
     token_expiry = db.Column(db.DateTime, nullable=False)
     connected_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     connected_at = db.Column(db.DateTime, default=_now)
+    # Space-separated scopes Google actually granted; tells us whether this
+    # connection may send email or only read the calendar (older connections).
+    scopes = db.Column(db.Text)
 
     connected_by = db.relationship("User")
 

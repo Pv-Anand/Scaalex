@@ -5,7 +5,9 @@ Claude might have in a chat session - the deployed app authenticates to
 Google itself via its own OAuth app credentials (GOOGLE_CLIENT_ID/SECRET),
 with one shared connection for the firm rather than per-advisor tokens.
 """
+import base64
 from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
 
 import requests
 from flask import current_app
@@ -14,7 +16,9 @@ AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
 USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
-SCOPE = "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email"
+GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
+SCOPE = "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email " + SEND_SCOPE
 
 
 class CalendarConfigError(Exception):
@@ -169,3 +173,35 @@ def parse_event(event: dict) -> dict:
         "attendees": attendees,
         "html_link": event.get("htmlLink"),
     }
+
+
+def scopes_allow_sending(scopes: str) -> bool:
+    return SEND_SCOPE in (scopes or "").split()
+
+
+def send_gmail(access_token: str, from_email: str, to: list, subject: str, body: str, cc=None, bcc=None) -> str:
+    """Send a plain-text email as the connected Google account through the
+    Gmail API (gmail.send scope: it can send, never read). Returns the
+    Gmail message id."""
+    msg = EmailMessage()
+    msg["From"] = from_email
+    msg["To"] = ", ".join(to)
+    if cc:
+        msg["Cc"] = ", ".join(cc)
+    if bcc:
+        msg["Bcc"] = ", ".join(bcc)
+    msg["Subject"] = subject
+    msg.set_content(body)
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
+    try:
+        response = requests.post(
+            GMAIL_SEND_URL, json={"raw": raw},
+            headers={"Authorization": f"Bearer {access_token}"}, timeout=30,
+        )
+    except requests.RequestException as exc:
+        raise CalendarRequestError(f"Could not reach Google: {exc}") from exc
+    if response.status_code in (401, 403):
+        raise CalendarRequestError("reconnect")
+    if response.status_code != 200:
+        raise CalendarRequestError(f"Google refused the email ({response.status_code}).")
+    return response.json().get("id", "")

@@ -1,10 +1,14 @@
-from flask import Blueprint, jsonify, url_for, abort
+import re
+
+from flask import Blueprint, jsonify, url_for, abort, request
 from flask_login import login_required, current_user
 
 from extensions import db, limiter
-from models import ActionItem, Client, DataRoomFolder, Decision, Milestone, log_activity
+from models import ActionItem, CalendarConnection, Client, ClientContact, DataRoomFolder, Decision, Milestone, log_activity
 from ai.notify_draft import draft_notify
 from ai.anthropic_client import AIConfigError, AIRequestError
+from ai.google_calendar_client import CalendarRequestError, scopes_allow_sending, send_gmail
+from routes.calendar import get_valid_access_token
 
 notify_bp = Blueprint("notify", __name__)
 
@@ -32,6 +36,21 @@ def _draft(item_type, state, item_title, client, extra_context=None, endpoint="p
         return jsonify({"error": str(exc)}), 200
     except AIRequestError as exc:
         return jsonify({"error": str(exc)}), 502
+
+    # What the Send email panel needs: who can be emailed and whether a Google
+    # account that may send is connected.
+    conn = CalendarConnection.query.first()
+    can_send = bool(conn and scopes_allow_sending(conn.scopes))
+    contacts = [
+        {"name": c.name, "email": c.email, "primary": bool(c.is_primary)}
+        for c in client.contacts.order_by(ClientContact.is_primary.desc(), ClientContact.created_at.asc()).all()
+        if c.email
+    ]
+    result = dict(result)
+    result.update(
+        client_id=client.id, contacts=contacts, connected=bool(conn), can_send=can_send,
+        sender=conn.email if can_send else None, can_edit=current_user.can_edit_client(client.id),
+    )
     return jsonify(result), 200
 
 
@@ -103,3 +122,73 @@ def data_room_folder(folder_id):
     log_activity(current_user.id, client.id, "Client notify draft generated", "data_room_folder", folder.id)
     db.session.commit()
     return resp
+
+
+EMAIL_RE = re.compile(r"^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$")
+
+
+def _addresses(value, limit):
+    out = []
+    for item in value or []:
+        addr = str(item).strip().lower()
+        if addr and addr not in out:
+            out.append(addr)
+    return out[:limit], out
+
+
+def _fail(message, status=400, reconnect=False):
+    return jsonify(ok=False, error=message, reconnect=reconnect), status
+
+
+@notify_bp.route("/notify/send-email", methods=["POST"])
+@login_required
+@limiter.limit("10 per minute")
+def send_email():
+    """Send a reviewed Notify Client email from the connected Google account.
+    Never automatic: the page asks for a confirmation click first."""
+    data = request.get_json(silent=True) or {}
+    client = Client.query.get(data.get("client_id") or 0)
+    if not client:
+        return _fail("Client not found.", 404)
+    if not current_user.can_edit_client(client.id):
+        return _fail("You need Edit access to this client to send email.", 403)
+
+    to, to_all = _addresses(data.get("to"), 5)
+    cc, cc_all = _addresses(data.get("cc"), 5)
+    subject = str(data.get("subject") or "").strip()
+    body = str(data.get("body") or "").strip()
+    if not to:
+        return _fail("Choose at least one recipient.")
+    for addr in to + cc:
+        if not EMAIL_RE.match(addr):
+            return _fail(f'The address "{addr}" looks wrong. Please check it.')
+    if len(to_all) > 5 or len(cc_all) > 5:
+        return _fail("Too many recipients. Send to at most 5 people at once.")
+    if not subject or len(subject) > 200:
+        return _fail("Add a subject (up to 200 characters).")
+    if not body or len(body) > 10000:
+        return _fail("Add a message (up to 10,000 characters).")
+
+    conn = CalendarConnection.query.first()
+    if not conn:
+        return _fail("Connect Google first to send email.", reconnect=True)
+    if not scopes_allow_sending(conn.scopes):
+        return _fail("Google needs you to reconnect and allow sending email.", reconnect=True)
+    token = get_valid_access_token()
+    if not token:
+        return _fail("Google needs you to reconnect.", reconnect=True)
+
+    bcc = [current_user.email.lower()] if data.get("bcc_me") and current_user.email else None
+    try:
+        send_gmail(token, conn.email, to, subject, body, cc=cc or None, bcc=bcc)
+    except CalendarRequestError as exc:
+        if str(exc) == "reconnect":
+            return _fail("Google needs you to reconnect.", 401, reconnect=True)
+        return _fail("Email was not sent. Nothing left the app. Try again in a minute.", 502)
+
+    log_activity(
+        current_user.id, client.id, "Client email sent", data.get("entity_type") or None, data.get("entity_id") or None,
+        details=f"To {', '.join(to)}: {subject}"[:400],
+    )
+    db.session.commit()
+    return jsonify(ok=True, sent_to=to, sender=conn.email)

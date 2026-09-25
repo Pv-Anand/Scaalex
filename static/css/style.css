@@ -1013,3 +1013,29 @@ tr.row-deactivated .team-name { color: var(--grey-500); }
 .confirm-pop-actions { display: flex; align-items: center; gap: 12px; }
 .undo-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 90; background: var(--black); color: var(--white); border-radius: var(--radius); padding: 11px 16px; font-size: 12.5px; display: flex; align-items: center; gap: 16px; box-shadow: 0 8px 24px rgba(10,10,10,.28); max-width: calc(100vw - 32px); }
 .undo-toast button { background: none; border: none; color: var(--white); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 0; white-space: nowrap; }
+
+/* ---- Notify Client: send email through Google ---- */
+.mail-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--grey-100); font-size: 12.5px; flex-wrap: wrap; min-width: 0; }
+.mail-row > span, .mail-row > input { min-width: 0; }
+.mail-k { width: 52px; color: var(--grey-500); font-size: 11.5px; flex-shrink: 0; }
+.mail-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1; min-width: 0; }
+.mail-chip { font: inherit; font-size: 12px; border: 1px solid var(--line-strong); border-radius: 20px; padding: 3px 11px; background: var(--white); color: var(--charcoal); cursor: pointer; white-space: nowrap; }
+.mail-chip.on { background: #e8edf9; border-color: #c3cfeb; color: #2b4a8b; }
+input.mail-input, input[type=text].mail-input { flex: 1; min-width: 120px; width: auto; border: none; border-radius: 0; outline: none; font: inherit; font-size: 12.5px; padding: 4px 0; background: transparent; box-shadow: none; }
+input.mail-input:focus, input[type=text].mail-input:focus { box-shadow: none; border: none; }
+input.mail-extra, input[type=text].mail-extra { flex: 0 1 150px; min-width: 100px; border-bottom: 1px dashed var(--line-strong); }
+.mail-bcc { font-size: 11.5px; color: var(--grey-700); display: flex; align-items: center; gap: 5px; white-space: nowrap; margin: 0; font-weight: 400; }
+.mail-bcc input[type=checkbox] { width: auto; padding: 0; }
+.mail-tag { font-size: 10.5px; font-weight: 500; padding: 2px 9px; border-radius: 20px; white-space: nowrap; }
+.mail-tag.ok { background: var(--success-bg); color: var(--success); }
+.mail-body { width: 100%; box-sizing: border-box; margin-top: 12px; min-height: 180px; font-size: 13px; line-height: 1.65; padding: 12px 14px; }
+.mail-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.mail-confirm { display: flex; align-items: center; gap: 16px; margin-top: 14px; padding: 14px 16px; background: var(--warn-bg); border: 1px solid #ecd9ac; border-radius: var(--radius); flex-wrap: wrap; }
+.mail-confirm-text { flex: 1; min-width: 200px; color: var(--grey-700); line-height: 1.5; }
+.mail-confirm-title { font-size: 13.5px; font-weight: 600; color: var(--warn); margin-bottom: 3px; }
+.mail-err { color: var(--danger); }
+.mail-banner { display: flex; align-items: center; gap: 14px; background: #e8edf9; border: 1px solid #c3cfeb; border-radius: var(--radius); padding: 12px 14px; margin: 10px 0; font-size: 12.5px; line-height: 1.5; flex-wrap: wrap; }
+.mail-banner > div { flex: 1; min-width: 200px; }
+.google-card { max-width: 640px; }
+.google-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--grey-100); font-size: 13.5px; }
+.chip-warn { font-size: 10.5px; font-weight: 500; padding: 2px 9px; border-radius: 20px; background: var(--warn-bg); color: var(--warn); white-space: nowrap; }

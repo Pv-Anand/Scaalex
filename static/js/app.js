@@ -277,6 +277,8 @@ function closeNotifyModal() {
   notifyDraftData = null;
 }
 
+let notifyEntity = { type: null, id: null };
+
 async function openNotifyModal(btn) {
   const { entityType, entityId, state, eyebrow, title, subtitle } = btn.dataset;
   ensureNotifyModal();
@@ -296,7 +298,9 @@ async function openNotifyModal(btn) {
       return;
     }
     notifyDraftData = data;
+    notifyEntity = { type: entityType, id: entityId };
     renderNotifyTemplates(data);
+    renderMailRecipients();
   } catch (err) {
     document.getElementById('notify-modal-body').innerHTML = `<div class="notify-modal-error">Couldn't generate templates: ${escapeHtml(err.message)}</div>`;
   }
@@ -308,24 +312,135 @@ function linkifyPortalUrl(text) {
 
 const copyIconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke-linecap="round"/></svg>';
 
-function renderNotifyTemplates(data) {
-  document.getElementById('notify-modal-body').innerHTML = `
-    <div class="tmpl-block">
-      <div class="tmpl-head">
-        <div class="tmpl-head-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Email
-        </div>
-      </div>
-      <div class="tmpl-subject-row">
-        <div class="tmpl-subject-text">${escapeHtml(data.subject)}</div>
-        <button type="button" class="copy-btn" onclick="copyNotifyField('subject')">${copyIconSvg} Copy</button>
-      </div>
-      <div class="tmpl-body-row">
-        <div class="tmpl-body-text">${linkifyPortalUrl(escapeHtml(data.email_body))}</div>
-        <button type="button" class="copy-btn" onclick="copyNotifyField('email_body')">${copyIconSvg} Copy</button>
-      </div>
+let notifyMail = null;
+
+function mailEmailBlock(data) {
+  const envelope = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  if (!data.can_send) {
+    const reconnect = data.connected;
+    const banner = `<div class="mail-banner">
+      <div><b>${reconnect ? 'Reconnect Google to allow sending email.' : 'Connect Google to send email from here.'}</b> The app asks for permission to send only. It cannot read your mail.</div>
+      <a class="btn btn-sm" href="/calendar/connect">${reconnect ? 'Reconnect Google' : 'Connect Google'}</a>
+    </div>`;
+    return `<div class="tmpl-block">
+      <div class="tmpl-head"><div class="tmpl-head-label">${envelope} Email</div></div>
+      ${banner}
+      <div class="tmpl-subject-row"><div class="tmpl-subject-text">${escapeHtml(data.subject)}</div>
+        <button type="button" class="copy-btn" onclick="copyNotifyField('subject')">${copyIconSvg} Copy</button></div>
+      <div class="tmpl-body-row"><div class="tmpl-body-text">${linkifyPortalUrl(escapeHtml(data.email_body))}</div>
+        <button type="button" class="copy-btn" onclick="copyNotifyField('email_body')">${copyIconSvg} Copy</button></div>
+    </div>`;
+  }
+  const contacts = data.contacts || [];
+  notifyMail = { selected: contacts.length ? new Set([0]) : new Set(), extra: [], data };
+  const noEdit = data.can_edit === false;
+  return `<div class="tmpl-block" id="mail-block">
+    <div class="tmpl-head"><div class="tmpl-head-label">${envelope} Email</div></div>
+    <div class="mail-row"><span class="mail-k">From</span><span>${escapeHtml(data.sender)}</span><span class="mail-tag ok">Connected</span></div>
+    <div class="mail-row"><span class="mail-k">To</span><div class="mail-chips" id="mail-to"></div></div>
+    <div class="mail-row"><span class="mail-k">Cc</span><input type="text" id="mail-cc" class="mail-input" placeholder="Add Cc (separate with commas)"><label class="mail-bcc"><input type="checkbox" id="mail-bcc"> Bcc me</label></div>
+    <div class="mail-row"><span class="mail-k">Subject</span><input type="text" id="mail-subject" class="mail-input" value="${escapeHtml(data.subject)}"></div>
+    <textarea id="mail-body" class="mail-body" rows="9">${escapeHtml(data.email_body)}</textarea>
+    <div class="small muted" style="margin-top:6px;">The message is editable. AI drafted it, so read it before sending.</div>
+    <div id="mail-actions" class="mail-actions">
+      ${noEdit ? '<span class="small muted">You have view-only access to this client, so you can copy the message but not send it.</span>' : '<button type="button" class="btn" id="mail-send-btn" onclick="showMailConfirm()">Send email</button>'}
+      <button type="button" class="btn btn-secondary" onclick="copyMailMessage()">Copy message</button>
     </div>
+    <div id="mail-confirm" class="mail-confirm" style="display:none;"></div>
+    <div id="mail-status" class="small" style="margin-top:8px;"></div>
+  </div>`;
+}
+
+function renderMailRecipients() {
+  const box = document.getElementById('mail-to');
+  if (!box || !notifyMail) return;
+  const contacts = notifyMail.data.contacts || [];
+  let html = contacts.map((c, i) => `<button type="button" class="mail-chip ${notifyMail.selected.has(i) ? 'on' : ''}" onclick="toggleMailTo(${i})" aria-pressed="${notifyMail.selected.has(i)}">${notifyMail.selected.has(i) ? '&#10003; ' : ''}${escapeHtml(c.name)} &middot; ${escapeHtml(c.email)}</button>`).join('');
+  html += notifyMail.extra.map((a, i) => `<button type="button" class="mail-chip on" onclick="removeMailExtra(${i})" title="Remove">&#10003; ${escapeHtml(a)} &times;</button>`).join('');
+  html += '<input type="text" id="mail-extra" class="mail-input mail-extra" placeholder="+ Add address" onkeydown="mailExtraKey(event)" onblur="addMailExtra()">';
+  box.innerHTML = html;
+}
+
+function toggleMailTo(i) { if (notifyMail.selected.has(i)) notifyMail.selected.delete(i); else notifyMail.selected.add(i); renderMailRecipients(); }
+function removeMailExtra(i) { notifyMail.extra.splice(i, 1); renderMailRecipients(); }
+function addMailExtra() {
+  const el = document.getElementById('mail-extra');
+  if (!el || !el.value.trim()) return;
+  el.value.split(/[,;\s]+/).map(v => v.trim().toLowerCase()).filter(Boolean).forEach(v => { if (notifyMail.extra.indexOf(v) < 0) notifyMail.extra.push(v); });
+  renderMailRecipients();
+}
+function mailExtraKey(e) { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addMailExtra(); } }
+
+function mailRecipients() {
+  const contacts = notifyMail.data.contacts || [];
+  const to = [...notifyMail.selected].map(i => contacts[i].email).concat(notifyMail.extra);
+  const cc = (document.getElementById('mail-cc').value || '').split(/[,;\s]+/).map(v => v.trim()).filter(Boolean);
+  return { to, cc };
+}
+
+function showMailConfirm() {
+  addMailExtra();
+  const { to } = mailRecipients();
+  const status = document.getElementById('mail-status');
+  status.textContent = '';
+  if (!to.length) { status.innerHTML = '<span class="mail-err">Choose at least one recipient.</span>'; return; }
+  const names = to.map(a => { const c = (notifyMail.data.contacts || []).find(x => x.email === a); return c ? c.name : a; });
+  const who = names.length === 1 ? names[0] : names.length + ' people';
+  const box = document.getElementById('mail-confirm');
+  box.innerHTML = `<div class="mail-confirm-text"><div class="mail-confirm-title">Send this email to ${escapeHtml(who)}?</div>
+    <div class="small">From ${escapeHtml(notifyMail.data.sender)}. It cannot be recalled once sent.</div></div>
+    <button type="button" class="btn btn-sm" id="mail-go" onclick="sendNotifyEmail()">Send now</button>
+    <button type="button" class="link-btn small muted" onclick="hideMailConfirm()">Back to edit</button>`;
+  box.style.display = 'flex';
+  document.getElementById('mail-actions').style.display = 'none';
+}
+function hideMailConfirm() {
+  document.getElementById('mail-confirm').style.display = 'none';
+  document.getElementById('mail-actions').style.display = 'flex';
+}
+
+async function sendNotifyEmail() {
+  const btn = document.getElementById('mail-go');
+  const status = document.getElementById('mail-status');
+  btn.disabled = true;
+  const { to, cc } = mailRecipients();
+  const d = notifyMail.data;
+  try {
+    const res = await fetch('/notify/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+      body: JSON.stringify({
+        client_id: d.client_id, to, cc, bcc_me: document.getElementById('mail-bcc').checked,
+        subject: document.getElementById('mail-subject').value, body: document.getElementById('mail-body').value,
+        entity_type: notifyEntity.type, entity_id: notifyEntity.id,
+      }),
+    });
+    let out = {};
+    try { out = await res.json(); } catch (e) { /* non-JSON error */ }
+    if (!res.ok || !out.ok) {
+      hideMailConfirm();
+      const extra = out.reconnect ? ' <a href="/calendar/connect">Reconnect Google</a>' : '';
+      status.innerHTML = `<span class="mail-err">${escapeHtml(out.error || 'Email was not sent. Nothing left the app. Try again in a minute.')}</span>${extra}`;
+      return;
+    }
+    const names = out.sent_to.join(', ');
+    document.getElementById('mail-block').innerHTML = `<div class="tmpl-head"><div class="tmpl-head-label">Email</div><span class="mail-tag ok">Email sent</span></div>
+      <p class="small" style="margin:10px 0 0; line-height:1.6;">Sent to <b>${escapeHtml(names)}</b> from ${escapeHtml(out.sender)}. It is in that account's Sent folder, and replies will arrive there.</p>`;
+    showToast('Email sent to ' + names);
+  } catch (e) {
+    hideMailConfirm();
+    status.innerHTML = '<span class="mail-err">Email was not sent. Nothing left the app. Try again in a minute.</span>';
+  }
+}
+
+async function copyMailMessage() {
+  const text = document.getElementById('mail-subject').value + '\n\n' + document.getElementById('mail-body').value;
+  try { await navigator.clipboard.writeText(text); showToast('Email copied'); }
+  catch (e) { showToast('Copy is blocked in this browser. Select the text and copy it.'); }
+}
+
+function renderNotifyTemplates(data) {
+  document.getElementById('notify-modal-body').innerHTML = mailEmailBlock(data) + `
     <div class="tmpl-block">
       <div class="tmpl-head">
         <div class="tmpl-head-label">

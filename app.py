@@ -187,6 +187,11 @@ def _ensure_schema_migrations(app):
                 conn.execute(db.text(f"ALTER TABLE ai_overviews ADD COLUMN {column} DATE"))
                 conn.commit()
 
+        cal_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(calendar_connections)"))}
+        if cal_columns and "scopes" not in cal_columns:
+            conn.execute(db.text("ALTER TABLE calendar_connections ADD COLUMN scopes TEXT"))
+            conn.commit()
+
         user_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(users)"))}
         for column, ddl_type in (
             ("last_login_at", "DATETIME"), ("deactivated_at", "DATETIME"), ("deactivated_by_id", "INTEGER"),
