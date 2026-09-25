@@ -19,7 +19,7 @@ _PRESETS = {
         "advisor_role": "banker",
         "mark_light": "images/favicon-white-mark.png",
         "mark_dark": "images/favicon-navy-mark.png",
-        "favicon": "images/favicon.png",
+        "favicon": "images/favicon-v2.png",
     },
     "shiftx": {
         "name": "ShiftX",
