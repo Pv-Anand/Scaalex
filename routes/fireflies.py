@@ -1,8 +1,10 @@
+from datetime import datetime
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 
 from extensions import db, limiter
-from models import Client, Conversation, FirefliesMeeting, CalendarConnection, log_activity
+from models import AppSetting, Client, Conversation, FirefliesMeeting, CalendarConnection, log_activity
 from ai.fireflies_client import (
     FirefliesConfigError, FirefliesRequestError,
     fetch_recent_transcripts, fetch_transcript_detail,
@@ -31,9 +33,18 @@ def guess_client_match(title, participant_names):
     return None
 
 
+def sales_addresses():
+    """Addresses that mark a meeting as a sales meeting: the list an
+    Administrator saved in Integrations, else the SALES_MEETING_EMAILS default."""
+    row = AppSetting.query.get("sales_meeting_emails")
+    if row and (row.value or "").strip():
+        return [a.strip().lower() for a in row.value.split(",") if a.strip()]
+    return list(current_app.config.get("SALES_MEETING_EMAILS") or ())
+
+
 def _is_sales_meeting(attendees):
-    """True when a sales mailbox (sales@scaalex.com by default) was invited."""
-    sales = set(current_app.config.get("SALES_MEETING_EMAILS") or ())
+    """True when a sales mailbox was invited."""
+    sales = set(sales_addresses())
     return any((a.get("email") or "").strip().lower() in sales for a in attendees or [])
 
 
@@ -152,7 +163,7 @@ def inbox():
             try:
                 raw_events = fetch_upcoming_events(access_token, max_results=10)
                 upcoming_events = [parse_event(e) for e in raw_events]
-                sales = set(current_app.config.get("SALES_MEETING_EMAILS") or ())
+                sales = set(sales_addresses())
                 for e in upcoming_events:
                     e["is_sales"] = any(x in sales for x in e.get("attendee_emails", []))
             except CalendarRequestError as exc:
@@ -161,6 +172,7 @@ def inbox():
     return render_template(
         "fireflies_inbox.html",
         pending=pending, completed=completed, sales_meetings=sales_meetings, clients=clients,
+        sales_addresses=sales_addresses(),
         calendar_connection=calendar_connection, upcoming_events=upcoming_events,
         calendar_error=calendar_error,
     )
@@ -282,3 +294,21 @@ def ignore(meeting_id):
     db.session.commit()
     flash("Meeting dismissed.", "success")
     return redirect(url_for("fireflies.inbox"))
+
+
+@fireflies_bp.route("/<int:meeting_id>/reviewed", methods=["POST"])
+@login_required
+def toggle_reviewed(meeting_id):
+    """Mark a Sales meeting as reviewed, or back to New."""
+    meeting = FirefliesMeeting.query.get_or_404(meeting_id)
+    if meeting.status != "sales_meeting":
+        flash("Only a Sales meeting can be marked as reviewed.", "error")
+        return redirect(url_for("fireflies.inbox"))
+    meeting.sales_reviewed_at = None if meeting.sales_reviewed_at else datetime.utcnow()
+    log_activity(
+        current_user.id, None,
+        "Sales meeting marked as reviewed" if meeting.sales_reviewed_at else "Sales meeting marked as new",
+        "fireflies_meeting", meeting.id, details=meeting.title,
+    )
+    db.session.commit()
+    return redirect(url_for("fireflies.inbox") + "#sales")

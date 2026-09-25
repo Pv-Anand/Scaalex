@@ -73,6 +73,24 @@
     {% endif %}
   </div>
 
+  <!-- Meeting sorting -->
+  <div class="int-card">
+    <div class="int-head">
+      <span class="int-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#4a4a4d" stroke-width="1.7"><path d="M4 6h16M4 12h10M4 18h6" stroke-linecap="round"/></svg></span>
+      <div class="int-title">
+        <div class="int-name">Meeting sorting</div>
+        <div class="int-desc">Decides which Meetings tab a synced meeting goes to. A meeting that includes a sales address goes to Sales and is never matched to a client project.</div>
+      </div>
+    </div>
+    <form method="POST" action="{{ url_for('auth.save_meeting_sorting') }}" class="sorting-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="sales-addresses" class="int-k" style="width:auto;">Sales addresses</label>
+      <input type="text" id="sales-addresses" name="sales_addresses" value="{{ sales_addresses }}" placeholder="sales@yourcompany.com" autocomplete="off">
+      <div class="small muted" style="margin-top:6px;">Separate several addresses with commas. It applies from the next sync. Everything else is matched to a client by name.</div>
+      <div class="int-actions"><button type="submit" class="btn btn-sm">Save</button></div>
+    </form>
+  </div>
+
   <!-- WhatsApp -->
   <div class="int-card int-wa">
     <div class="int-head">

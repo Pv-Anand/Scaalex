@@ -544,6 +544,8 @@ class FirefliesMeeting(db.Model):
     synced_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))  # who ran the sync/assign that completed this
 
     synced_at = db.Column(db.DateTime, default=_now)
+    # Set when someone marks a Sales meeting as reviewed; NULL means "New".
+    sales_reviewed_at = db.Column(db.DateTime)
 
     matched_client = db.relationship("Client", foreign_keys=[matched_client_id])
     assigned_client = db.relationship("Client", foreign_keys=[assigned_client_id])
@@ -573,6 +575,17 @@ class CalendarConnection(db.Model):
     scopes = db.Column(db.Text)
 
     connected_by = db.relationship("User")
+
+
+class AppSetting(db.Model):
+    """Small admin-editable settings (for example which addresses mark a
+    meeting as a sales meeting). One row per key."""
+
+    __tablename__ = "app_settings"
+
+    key = db.Column(db.String(80), primary_key=True)
+    value = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=_now, onupdate=_now)
 
 
 class AuditLog(db.Model):

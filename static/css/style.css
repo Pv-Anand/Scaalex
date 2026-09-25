@@ -1061,3 +1061,23 @@ input.mail-extra, input[type=text].mail-extra { flex: 0 1 150px; min-width: 100p
 .int-note { margin-top: 12px; font-size: 12.5px; color: var(--grey-700); line-height: 1.6; }
 .int-wa { border-color: #cfe6d7; }
 .chip-none { font-size: 10.5px; font-weight: 500; padding: 2px 9px; border-radius: 20px; background: var(--grey-100); color: var(--grey-700); white-space: nowrap; display: inline-flex; margin-left: 0; }
+
+/* ---- Meetings: Sales tab ---- */
+.sales-banner { display: flex; align-items: center; gap: 14px; background: #e8edf9; border: 1px solid #c3cfeb; border-radius: var(--radius); padding: 11px 14px; margin-bottom: 16px; font-size: 12.5px; line-height: 1.55; color: var(--charcoal); flex-wrap: wrap; }
+.sales-banner > span { flex: 1; min-width: 240px; }
+.sales-tools { display: flex; gap: 10px; margin-bottom: 14px; }
+.sales-tools input[type=search] { flex: 1; }
+.sales-tools select { width: auto; min-width: 110px; }
+.sales-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; }
+.sales-title { font-size: 14.5px; font-weight: 600; line-height: 1.35; }
+.sales-people { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sales-people span { font-size: 11px; border: 1px solid var(--line); border-radius: 20px; padding: 2px 9px; color: var(--grey-700); background: var(--grey-50); white-space: nowrap; }
+.sales-overview { font-size: 12.5px; color: var(--grey-700); line-height: 1.6; margin: 10px 0 0; }
+.sales-transcript { margin-top: 10px; font-size: 12.5px; }
+.sales-transcript summary { cursor: pointer; color: var(--grey-700); }
+.sales-transcript-box { margin-top: 8px; max-height: 260px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.6; color: var(--grey-700); border: 1px solid var(--line); padding: 12px 14px; background: var(--grey-50); }
+.sales-actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+.sales-actions form { margin: 0; }
+.chip-blue { font-size: 10.5px; font-weight: 500; padding: 2px 9px; border-radius: 20px; background: #e8edf9; color: #2b4a8b; white-space: nowrap; display: inline-flex; }
+.sorting-form { margin-top: 14px; border-top: 1px solid var(--grey-100); padding-top: 12px; }
+.sorting-form input[type=text] { margin-top: 6px; }

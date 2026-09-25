@@ -177,6 +177,9 @@ def _ensure_schema_migrations(app):
                     conn.rollback()
 
         meeting_columns = {row[1] for row in conn.execute(db.text("PRAGMA table_info(fireflies_meetings)"))}
+        if "sales_reviewed_at" not in meeting_columns:
+            conn.execute(db.text("ALTER TABLE fireflies_meetings ADD COLUMN sales_reviewed_at DATETIME"))
+            conn.commit()
         if "synced_by_id" not in meeting_columns:
             conn.execute(db.text("ALTER TABLE fireflies_meetings ADD COLUMN synced_by_id INTEGER"))
             conn.commit()

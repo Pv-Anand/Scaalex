@@ -139,31 +139,50 @@
   </div>
 
   <div id="tab-sales" style="display:none;">
+    <div class="sales-banner">
+      <span><b>Filed here automatically.</b> Any meeting that includes {% for a in sales_addresses %}<b>{{ a }}</b>{{ ', ' if not loop.last }}{% endfor %} is sorted into Sales on the next sync and never matched to a client project.</span>
+      {% if current_user.is_admin %}<a href="{{ url_for('auth.integrations') }}" class="link-btn small">Change address</a>{% endif %}
+    </div>
     {% if sales_meetings %}
-    <ul>
+    <div class="sales-tools">
+      <input type="search" id="sales-search" placeholder="Search sales meetings" oninput="filterSales()">
+      <select id="sales-filter" onchange="filterSales()">
+        <option value="all">All</option><option value="new">New</option><option value="reviewed">Reviewed</option>
+      </select>
+    </div>
+    <div id="sales-list">
       {% for m in sales_meetings %}
-      <li class="list-item">
-        <div class="flex-between">
-          <span>{{ m.title }}</span>
-          <span class="badge badge-type">Sales</span>
+      <div class="sales-card" data-state="{{ 'reviewed' if m.sales_reviewed_at else 'new' }}" data-text="{{ (m.title ~ ' ' ~ (m.participants|join(' ') if m.participants else '') ~ ' ' ~ (m.fireflies_overview or ''))|lower }}">
+        <div class="flex-between" style="align-items:flex-start; gap:12px;">
+          <div style="min-width:0;">
+            <div class="sales-title">{{ m.title }}</div>
+            <div class="small muted mt-4">{{ m.meeting_date.strftime('%a %d %b %Y, %H:%M') if m.meeting_date else 'Unknown date' }}{% if m.duration_minutes %} &middot; {{ m.duration_minutes|round|int }} min{% endif %}</div>
+          </div>
+          {% if m.sales_reviewed_at %}<span class="chip-active">Reviewed</span>{% else %}<span class="chip-blue">New</span>{% endif %}
         </div>
-        <div class="small muted mt-8">
-          {{ m.meeting_date.strftime('%d %b %Y') if m.meeting_date else '' }}
-          {% if m.participants %} · {{ m.participants|join(', ') }}{% endif %}
-          {% if m.synced_by %} · Synced by {{ m.synced_by.name }}{% endif %}
+        {% if m.participants %}<div class="sales-people">{% for p in m.participants %}<span>{{ p }}</span>{% endfor %}</div>{% endif %}
+        {% if m.fireflies_overview %}<p class="sales-overview">{{ m.fireflies_overview }}</p>{% endif %}
+        {% if m.transcript %}
+        <details class="sales-transcript"><summary>View transcript</summary><div class="sales-transcript-box">{{ m.transcript }}</div></details>
+        {% endif %}
+        <div class="sales-actions">
+          <form method="POST" action="{{ url_for('fireflies.toggle_reviewed', meeting_id=m.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="{{ 'link-btn small' if m.sales_reviewed_at else 'btn btn-sm' }}">{{ 'Mark as new' if m.sales_reviewed_at else 'Mark as reviewed' }}</button>
+          </form>
+          <form method="POST" action="{{ url_for('fireflies.revert', meeting_id=m.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="link-btn small">Move to Pending</button>
+          </form>
         </div>
-        {% if m.fireflies_overview %}<p class="small mt-8" style="color:var(--grey-700);">{{ m.fireflies_overview }}</p>{% endif %}
-        <form method="POST" action="{{ url_for('fireflies.revert', meeting_id=m.id) }}" class="mt-8">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="small link-btn">Move back to Pending</button>
-        </form>
-      </li>
+      </div>
       {% endfor %}
-    </ul>
+      <div class="empty-state" id="sales-none" style="display:none;"><h3>No matches</h3><p>No sales meetings match that search.</p></div>
+    </div>
     {% else %}
     <div class="empty-state">
       <h3>No sales meetings yet</h3>
-      <p>Any meeting you invite sales@scaalex.com to is filed here automatically on the next sync. You can also move a pending meeting here by hand.</p>
+      <p>Invite {{ sales_addresses[0] if sales_addresses else 'your sales address' }} to a meeting and it is filed here on the next sync. You can also move a Pending meeting here by hand.</p>
     </div>
     {% endif %}
   </div>
@@ -179,5 +198,17 @@ function switchMeetingTab(tab) {
   document.getElementById('tab-completed-btn').classList.toggle('active', tab === 'completed');
   document.getElementById('tab-sales-btn').classList.toggle('active', tab === 'sales');
 }
+function filterSales() {
+  const q = (document.getElementById('sales-search').value || '').toLowerCase().trim();
+  const state = document.getElementById('sales-filter').value;
+  let shown = 0;
+  document.querySelectorAll('.sales-card').forEach(c => {
+    const ok = (state === 'all' || c.dataset.state === state) && (!q || c.dataset.text.indexOf(q) >= 0);
+    c.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+  document.getElementById('sales-none').style.display = shown ? 'none' : '';
+}
+if (location.hash === '#sales') switchMeetingTab('sales');
 </script>
 {% endblock %}

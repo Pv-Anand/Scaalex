@@ -7,10 +7,13 @@ import backup
 import requests
 from brand import BRAND
 from extensions import db, limiter
-from models import User, Client, ClientAccess, ActionItem, CalendarConnection, AuditLog, ROLES, ROLE_LABELS, log_activity
+from models import User, Client, ClientAccess, ActionItem, CalendarConnection, AuditLog, AppSetting, ROLES, ROLE_LABELS, log_activity
 from permissions import admin_required
 from ai.google_calendar_client import CalendarRequestError, scopes_allow_sending, send_gmail
 from routes.calendar import get_valid_access_token
+import re
+
+EMAIL_RE = re.compile(r"^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$")
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -307,7 +310,36 @@ def integrations():
         "integrations.html", conn=conn, can_send=bool(conn and scopes_allow_sending(conn.scopes)),
         sent_this_month=sent, fireflies_ok=bool(current_app.config.get("FIREFLIES_API_KEY")),
         sender_domain=(conn.email.split("@")[-1] if conn and conn.email and "@" in conn.email else None),
+        sales_addresses=", ".join(_sales_addresses()),
     )
+
+
+def _sales_addresses():
+    from routes.fireflies import sales_addresses
+    return sales_addresses()
+
+
+@auth_bp.route("/settings/integrations/meeting-sorting", methods=["POST"])
+@login_required
+@admin_required
+def save_meeting_sorting():
+    raw = request.form.get("sales_addresses", "")
+    addresses = []
+    for part in raw.replace("\n", ",").replace(";", ",").split(","):
+        a = part.strip().lower()
+        if a and a not in addresses:
+            addresses.append(a)
+    bad = [a for a in addresses if not EMAIL_RE.match(a)]
+    if bad:
+        flash(f'"{bad[0]}" does not look like an email address.', "error")
+        return redirect(url_for("auth.integrations"))
+    row = AppSetting.query.get("sales_meeting_emails") or AppSetting(key="sales_meeting_emails")
+    row.value = ", ".join(addresses)
+    db.session.add(row)
+    log_activity(current_user.id, None, "Meeting sorting updated", "app_setting", None, details=row.value[:300])
+    db.session.commit()
+    flash("Sales addresses saved. They apply from the next sync." if addresses else "Sales addresses cleared. The default address applies.", "success")
+    return redirect(url_for("auth.integrations"))
 
 
 @auth_bp.route("/settings/integrations/domain-check")
