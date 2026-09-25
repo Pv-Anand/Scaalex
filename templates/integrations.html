@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Integrations - {{ brand.name }} Intelligence{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Settings</div>
+    <h1>Integrations</h1>
+  </div>
+</div>
+{% set settings_tab = 'integrations' %}{% include "_settings_tabs.html" %}
+<p class="small muted mb-24">Connect the tools this workspace uses. Only Owners and Administrators can see this page. Each app has its own connections.</p>
+
+<div class="int-list">
+
+  <!-- Google Calendar -->
+  <div class="int-card">
+    <div class="int-head">
+      <span class="int-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#4285f4" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke-linecap="round"/></svg></span>
+      <div class="int-title">
+        <div class="int-name">Google Calendar</div>
+        <div class="int-desc">Shows upcoming meetings on the Meetings page. Read only: the app never changes your calendar.</div>
+      </div>
+      {% if conn %}<span class="chip-active">Connected</span>{% else %}<span class="chip-none">Not connected</span>{% endif %}
+    </div>
+    {% if conn %}
+    <div class="int-rows">
+      <div class="int-row"><span class="int-k">Account</span><span>{{ conn.email }}</span></div>
+      <div class="int-row"><span class="int-k">Permission</span><span>See and download calendars (read only)</span></div>
+      <div class="int-row"><span class="int-k">Connected</span><span>{{ conn.connected_at.strftime('%d %b %Y') if conn.connected_at }}{% if conn.connected_by %} by {{ conn.connected_by.name }}{% endif %}</span></div>
+    </div>
+    <div class="int-actions">
+      <a href="{{ url_for('calendar.connect') }}" class="btn btn-sm btn-secondary">Reconnect</a>
+      <form method="POST" action="{{ url_for('calendar.disconnect') }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="link-btn small" style="color:var(--danger);">Disconnect</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="int-actions"><a href="{{ url_for('calendar.connect') }}" class="btn btn-sm">Connect Google</a></div>
+    {% endif %}
+  </div>
+
+  <!-- Email -->
+  <div class="int-card">
+    <div class="int-head">
+      <span class="int-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#ea4335" stroke-width="1.7"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <div class="int-title">
+        <div class="int-name">Email (Gmail)</div>
+        <div class="int-desc">Sends the emails you review in Notify Client, from the connected Google account. It can send only: it cannot read, list or delete mail.</div>
+      </div>
+      {% if can_send %}<span class="chip-active">Send only</span>{% elif conn %}<span class="chip-warn">Needs attention</span>{% else %}<span class="chip-none">Not connected</span>{% endif %}
+    </div>
+    {% if can_send %}
+    <div class="int-rows">
+      <div class="int-row"><span class="int-k">Sends as</span><span>{{ conn.email }}</span><span class="small muted">Same Google account as the calendar</span></div>
+      <div class="int-row"><span class="int-k">Sent this month</span><span>{{ sent_this_month }} email{{ 's' if sent_this_month != 1 }}</span></div>
+      <div class="int-row"><span class="int-k">Domain checks</span>
+        <span id="dc-spf" class="chip-none">SPF</span><span id="dc-dkim" class="chip-none">DKIM</span><span id="dc-dmarc" class="chip-none">DMARC</span>
+        <span class="small muted" id="dc-note">Checking {{ sender_domain }} ...</span>
+      </div>
+    </div>
+    <div class="int-actions">
+      <button type="button" class="btn btn-sm btn-secondary" id="test-email-btn" onclick="sendTestEmail(this)">Send a test email to me</button>
+      <a href="{{ url_for('calendar.connect') }}" class="link-btn small">Reconnect</a>
+      <span class="small" id="test-email-status"></span>
+    </div>
+    {% elif conn %}
+    <div class="int-note">This connection was made before sending existed. Reconnect once to allow sending email. Only the send permission is added.</div>
+    <div class="int-actions"><a href="{{ url_for('calendar.connect') }}" class="btn btn-sm">Reconnect to allow sending</a></div>
+    {% else %}
+    <div class="int-note">Connect Google first. Email sending uses the same connection as the calendar.</div>
+    <div class="int-actions"><a href="{{ url_for('calendar.connect') }}" class="btn btn-sm">Connect Google</a></div>
+    {% endif %}
+  </div>
+
+  <!-- WhatsApp -->
+  <div class="int-card int-wa">
+    <div class="int-head">
+      <span class="int-logo"><svg viewBox="0 0 24 24" fill="none"><path fill="#25984a" d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .9.9-2.9-.2-.3A8 8 0 1112 20z"/><path fill="#25984a" d="M17 14.3c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.5-1.8-.1-.2 0-.4.1-.5l.4-.5c.1-.1.1-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.3-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.4 3.8 3.4.5.2.9.4 1.3.5.5.1 1 .1 1.4.1.4-.1 1.3-.5 1.5-1s.2-.9.1-1c0-.1-.2-.2-.4-.3z"/></svg></span>
+      <div class="int-title">
+        <div class="int-name">WhatsApp Business API</div>
+        <div class="int-desc">Send the Notify Client WhatsApp message straight from the app, using WhatsApp templates approved by Meta.</div>
+      </div>
+      <span class="chip-none">Coming soon</span>
+    </div>
+    <div class="int-note">Not available yet. It needs a Meta Business account and a phone number that is not used on the regular WhatsApp app. Until then, Notify Client keeps its Copy button for WhatsApp.</div>
+  </div>
+
+  <!-- Fireflies -->
+  <div class="int-card">
+    <div class="int-head">
+      <span class="int-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#6b46c1" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke-linecap="round"/></svg></span>
+      <div class="int-title">
+        <div class="int-name">Fireflies</div>
+        <div class="int-desc">Pulls meeting transcripts into the Meetings inbox. Connected with an API key set on the server.</div>
+      </div>
+      {% if fireflies_ok %}<span class="chip-active">Connected</span>{% else %}<span class="chip-warn">Not set up</span>{% endif %}
+    </div>
+    {% if not fireflies_ok %}<div class="int-note">Add <code>FIREFLIES_API_KEY</code> in your hosting environment settings, then restart.</div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function runDomainCheck() {
+  const note = document.getElementById('dc-note');
+  if (!note) return;
+  try {
+    const res = await fetch('/settings/integrations/domain-check');
+    const d = await res.json();
+    if (!d.ok) { note.textContent = d.error; return; }
+    [['dc-spf', d.spf], ['dc-dkim', d.dkim], ['dc-dmarc', d.dmarc]].forEach(([id, ok]) => {
+      const el = document.getElementById(id); el.className = ok ? 'chip-active' : 'chip-warn';
+    });
+    note.textContent = d.domain + ', published records checked just now';
+  } catch (e) { note.textContent = 'Could not check right now.'; }
+}
+async function sendTestEmail(btn) {
+  const status = document.getElementById('test-email-status');
+  btn.disabled = true; status.textContent = 'Sending...';
+  try {
+    const res = await fetch('/settings/integrations/test-email', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() }, body: '{}',
+    });
+    const d = await res.json();
+    status.style.color = d.ok ? 'var(--success)' : 'var(--danger)';
+    status.textContent = d.ok ? 'Sent to ' + d.sent_to : d.error;
+  } catch (e) { status.style.color = 'var(--danger)'; status.textContent = 'The test email was not sent. Try again in a minute.'; }
+  btn.disabled = false;
+}
+runDomainCheck();
+</script>
+{% endblock %}

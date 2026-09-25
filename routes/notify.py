@@ -50,6 +50,7 @@ def _draft(item_type, state, item_title, client, extra_context=None, endpoint="p
     result.update(
         client_id=client.id, contacts=contacts, connected=bool(conn), can_send=can_send,
         sender=conn.email if can_send else None, can_edit=current_user.can_edit_client(client.id),
+        can_connect=current_user.is_admin,
     )
     return jsonify(result), 200
 

@@ -16,26 +16,21 @@
 <div class="section">
   <div class="flex-between mb-16">
     <h2 class="section-title" style="margin-bottom:0;">Upcoming Meetings</h2>
-    {% if calendar_connection %}
-    <form method="POST" action="{{ url_for('calendar.disconnect') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-sm btn-secondary">Disconnect ({{ calendar_connection.email }})</button>
-    </form>
-    {% else %}
-    <a href="{{ url_for('calendar.connect') }}" class="btn btn-sm">Connect Google Calendar</a>
+    {% if current_user.is_admin %}
+    <a href="{{ url_for('auth.integrations') }}" class="btn btn-sm btn-secondary">{{ calendar_connection.email if calendar_connection else 'Connect Google Calendar' }} &middot; Integrations</a>
     {% endif %}
   </div>
 
   {% if not calendar_connection %}
   <div class="empty-state">
     <h3>No calendar connected</h3>
-    <p>Connect Google Calendar to see upcoming meeting titles and participants here.</p>
+    <p>{% if current_user.is_admin %}Connect Google Calendar in Settings, then Integrations, to see upcoming meeting titles and participants here.{% else %}Ask an Administrator to connect Google Calendar in Settings.{% endif %}</p>
   </div>
   {% elif calendar_error %}
   <div class="empty-state">
     <h3>Couldn't load upcoming meetings</h3>
     <p>{{ calendar_error }}</p>
-    <a href="{{ url_for('calendar.connect') }}" class="btn btn-sm mt-16">Reconnect Google Calendar</a>
+    {% if current_user.is_admin %}<a href="{{ url_for('auth.integrations') }}" class="btn btn-sm mt-16">Reconnect in Integrations</a>{% endif %}
   </div>
   {% elif upcoming_events %}
   {% for e in upcoming_events %}

@@ -1,14 +1,16 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
 import backup
+import requests
 from brand import BRAND
 from extensions import db, limiter
-from models import User, Client, ClientAccess, ActionItem, CalendarConnection, ROLES, ROLE_LABELS, log_activity
+from models import User, Client, ClientAccess, ActionItem, CalendarConnection, AuditLog, ROLES, ROLE_LABELS, log_activity
 from permissions import admin_required
-from ai.google_calendar_client import scopes_allow_sending
+from ai.google_calendar_client import CalendarRequestError, scopes_allow_sending, send_gmail
+from routes.calendar import get_valid_access_token
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -89,8 +91,7 @@ def team():
 
     return render_template(
         "team.html", users=users, clients=clients, access_map=access_map, open_items=open_items,
-        google_connection=CalendarConnection.query.first(),
-        google_can_send=bool(CalendarConnection.query.first() and scopes_allow_sending(CalendarConnection.query.first().scopes)),
+
         roles=ROLES, role_labels=ROLE_LABELS,
         backup_status=backup.read_status(current_app._get_current_object()),
         backup_configured=backup._is_configured(current_app._get_current_object()),
@@ -278,3 +279,80 @@ def reactivate_user(user_id):
     db.session.commit()
     flash(f"{user.name} reactivated.", "success")
     return redirect(url_for("auth.team"))
+
+
+# ---------------------------------------------------------------- Integrations
+
+def _doh_txt(name):
+    """TXT records for a name through Cloudflare's DNS-over-HTTPS JSON API."""
+    try:
+        r = requests.get(
+            "https://cloudflare-dns.com/dns-query", params={"name": name, "type": "TXT"},
+            headers={"accept": "application/dns-json"}, timeout=6,
+        )
+        answers = r.json().get("Answer") or []
+    except (requests.RequestException, ValueError):
+        return None
+    return [a.get("data", "").replace('" "', "").strip('"') for a in answers if a.get("type") == 16]
+
+
+@auth_bp.route("/settings/integrations")
+@login_required
+@admin_required
+def integrations():
+    conn = CalendarConnection.query.first()
+    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    sent = AuditLog.query.filter(AuditLog.action == "Client email sent", AuditLog.created_at >= month_start).count()
+    return render_template(
+        "integrations.html", conn=conn, can_send=bool(conn and scopes_allow_sending(conn.scopes)),
+        sent_this_month=sent, fireflies_ok=bool(current_app.config.get("FIREFLIES_API_KEY")),
+        sender_domain=(conn.email.split("@")[-1] if conn and conn.email and "@" in conn.email else None),
+    )
+
+
+@auth_bp.route("/settings/integrations/domain-check")
+@login_required
+@admin_required
+def domain_check():
+    """SPF / DKIM / DMARC published for the sending domain. Reads DNS only, so
+    it says 'published', not that Google has switched DKIM on."""
+    conn = CalendarConnection.query.first()
+    if not conn or not conn.email or "@" not in conn.email:
+        return jsonify(ok=False, error="No Google account connected.")
+    domain = conn.email.split("@")[-1]
+    root = _doh_txt(domain)
+    dkim = _doh_txt(f"google._domainkey.{domain}")
+    dmarc = _doh_txt(f"_dmarc.{domain}")
+    if root is None and dkim is None and dmarc is None:
+        return jsonify(ok=False, error="Could not reach DNS right now. Try again in a minute.")
+    spf_recs = [r for r in (root or []) if r.lower().startswith("v=spf1")]
+    return jsonify(
+        ok=True, domain=domain,
+        spf=bool(spf_recs) and "_spf.google.com" in spf_recs[0] and len(spf_recs) == 1,
+        dkim=any(r.startswith("v=DKIM1") for r in (dkim or [])),
+        dmarc=any(r.upper().startswith("V=DMARC1") for r in (dmarc or [])),
+    )
+
+
+@auth_bp.route("/settings/integrations/test-email", methods=["POST"])
+@login_required
+@admin_required
+@limiter.limit("5 per minute")
+def test_email():
+    conn = CalendarConnection.query.first()
+    if not conn or not scopes_allow_sending(conn.scopes):
+        return jsonify(ok=False, error="Reconnect Google to allow sending email first."), 400
+    token = get_valid_access_token()
+    if not token:
+        return jsonify(ok=False, error="Google needs you to reconnect."), 401
+    try:
+        send_gmail(
+            token, conn.email, [current_user.email], f"Test email from {BRAND.name}",
+            f"This is a test email from {BRAND.name} Intelligence, sent through {conn.email}.\n\nIf you can read this, email sending works.",
+        )
+    except CalendarRequestError as exc:
+        reconnect = str(exc) == "reconnect"
+        return jsonify(ok=False, error="Google needs you to reconnect." if reconnect else "The test email was not sent. Try again in a minute."), 502
+    log_activity(current_user.id, None, "Test email sent", "user", current_user.id, details=current_user.email)
+    db.session.commit()
+    return jsonify(ok=True, sent_to=current_user.email)

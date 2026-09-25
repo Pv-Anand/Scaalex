@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 
 from extensions import db
 from models import CalendarConnection, log_activity
+from permissions import admin_required
 from ai.google_calendar_client import (
     CalendarConfigError, CalendarRequestError,
     build_auth_url, exchange_code_for_tokens, refresh_access_token, fetch_user_email,
@@ -37,6 +38,7 @@ def get_valid_access_token():
 
 @calendar_bp.route("/connect")
 @login_required
+@admin_required
 def connect():
     try:
         redirect_uri = url_for("calendar.oauth_callback", _external=True)
@@ -45,27 +47,28 @@ def connect():
         auth_url = build_auth_url(redirect_uri, state)
     except CalendarConfigError as exc:
         flash(str(exc), "error")
-        return redirect(url_for("fireflies.inbox"))
+        return redirect(url_for("auth.integrations"))
     return redirect(auth_url)
 
 
 @calendar_bp.route("/oauth/callback")
 @login_required
+@admin_required
 def oauth_callback():
     error = request.args.get("error")
     if error:
         flash(f"Google Calendar connection was not completed: {error}", "error")
-        return redirect(url_for("fireflies.inbox"))
+        return redirect(url_for("auth.integrations"))
 
     state = request.args.get("state")
     if not state or state != session.pop("calendar_oauth_state", None):
         flash("Calendar connection failed a security check - please try again.", "error")
-        return redirect(url_for("fireflies.inbox"))
+        return redirect(url_for("auth.integrations"))
 
     code = request.args.get("code")
     if not code:
         flash("Google did not return an authorization code.", "error")
-        return redirect(url_for("fireflies.inbox"))
+        return redirect(url_for("auth.integrations"))
 
     redirect_uri = url_for("calendar.oauth_callback", _external=True)
     try:
@@ -73,7 +76,7 @@ def oauth_callback():
         email = fetch_user_email(tokens["access_token"])
     except CalendarRequestError as exc:
         flash(f"Google Calendar connection failed: {exc}", "error")
-        return redirect(url_for("fireflies.inbox"))
+        return redirect(url_for("auth.integrations"))
 
     expiry = datetime.utcnow() + timedelta(seconds=tokens.get("expires_in", 3600))
 
@@ -94,14 +97,15 @@ def oauth_callback():
     db.session.commit()
 
     flash(f"Connected Google Calendar ({email}).", "success")
-    return redirect(url_for("fireflies.inbox"))
+    return redirect(url_for("auth.integrations"))
 
 
 @calendar_bp.route("/disconnect", methods=["POST"])
 @login_required
+@admin_required
 def disconnect():
     CalendarConnection.query.delete()
     log_activity(current_user.id, None, "Google Calendar disconnected")
     db.session.commit()
     flash("Google Calendar disconnected.", "success")
-    return redirect(url_for("fireflies.inbox"))
+    return redirect(url_for("auth.integrations"))

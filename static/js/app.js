@@ -320,7 +320,7 @@ function mailEmailBlock(data) {
     const reconnect = data.connected;
     const banner = `<div class="mail-banner">
       <div><b>${reconnect ? 'Reconnect Google to allow sending email.' : 'Connect Google to send email from here.'}</b> The app asks for permission to send only. It cannot read your mail.</div>
-      <a class="btn btn-sm" href="/calendar/connect">${reconnect ? 'Reconnect Google' : 'Connect Google'}</a>
+      ${data.can_connect ? `<a class="btn btn-sm" href="/calendar/connect">${reconnect ? 'Reconnect Google' : 'Connect Google'}</a>` : '<span class="small muted">Ask an Administrator</span>'}
     </div>`;
     return `<div class="tmpl-block">
       <div class="tmpl-head"><div class="tmpl-head-label">${envelope} Email</div></div>
@@ -419,7 +419,7 @@ async function sendNotifyEmail() {
     try { out = await res.json(); } catch (e) { /* non-JSON error */ }
     if (!res.ok || !out.ok) {
       hideMailConfirm();
-      const extra = out.reconnect ? ' <a href="/calendar/connect">Reconnect Google</a>' : '';
+      const extra = out.reconnect ? ' <a href="/settings/integrations">Open Integrations</a>' : '';
       status.innerHTML = `<span class="mail-err">${escapeHtml(out.error || 'Email was not sent. Nothing left the app. Try again in a minute.')}</span>${extra}`;
       return;
     }

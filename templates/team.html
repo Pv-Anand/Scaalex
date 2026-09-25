@@ -3,11 +3,12 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <div class="page-eyebrow">Account</div>
+    <div class="page-eyebrow">Settings</div>
     <h1>Team</h1>
   </div>
   <button type="button" class="btn" onclick="toggleAddUser()">+ Add User</button>
 </div>
+{% set settings_tab = 'team' %}{% include "_settings_tabs.html" %}
 <p class="small muted mb-24">Owners and Administrators manage the team and reset passwords. Executives only see the clients they're granted access to. Deactivate a person to stop them signing in without removing them.</p>
 
 <div id="add-user-panel" class="card mb-24" style="display:none; background:var(--grey-50);">
@@ -226,37 +227,6 @@
       {% endfor %}
     </tbody>
   </table>
-</div>
-
-<div class="section mt-32">
-  <h2 class="section-title" style="margin-bottom:4px;">Google connection</h2>
-  <p class="small muted mb-16">One shared Google account for this workspace. It shows upcoming meetings and sends the emails you approve from Notify Client.</p>
-  <div class="card google-card">
-    {% if google_connection %}
-    <div class="google-row">
-      <div style="flex:1; min-width:0;">
-        <div style="font-weight:500;">{{ google_connection.email }}</div>
-        <div class="small muted">Connected {{ google_connection.connected_at.strftime('%d %b %Y') if google_connection.connected_at }}{% if google_connection.connected_by %} by {{ google_connection.connected_by.name }}{% endif %}</div>
-      </div>
-      <span class="chip-active">Active</span>
-    </div>
-    <div class="google-row"><span style="flex:1;">Calendar</span><span class="chip-active">Read only</span></div>
-    <div class="google-row">
-      <span style="flex:1;">Send email</span>
-      {% if google_can_send %}<span class="chip-active">Send only</span>{% else %}<span class="chip-warn">Not allowed yet</span>{% endif %}
-    </div>
-    <div class="flex-gap" style="gap:14px; margin-top:16px; align-items:center;">
-      <a href="{{ url_for('calendar.connect') }}" class="btn btn-sm btn-secondary">{{ 'Reconnect' if google_can_send else 'Reconnect to allow sending' }}</a>
-      <form method="POST" action="{{ url_for('calendar.disconnect') }}" style="display:inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="link-btn small" style="color:var(--danger);">Disconnect</button>
-      </form>
-    </div>
-    {% else %}
-    <p class="small muted" style="margin:0 0 14px;">No Google account connected yet.</p>
-    <a href="{{ url_for('calendar.connect') }}" class="btn btn-sm">Connect Google</a>
-    {% endif %}
-  </div>
 </div>
 
 <div class="section mt-32">
