@@ -207,6 +207,10 @@ class ClientContact(db.Model):
     name = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(200))
     phone = db.Column(db.String(40))
+    # WhatsApp: the number to message, and whether the person agreed to it.
+    whatsapp_number = db.Column(db.String(40))
+    whatsapp_ok = db.Column(db.Boolean, default=False)
+    whatsapp_ok_at = db.Column(db.DateTime)
     designation = db.Column(db.String(120))
     is_primary = db.Column(db.Boolean, default=False)
 

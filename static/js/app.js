@@ -300,7 +300,6 @@ async function openNotifyModal(btn) {
     notifyDraftData = data;
     notifyEntity = { type: entityType, id: entityId };
     renderNotifyTemplates(data);
-    renderMailRecipients();
   } catch (err) {
     document.getElementById('notify-modal-body').innerHTML = `<div class="notify-modal-error">Couldn't generate templates: ${escapeHtml(err.message)}</div>`;
   }
@@ -313,6 +312,101 @@ function linkifyPortalUrl(text) {
 const copyIconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke-linecap="round"/></svg>';
 
 let notifyMail = null;
+const tickSvg = '<svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="#fff" stroke-width="1.8" style="display:block;"><path d="M2.5 6.2l2.4 2.4 4.6-5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const waSvg = '<svg viewBox="0 0 24 24" fill="none"><path fill="#25984a" d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .9.9-2.9-.2-.3A8 8 0 1112 20z"/><path fill="#25984a" d="M17 14.3c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.5-1.8-.1-.2 0-.4.1-.5l.4-.5c.1-.1.1-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.3-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.4 3.8 3.4.5.2.9.4 1.3.5.5.1 1 .1 1.4.1.4-.1 1.3-.5 1.5-1s.2-.9.1-1c0-.1-.2-.2-.4-.3z"/></svg>';
+
+function firstName(full) { return (full || '').trim().split(/\s+/)[0] || ''; }
+function greetingFor(names) {
+  if (!names.length) return 'there';
+  if (names.length === 1) return names[0];
+  return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+}
+function escapeRegex(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function detectGreeting(text) {
+  const m = /^(?:Hi|Hello|Dear)\s+([^,\s]+(?:\s+and\s+[^,\s]+)?)/i.exec(text || '');
+  return m ? m[1] : '';
+}
+function swapGreeting(text, from, to) {
+  if (!from || from === to) return text;
+  return text.replace(new RegExp('^(Hi|Hello|Dear)(\\s+)' + escapeRegex(from), 'i'), (m, g, sp) => g + sp + to);
+}
+function ticked() { return [...notifyMail.selected].sort((x, y) => x - y).map(i => notifyMail.data.contacts[i]); }
+function emailTargets() { return ticked().filter(c => c.email); }
+function waTargets() { return ticked().filter(c => c.whatsapp); }
+
+function recipientsBlock(data) {
+  const contacts = data.contacts || [];
+  if (!contacts.length) {
+    return `<div class="tmpl-block"><div class="tmpl-head"><div class="tmpl-head-label">Send to</div></div>
+      <p class="small muted" style="margin:10px 0 0;">No contacts yet. <a href="/clients/${encodeURIComponent(data.client_slug)}/profile" target="_blank">Add one in Client Profile</a>.</p></div>`;
+  }
+  return `<div class="tmpl-block" id="rcpt-block">
+    <div class="tmpl-head"><div class="tmpl-head-label">Send to</div><button type="button" class="link-btn small" onclick="selectAllRecipients()">Select all</button></div>
+    <div class="rcpt-list" id="rcpt-list"></div>
+    <div class="small" style="margin-top:8px;"><a href="/clients/${encodeURIComponent(data.client_slug)}/profile" target="_blank">+ Add a contact</a> or edit numbers in Client Profile.</div>
+  </div>`;
+}
+
+function renderRecipients() {
+  const box = document.getElementById('rcpt-list');
+  if (!box || !notifyMail) return;
+  const contacts = notifyMail.data.contacts || [];
+  box.innerHTML = contacts.map((c, i) => {
+    const on = notifyMail.selected.has(i);
+    const waText = c.whatsapp ? escapeHtml(c.whatsapp) : (c.whatsapp_number ? '<span class="rcpt-miss">not OK to message</span>' : '<span class="rcpt-miss">no number</span>');
+    const mailText = c.email ? escapeHtml(c.email) : '<span class="rcpt-miss">no email</span>';
+    return `<button type="button" class="rcpt-row" onclick="toggleRecipient(${i})" aria-pressed="${on}">
+      <span class="rcpt-cb ${on ? 'on' : ''}">${on ? tickSvg : ''}</span>
+      <span class="rcpt-name">${escapeHtml(c.name)}</span>
+      <span class="rcpt-mail">${mailText}</span>
+      <span class="rcpt-wa">${waText}</span>
+    </button>`;
+  }).join('');
+  updateSendButtons();
+}
+
+function toggleRecipient(i) {
+  if (notifyMail.selected.has(i)) notifyMail.selected.delete(i); else notifyMail.selected.add(i);
+  syncGreeting();
+  renderRecipients();
+}
+function selectAllRecipients() {
+  const all = notifyMail.data.contacts.length;
+  if (notifyMail.selected.size === all) notifyMail.selected.clear();
+  else notifyMail.data.contacts.forEach((c, i) => notifyMail.selected.add(i));
+  syncGreeting();
+  renderRecipients();
+}
+
+function syncGreeting() {
+  if (!notifyMail) return;
+  const names = ticked().map(c => firstName(c.name));
+  const next = greetingFor(names);
+  const body = document.getElementById('mail-body');
+  if (body) body.value = swapGreeting(body.value, notifyMail.greeting, next);
+  notifyMail.greeting = next;
+}
+
+function updateSendButtons() {
+  const mailBtn = document.getElementById('mail-send-btn');
+  const n = emailTargets().length;
+  if (mailBtn) {
+    mailBtn.textContent = n ? `Send email to ${n}` : 'Send email';
+    mailBtn.disabled = !n;
+  }
+  const waBtn = document.getElementById('wa-send-btn');
+  const w = waTargets().length;
+  if (waBtn) {
+    waBtn.textContent = w ? `Send WhatsApp to ${w}` : 'Send WhatsApp';
+    waBtn.disabled = !w;
+  }
+  const hint = document.getElementById('rcpt-hint');
+  if (hint) {
+    const t = ticked();
+    const skipMail = t.filter(c => !c.email).length, skipWa = t.filter(c => !c.whatsapp).length;
+    hint.textContent = t.length ? [skipMail ? `${skipMail} skipped for email` : '', skipWa ? `${skipWa} skipped for WhatsApp` : ''].filter(Boolean).join(', ') : 'Tick who should receive this.';
+  }
+}
 
 function mailEmailBlock(data) {
   const envelope = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -331,13 +425,10 @@ function mailEmailBlock(data) {
         <button type="button" class="copy-btn" onclick="copyNotifyField('email_body')">${copyIconSvg} Copy</button></div>
     </div>`;
   }
-  const contacts = data.contacts || [];
-  notifyMail = { selected: contacts.length ? new Set([0]) : new Set(), extra: [], data };
   const noEdit = data.can_edit === false;
   return `<div class="tmpl-block" id="mail-block">
     <div class="tmpl-head"><div class="tmpl-head-label">${envelope} Email</div></div>
     <div class="mail-row"><span class="mail-k">From</span><span>${escapeHtml(data.sender)}</span><span class="mail-tag ok">Connected</span></div>
-    <div class="mail-row"><span class="mail-k">To</span><div class="mail-chips" id="mail-to"></div></div>
     <div class="mail-row"><span class="mail-k">Cc</span><input type="text" id="mail-cc" class="mail-input" placeholder="Add Cc (separate with commas)"><label class="mail-bcc"><input type="checkbox" id="mail-bcc"> Bcc me</label></div>
     <div class="mail-row"><span class="mail-k">Subject</span><input type="text" id="mail-subject" class="mail-input" value="${escapeHtml(data.subject)}"></div>
     <textarea id="mail-body" class="mail-body" rows="9">${escapeHtml(data.email_body)}</textarea>
@@ -351,40 +442,45 @@ function mailEmailBlock(data) {
   </div>`;
 }
 
-function renderMailRecipients() {
-  const box = document.getElementById('mail-to');
-  if (!box || !notifyMail) return;
-  const contacts = notifyMail.data.contacts || [];
-  let html = contacts.map((c, i) => `<button type="button" class="mail-chip ${notifyMail.selected.has(i) ? 'on' : ''}" onclick="toggleMailTo(${i})" aria-pressed="${notifyMail.selected.has(i)}">${notifyMail.selected.has(i) ? '&#10003; ' : ''}${escapeHtml(c.name)} &middot; ${escapeHtml(c.email)}</button>`).join('');
-  html += notifyMail.extra.map((a, i) => `<button type="button" class="mail-chip on" onclick="removeMailExtra(${i})" title="Remove">&#10003; ${escapeHtml(a)} &times;</button>`).join('');
-  html += '<input type="text" id="mail-extra" class="mail-input mail-extra" placeholder="+ Add address" onkeydown="mailExtraKey(event)" onblur="addMailExtra()">';
-  box.innerHTML = html;
+function whatsappBlock(data) {
+  return `<div class="tmpl-block">
+    <div class="tmpl-head"><div class="tmpl-head-label">${waSvg} WhatsApp</div>
+      <button type="button" class="copy-btn" onclick="copyNotifyField('whatsapp_body')">${copyIconSvg} Copy</button></div>
+    <div class="tmpl-body">${linkifyPortalUrl(escapeHtml(data.whatsapp_body))}</div>
+    <div class="mail-actions">
+      <button type="button" class="btn btn-wa" id="wa-send-btn" onclick="sendWhatsApp()">Send WhatsApp</button>
+    </div>
+    <div class="small muted" style="margin-top:8px;">Opens WhatsApp with the message ready for each person. You press Send there.</div>
+    <div id="wa-links" class="wa-links"></div>
+  </div>`;
 }
 
-function toggleMailTo(i) { if (notifyMail.selected.has(i)) notifyMail.selected.delete(i); else notifyMail.selected.add(i); renderMailRecipients(); }
-function removeMailExtra(i) { notifyMail.extra.splice(i, 1); renderMailRecipients(); }
-function addMailExtra() {
-  const el = document.getElementById('mail-extra');
-  if (!el || !el.value.trim()) return;
-  el.value.split(/[,;\s]+/).map(v => v.trim().toLowerCase()).filter(Boolean).forEach(v => { if (notifyMail.extra.indexOf(v) < 0) notifyMail.extra.push(v); });
-  renderMailRecipients();
+function waLink(contact) {
+  const text = swapGreeting(notifyMail.data.whatsapp_body, detectGreeting(notifyMail.data.whatsapp_body), firstName(contact.name));
+  return 'https://wa.me/' + contact.whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent(text);
 }
-function mailExtraKey(e) { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addMailExtra(); } }
+function sendWhatsApp() {
+  const targets = waTargets();
+  const box = document.getElementById('wa-links');
+  box.innerHTML = '';
+  if (!targets.length) return;
+  if (targets.length === 1) { window.open(waLink(targets[0]), '_blank', 'noopener'); return; }
+  box.innerHTML = targets.map(c => `<a class="wa-link" href="${waLink(c)}" target="_blank" rel="noopener">Message ${escapeHtml(firstName(c.name))} (${escapeHtml(c.whatsapp)})</a>`).join('');
+}
 
 function mailRecipients() {
-  const contacts = notifyMail.data.contacts || [];
-  const to = [...notifyMail.selected].map(i => contacts[i].email).concat(notifyMail.extra);
+  const to = emailTargets().map(c => c.email);
   const cc = (document.getElementById('mail-cc').value || '').split(/[,;\s]+/).map(v => v.trim()).filter(Boolean);
   return { to, cc };
 }
 
 function showMailConfirm() {
-  addMailExtra();
   const { to } = mailRecipients();
   const status = document.getElementById('mail-status');
   status.textContent = '';
-  if (!to.length) { status.innerHTML = '<span class="mail-err">Choose at least one recipient.</span>'; return; }
-  const names = to.map(a => { const c = (notifyMail.data.contacts || []).find(x => x.email === a); return c ? c.name : a; });
+  if (!to.length) { status.innerHTML = '<span class="mail-err">Choose at least one person to send to.</span>'; return; }
+  if (to.length > 5) { status.innerHTML = '<span class="mail-err">Send to at most 5 people at once.</span>'; return; }
+  const names = emailTargets().map(c => c.name);
   const who = names.length === 1 ? names[0] : names.length + ' people';
   const box = document.getElementById('mail-confirm');
   box.innerHTML = `<div class="mail-confirm-text"><div class="mail-confirm-title">Send this email to ${escapeHtml(who)}?</div>
@@ -423,7 +519,7 @@ async function sendNotifyEmail() {
       status.innerHTML = `<span class="mail-err">${escapeHtml(out.error || 'Email was not sent. Nothing left the app. Try again in a minute.')}</span>${extra}`;
       return;
     }
-    const names = out.sent_to.join(', ');
+    const names = emailTargets().map(c => c.name).join(', ');
     document.getElementById('mail-block').innerHTML = `<div class="tmpl-head"><div class="tmpl-head-label">Email</div><span class="mail-tag ok">Email sent</span></div>
       <p class="small" style="margin:10px 0 0; line-height:1.6;">Sent to <b>${escapeHtml(names)}</b> from ${escapeHtml(out.sender)}. It is in that account's Sent folder, and replies will arrive there.</p>`;
     showToast('Email sent to ' + names);
@@ -440,17 +536,13 @@ async function copyMailMessage() {
 }
 
 function renderNotifyTemplates(data) {
-  document.getElementById('notify-modal-body').innerHTML = mailEmailBlock(data) + `
-    <div class="tmpl-block">
-      <div class="tmpl-head">
-        <div class="tmpl-head-label">
-          <svg viewBox="0 0 24 24" fill="none"><path fill="#25984a" d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .9.9-2.9-.2-.3A8 8 0 1112 20z"/><path fill="#25984a" d="M17 14.3c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.5-1.8-.1-.2 0-.4.1-.5l.4-.5c.1-.1.1-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.3-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.4 3.8 3.4.5.2.9.4 1.3.5.5.1 1 .1 1.4.1.4-.1 1.3-.5 1.5-1s.2-.9.1-1c0-.1-.2-.2-.4-.3z"/></svg>
-          WhatsApp
-        </div>
-        <button type="button" class="copy-btn" onclick="copyNotifyField('whatsapp_body')">${copyIconSvg} Copy</button>
-      </div>
-      <div class="tmpl-body">${linkifyPortalUrl(escapeHtml(data.whatsapp_body))}</div>
-    </div>`;
+  const contacts = data.contacts || [];
+  const primary = contacts.findIndex(c => c.primary);
+  notifyMail = { data, selected: new Set(contacts.length ? [primary >= 0 ? primary : 0] : []), greeting: detectGreeting(data.email_body) || data.greeting_name || '' };
+  document.getElementById('notify-modal-body').innerHTML =
+    recipientsBlock(data) + '<div class="small rcpt-hint" id="rcpt-hint"></div>' + mailEmailBlock(data) + whatsappBlock(data);
+  syncGreeting();
+  renderRecipients();
 }
 
 function copyNotifyField(field) {

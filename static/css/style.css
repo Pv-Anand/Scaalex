@@ -1081,3 +1081,20 @@ input.mail-extra, input[type=text].mail-extra { flex: 0 1 150px; min-width: 100p
 .chip-blue { font-size: 10.5px; font-weight: 500; padding: 2px 9px; border-radius: 20px; background: #e8edf9; color: #2b4a8b; white-space: nowrap; display: inline-flex; }
 .sorting-form { margin-top: 14px; border-top: 1px solid var(--grey-100); padding-top: 12px; }
 .sorting-form input[type=text] { margin-top: 6px; }
+
+/* ---- Notify Client: one list of people to tick ---- */
+.rcpt-list { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--radius); }
+.rcpt-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; background: var(--white); border: none; border-bottom: 1px solid var(--grey-100); font: inherit; font-size: 12.5px; cursor: pointer; text-align: left; color: var(--black); }
+.rcpt-row:last-child { border-bottom: none; }
+.rcpt-row:hover { background: var(--grey-50); }
+.rcpt-cb { width: 16px; height: 16px; border: 1.5px solid var(--grey-300); border-radius: 3px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+.rcpt-cb.on { background: var(--black); border-color: var(--black); }
+.rcpt-name { flex: 1; min-width: 0; font-weight: 500; }
+.rcpt-mail { font-size: 11.5px; color: var(--grey-500); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rcpt-wa { font-size: 11.5px; color: var(--grey-500); width: 118px; text-align: right; white-space: nowrap; flex-shrink: 0; }
+.rcpt-miss { color: var(--grey-300); }
+.rcpt-hint { margin: 6px 2px 12px; }
+.btn-wa { background: #1f8f4a; border-color: #1f8f4a; color: var(--white); white-space: nowrap; }
+.btn-wa:disabled, .mail-actions .btn:disabled { opacity: .4; cursor: not-allowed; }
+.wa-links { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.wa-link { font-size: 12.5px; color: #1f8f4a; text-decoration: underline; }

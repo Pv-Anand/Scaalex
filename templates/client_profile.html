@@ -26,7 +26,7 @@
   <div class="table-wrap">
     {% if contacts %}
     <table class="table">
-      <thead><tr><th>Name</th><th>Designation</th><th>Email</th><th>Phone</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Designation</th><th>Email</th><th>Phone</th><th>WhatsApp</th><th></th></tr></thead>
       <tbody>
         {% for c in contacts %}
         <tr>
@@ -35,6 +35,11 @@
           <td>{{ c.email or '-' }}</td>
           <td>{{ c.phone or '-' }}</td>
           <td style="white-space:nowrap;">
+            {% if c.whatsapp_number %}{{ c.whatsapp_number }}{% if not c.whatsapp_ok %}<div class="small muted">not confirmed</div>{% endif %}
+            {% else %}<button type="button" class="small link-btn" onclick="toggleContactEdit({{ c.id }})">+ Add number</button>{% endif %}
+          </td>
+          <td style="white-space:nowrap;">
+            <button type="button" class="small link-btn" onclick="toggleContactEdit({{ c.id }})">Edit</button> &middot;
             {% if not c.is_primary %}
             <form method="POST" action="{{ url_for('clients.make_primary_contact', slug=client.slug, contact_id=c.id) }}" style="display:inline;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -45,6 +50,32 @@
             <form method="POST" action="{{ url_for('clients.delete_contact', slug=client.slug, contact_id=c.id) }}" style="display:inline;" onsubmit="return confirm('Remove {{ c.name }} as a contact?');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="small link-btn" style="color:var(--danger);">Remove</button>
+            </form>
+          </td>
+        </tr>
+        <tr id="contact-edit-{{ c.id }}" style="display:none;">
+          <td colspan="6" style="background:var(--grey-50); padding:18px;">
+            <form method="POST" action="{{ url_for('clients.edit_contact', slug=client.slug, contact_id=c.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="form-row">
+                <div class="form-group"><label>Name</label><input type="text" name="name" value="{{ c.name }}" required></div>
+                <div class="form-group"><label>Designation</label><input type="text" name="designation" value="{{ c.designation or '' }}"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ c.email or '' }}"></div>
+                <div class="form-group"><label>Phone (portal sign-in)</label><input type="text" name="phone" value="{{ c.phone or '' }}"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>WhatsApp number</label><input type="text" name="whatsapp_number" value="{{ c.whatsapp_number or '' }}" placeholder="+91 98200 10001"></div>
+                <div class="form-group"><label>&nbsp;</label>
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:400; padding-top:9px;"><input type="checkbox" name="whatsapp_ok" value="1" {{ 'checked' if c.whatsapp_ok }} style="width:auto;"> OK to message this person on WhatsApp</label>
+                </div>
+              </div>
+              <div class="small muted" style="margin-bottom:12px;">Include the country code, for example +91. The tickbox is the person's consent, which WhatsApp requires.</div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <button type="submit" class="btn btn-sm">Save</button>
+                <button type="button" class="link-btn small muted" onclick="toggleContactEdit({{ c.id }})">Cancel</button>
+              </div>
             </form>
           </td>
         </tr>
@@ -78,8 +109,18 @@
             <input type="email" name="email">
           </div>
           <div class="form-group">
-            <label>Phone</label>
+            <label>Phone (portal sign-in)</label>
             <input type="text" name="phone">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>WhatsApp number</label>
+            <input type="text" name="whatsapp_number" placeholder="+91 98200 10001">
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:400; padding-top:9px;"><input type="checkbox" name="whatsapp_ok" value="1" style="width:auto;"> OK to message this person on WhatsApp</label>
           </div>
         </div>
         <div class="form-group">
@@ -158,6 +199,10 @@
 </div>
 
 <script>
+function toggleContactEdit(id) {
+  const row = document.getElementById('contact-edit-' + id);
+  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
 function toggleAddContact() {
   var form = document.getElementById('add-contact-form');
   form.style.display = form.style.display === 'none' ? 'block' : 'none';

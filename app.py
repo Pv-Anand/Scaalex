@@ -231,6 +231,7 @@ def _ensure_schema_migrations(app):
             ("portal_access", "BOOLEAN DEFAULT 0"), ("password_hash", "VARCHAR(255)"),
             ("must_change_password", "BOOLEAN DEFAULT 1"), ("last_login_at", "DATETIME"),
             ("terms_accepted_at", "DATETIME"), ("data_room_access", "BOOLEAN DEFAULT 0"),
+            ("whatsapp_number", "VARCHAR(40)"), ("whatsapp_ok", "BOOLEAN DEFAULT 0"), ("whatsapp_ok_at", "DATETIME"),
         ):
             if column not in contact_columns:
                 conn.execute(db.text(f"ALTER TABLE client_contacts ADD COLUMN {column} {ddl_type}"))

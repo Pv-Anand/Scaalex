@@ -21,6 +21,38 @@ clients_bp = Blueprint("clients", __name__, url_prefix="/clients")
 RESERVED_PORTAL_SLUGS = {"login", "choose", "logout", ""}
 
 
+def clean_whatsapp_number(raw):
+    """Normalise a WhatsApp number. Returns (number, error). Empty is fine.
+    The number must start with the country code (+91 ...) and hold 8 to 15
+    digits, which is what WhatsApp itself accepts."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None, None
+    digits = re.sub(r"\D", "", raw)
+    if not raw.startswith("+"):
+        return None, "Start the number with the country code, for example +91."
+    if len(digits) < 8:
+        return None, "That number is too short. Include the country code and all digits."
+    if len(digits) > 15:
+        return None, "That number is too long. Check the digits."
+    return "+" + digits, None
+
+
+def _apply_whatsapp(contact, form):
+    """Set the WhatsApp fields from a submitted form. Returns an error message or None."""
+    number, error = clean_whatsapp_number(form.get("whatsapp_number"))
+    if error:
+        return error
+    contact.whatsapp_number = number
+    ok = bool(form.get("whatsapp_ok")) and bool(number)
+    if ok and not contact.whatsapp_ok:
+        contact.whatsapp_ok_at = datetime.utcnow()
+    if not ok:
+        contact.whatsapp_ok_at = None
+    contact.whatsapp_ok = ok
+    return None
+
+
 def slugify(name):
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     base = slug
@@ -276,11 +308,40 @@ def add_contact(slug):
         designation=request.form.get("designation", "").strip() or None,
         is_primary=make_primary,
     )
+    error = _apply_whatsapp(contact, request.form)
+    if error:
+        db.session.rollback()
+        flash(f"{name} was not added. {error}", "error")
+        return redirect(url_for("clients.profile", slug=slug))
     db.session.add(contact)
     db.session.flush()
     log_activity(current_user.id, client.id, "Client contact added", "client_contact", contact.id, details=name)
     db.session.commit()
     flash(f"{name} added as a contact.", "success")
+    return redirect(url_for("clients.profile", slug=slug))
+
+
+@clients_bp.route("/<slug>/profile/contacts/<int:contact_id>/edit", methods=["POST"])
+@login_required
+def edit_contact(slug, contact_id):
+    client = get_client_or_404(slug)
+    contact = ClientContact.query.filter_by(id=contact_id, client_id=client.id).first_or_404()
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Contact name is required.", "error")
+        return redirect(url_for("clients.profile", slug=slug))
+    error = _apply_whatsapp(contact, request.form)
+    if error:
+        db.session.rollback()
+        flash(f"{contact.name} was not changed. {error}", "error")
+        return redirect(url_for("clients.profile", slug=slug))
+    contact.name = name
+    contact.designation = request.form.get("designation", "").strip() or None
+    contact.email = request.form.get("email", "").strip() or None
+    contact.phone = request.form.get("phone", "").strip() or None
+    log_activity(current_user.id, client.id, "Client contact updated", "client_contact", contact.id, details=name)
+    db.session.commit()
+    flash(f"{name} updated.", "success")
     return redirect(url_for("clients.profile", slug=slug))
 
 

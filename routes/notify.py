@@ -42,15 +42,19 @@ def _draft(item_type, state, item_title, client, extra_context=None, endpoint="p
     conn = CalendarConnection.query.first()
     can_send = bool(conn and scopes_allow_sending(conn.scopes))
     contacts = [
-        {"name": c.name, "email": c.email, "primary": bool(c.is_primary)}
+        {
+            "name": c.name, "email": c.email, "primary": bool(c.is_primary),
+            "whatsapp": c.whatsapp_number if c.whatsapp_ok else None,
+            "whatsapp_number": c.whatsapp_number, "whatsapp_ok": bool(c.whatsapp_ok),
+        }
         for c in client.contacts.order_by(ClientContact.is_primary.desc(), ClientContact.created_at.asc()).all()
-        if c.email
     ]
     result = dict(result)
     result.update(
         client_id=client.id, contacts=contacts, connected=bool(conn), can_send=can_send,
         sender=conn.email if can_send else None, can_edit=current_user.can_edit_client(client.id),
-        can_connect=current_user.is_admin,
+        can_connect=current_user.is_admin, greeting_name=_contact_first_name(client),
+        client_slug=client.slug,
     )
     return jsonify(result), 200
 
