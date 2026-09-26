@@ -9,6 +9,7 @@ from ai.fireflies_client import (
     FirefliesConfigError, FirefliesRequestError,
     fetch_recent_transcripts, fetch_transcript_detail,
     parse_fireflies_date, extract_participant_names, build_transcript_text,
+    pick_overview, pick_action_items,
 )
 from ai.google_calendar_client import CalendarRequestError, fetch_upcoming_events, parse_event
 from routes.calendar import get_valid_access_token
@@ -48,9 +49,45 @@ def _is_sales_meeting(attendees):
     return any((a.get("email") or "").strip().lower() in sales for a in attendees or [])
 
 
+def _notes_from(overview, summary):
+    """Notes the AI extraction works from: the summary, plus Fireflies' own
+    action items when it listed any."""
+    actions = pick_action_items(summary)
+    return overview + (f"\n\nAction items noted by Fireflies:\n{actions}" if actions else "")
+
+
+def _refresh_incomplete(record, detail):
+    """A meeting can sync before Fireflies has finished processing it, leaving
+    the summary or transcript empty. Fill in whatever is now available, and
+    update the conversation made from it if that was left blank too. Returns
+    True when something changed."""
+    summary = detail.get("summary") or {}
+    overview = pick_overview(summary)
+    transcript_text = build_transcript_text(detail.get("sentences"))
+    changed = False
+    if overview and not record.fireflies_overview:
+        record.fireflies_overview = overview
+        changed = True
+    if transcript_text and not record.transcript:
+        record.transcript = transcript_text
+        changed = True
+    conv = Conversation.query.get(record.assigned_conversation_id) if record.assigned_conversation_id else None
+    if conv:
+        if overview and not (conv.raw_notes or "").strip():
+            conv.raw_notes = _notes_from(overview, summary)
+            changed = True
+        if transcript_text and not conv.transcript:
+            conv.transcript = transcript_text
+            conv.transcript_status = "ready"
+            changed = True
+    return changed
+
+
 def _sync_transcripts():
-    meetings = fetch_recent_transcripts(limit=25)
-    existing_ids = {m.fireflies_id for m in FirefliesMeeting.query.all()}
+    meetings = fetch_recent_transcripts(limit=50)
+    existing = {m.fireflies_id: m for m in FirefliesMeeting.query.all()}
+    existing_ids = set(existing)
+    refreshed = 0
 
     new_count = 0
     auto_matched_count = 0
@@ -58,7 +95,13 @@ def _sync_transcripts():
 
     for m in meetings:
         fid = m.get("id")
-        if not fid or fid in existing_ids:
+        if not fid:
+            continue
+        if fid in existing_ids:
+            record = existing[fid]
+            if not (record.fireflies_overview and record.transcript):
+                if _refresh_incomplete(record, fetch_transcript_detail(fid)):
+                    refreshed += 1
             continue
 
         detail = fetch_transcript_detail(fid)
@@ -68,7 +111,7 @@ def _sync_transcripts():
         participant_names = extract_participant_names(attendees)
         transcript_text = build_transcript_text(detail.get("sentences"))
         summary = detail.get("summary") or {}
-        overview = summary.get("short_overview") or ""
+        overview = pick_overview(summary)
 
         is_sales = _is_sales_meeting(attendees)
         # Sales meetings are prospects, not projects: never match them to a client.
@@ -102,7 +145,7 @@ def _sync_transcripts():
                 interaction_type="Video Call",
                 date=meeting_date,
                 participants=participant_names,
-                raw_notes=overview,
+                raw_notes=_notes_from(overview, summary),
                 transcript=transcript_text,
                 transcript_status="ready",
                 source="fireflies",
@@ -127,7 +170,7 @@ def _sync_transcripts():
             )
 
     db.session.commit()
-    return new_count, auto_matched_count, sales_count
+    return new_count, auto_matched_count, sales_count, refreshed
 
 
 @fireflies_bp.route("")
@@ -183,7 +226,7 @@ def inbox():
 @limiter.limit("10 per minute")
 def sync():
     try:
-        new_count, auto_matched, sales_count = _sync_transcripts()
+        new_count, auto_matched, sales_count, refreshed = _sync_transcripts()
     except FirefliesConfigError as exc:
         flash(str(exc), "error")
         return redirect(url_for("fireflies.inbox"))
@@ -192,12 +235,16 @@ def sync():
         return redirect(url_for("fireflies.inbox"))
 
     if new_count == 0:
-        flash("No new meetings found since the last sync.", "info")
+        flash(
+            f"No new meetings found. {refreshed} earlier meeting(s) had their summary or transcript filled in." if refreshed
+            else "No new meetings found since the last sync.", "info",
+        )
     else:
         review = new_count - auto_matched - sales_count
         flash(
             f"Synced {new_count} new meeting(s) - {auto_matched} auto-matched to a project, "
-            f"{sales_count} filed under Sales, {review} need manual review below.",
+            f"{sales_count} filed under Sales, {review} need manual review below."
+            + (f" {refreshed} earlier meeting(s) also had their summary filled in." if refreshed else ""),
             "success",
         )
     return redirect(url_for("fireflies.inbox"))

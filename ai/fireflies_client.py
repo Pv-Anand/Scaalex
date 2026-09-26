@@ -85,7 +85,7 @@ query Transcript($transcriptId: String!) {
     date
     duration
     sentences { text speaker_name }
-    summary { short_overview action_items keywords }
+    summary { short_overview short_summary overview gist bullet_gist action_items keywords }
     meeting_attendees { name email displayName }
   }
 }
@@ -140,3 +140,24 @@ def build_transcript_text(sentences):
         if text:
             lines.append(f"{speaker}: {text}")
     return "\n".join(lines)
+
+
+def pick_overview(summary):
+    """The call summary as text. Fireflies has moved the summary between
+    fields over time (short_overview is now usually empty), so take the first
+    one that has content, fullest first."""
+    summary = summary or {}
+    for field in ("short_summary", "overview", "short_overview", "bullet_gist", "gist"):
+        value = summary.get(field)
+        if isinstance(value, list):
+            value = "\n".join(str(v) for v in value if v)
+        if value and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
+def pick_action_items(summary):
+    value = (summary or {}).get("action_items")
+    if isinstance(value, list):
+        value = "\n".join(str(v) for v in value if v)
+    return (value or "").strip()
