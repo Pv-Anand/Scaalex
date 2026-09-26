@@ -1129,17 +1129,17 @@ input.mail-extra, input[type=text].mail-extra { flex: 0 1 150px; min-width: 100p
 .mt-banner .mt-dot { margin-top: 6px; }
 .mt-banner-plain { background: var(--grey-50); color: var(--grey-700); border: 1px solid var(--line); }
 .mt-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; flex-shrink: 0; }
-.mt-next { background: var(--black); color: var(--white); border-radius: 4px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
+.mt-box { border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 20px; margin-bottom: 20px; }
+.mt-box-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0 10px; flex-wrap: wrap; }
+.mt-next { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 0 16px; border-bottom: 1px solid var(--line); }
 .mt-next-main { min-width: 0; }
-.mt-next-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--grey-300); }
-.mt-next-title { font-size: 18px; font-weight: 600; margin-top: 7px; overflow-wrap: anywhere; }
-.mt-next-foot { display: flex; align-items: center; gap: 12px; margin-top: 11px; flex-wrap: wrap; }
-.mt-next .mt-av { border-color: var(--black); }
-.mt-join-inv { background: var(--white); color: var(--black); border-color: var(--white); white-space: nowrap; flex-shrink: 0; }
-.mt-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 6px; flex-wrap: wrap; }
-.mt-agenda { margin-bottom: 8px; }
+.mt-next-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--grey-500); }
+.mt-next-title { font-size: 18px; font-weight: 600; margin-top: 6px; overflow-wrap: anywhere; }
+.mt-next-foot { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.mt-join { white-space: nowrap; flex-shrink: 0; }
+.mt-next + .mt-row, .mt-box-head + .mt-row { border-top: none; }
+.mt-box-rec .empty-state { border: none; }
 .mt-row { display: grid; grid-template-columns: 56px 84px minmax(0, 1fr) 150px 78px; align-items: center; gap: 14px; padding: 13px 0; border-top: 1px solid var(--line); }
-.mt-agenda .mt-row:first-child { border-top: none; }
 .mt-dd b { display: block; font-size: 20px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .mt-dd span { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--grey-500); }
 .mt-tm { font-size: 12.5px; color: var(--grey-700); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -1163,11 +1163,12 @@ input.mail-extra, input[type=text].mail-extra { flex: 0 1 150px; min-width: 100p
 .mt-seg .tab-btn i { font-style: normal; font-size: 11px; color: var(--grey-500); margin-left: 5px; }
 .mt-seg .tab-btn.active { background: var(--white); color: var(--black); font-weight: 600; box-shadow: 0 1px 2px rgba(10,10,10,.1); }
 .mt-rec { display: grid; grid-template-columns: minmax(0, 1fr) 150px 70px; align-items: center; gap: 14px; padding: 13px 0; border-top: 1px solid var(--line); }
-.mt-rec-list .mt-rec:first-child { border-top: none; }
+
 .mt-kp { font-size: 12.5px; color: var(--grey-700); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mt-date { text-align: right; white-space: nowrap; }
 .mt-dest { min-width: 0; }
-#tab-pending, #tab-completed, #tab-sales { margin-top: 14px; }
+#tab-pending, #tab-completed, #tab-sales { padding-bottom: 6px; }
+.mt-box-rec .empty-state { margin: 6px 0 14px; }
 @media (max-width: 720px) {
   .mt-sync .small { display: none; }
   .mt-row { grid-template-columns: 44px minmax(0, 1fr) auto; row-gap: 6px; }
@@ -1179,7 +1180,7 @@ input.mail-extra, input[type=text].mail-extra { flex: 0 1 150px; min-width: 100p
   .mt-rec { grid-template-columns: minmax(0, 1fr) auto; }
   .mt-rec .mt-date { display: none; }
   .mt-next { flex-direction: column; align-items: stretch; }
-  .mt-join-inv { width: 100%; box-sizing: border-box; }
+  .mt-join { width: 100%; box-sizing: border-box; text-align: center; }
   .mt-seg { width: 100%; }
   .mt-seg .tab-btn { flex: 1; padding: 6px 4px; }
 }

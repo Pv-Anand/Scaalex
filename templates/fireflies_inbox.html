@@ -32,7 +32,7 @@
 {% macro dest_chip(e) %}
   {% if e.dest_kind == 'sales' %}<span class="mt-chip mt-chip-blue">Sales</span>
   {% elif e.dest_kind == 'client' %}<span class="mt-chip mt-chip-green"><span class="mt-dot"></span>{{ e.dest_name }}</span>
-  {% else %}<span class="mt-chip mt-chip-warn">Needs review</span>{% endif %}
+  {% endif %}
 {% endmacro %}
 {% block content %}
 <div class="page-header">
@@ -68,22 +68,21 @@
     {% if current_user.is_admin %}<a href="{{ url_for('auth.integrations') }}" class="btn btn-sm mt-16">Reconnect in Integrations</a>{% endif %}
   </div>
   {% elif upcoming_events %}
-  {% if next_up %}
-  <div class="mt-next">
-    <div class="mt-next-main">
-      <div class="mt-next-label">Next up - {{ next_up.start.strftime('%a %d %b, %-I:%M %p') }}, {{ starts_in(next_up.minutes_away) }}</div>
-      <div class="mt-next-title">{{ next_up.title }}</div>
-      <div class="mt-next-foot">{{ avatars(next_up) }}{{ dest_chip(next_up) }}</div>
+  <div class="mt-box">
+    <div class="mt-box-head">
+      <h2 class="section-title" style="margin:0;">Upcoming</h2>
+      {% if current_user.is_admin %}<a href="{{ url_for('auth.integrations') }}" class="small muted">{{ calendar_connection.email }}</a>{% endif %}
     </div>
-    {% if next_up.meet_link %}<a class="btn mt-join-inv" href="{{ next_up.meet_link }}" target="_blank" rel="noopener">Join Meet</a>{% endif %}
-  </div>
-  {% endif %}
-  {% if agenda_days %}
-  <div class="mt-head">
-    <h2 class="section-title" style="margin:0;">Coming up</h2>
-    {% if current_user.is_admin %}<a href="{{ url_for('auth.integrations') }}" class="small muted">{{ calendar_connection.email }}</a>{% endif %}
-  </div>
-  <div class="mt-agenda">
+    {% if next_up %}
+    <div class="mt-next">
+      <div class="mt-next-main">
+        <div class="mt-next-label">Next up - {{ next_up.start.strftime('%a %d %b, %-I:%M %p') }}, {{ starts_in(next_up.minutes_away) }}</div>
+        <div class="mt-next-title">{{ next_up.title }}</div>
+        <div class="mt-next-foot">{{ avatars(next_up) }}{{ dest_chip(next_up) }}</div>
+      </div>
+      {% if next_up.meet_link %}<a class="btn mt-join" href="{{ next_up.meet_link }}" target="_blank" rel="noopener">Join Meet</a>{% endif %}
+    </div>
+    {% endif %}
     {% for day in agenda_days %}{% for e in day.events %}
     <div class="mt-row">
       <div class="mt-dd">{% if loop.first and day.date %}<b>{{ day.date.strftime('%d') }}</b><span>{{ day.date.strftime('%a') }}</span>{% endif %}</div>
@@ -94,7 +93,6 @@
     </div>
     {% endfor %}{% endfor %}
   </div>
-  {% endif %}
   {% else %}
   <div class="empty-state">
     <h3>No upcoming meetings</h3>
@@ -103,8 +101,8 @@
   {% endif %}
 </div>
 
-<div class="section">
-  <div class="mt-head">
+<div class="section mt-box mt-box-rec">
+  <div class="mt-box-head">
     <h2 class="section-title" style="margin:0;">Recorded</h2>
     <div class="mt-seg">
       <button type="button" class="tab-btn active" id="tab-pending-btn" onclick="switchMeetingTab('pending')">Needs review <i>{{ pending|length }}</i></button>
