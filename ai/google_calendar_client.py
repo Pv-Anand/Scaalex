@@ -161,12 +161,21 @@ def parse_event(event: dict) -> dict:
 
     attendees = []
     emails = []
+    people = []
     for a in event.get("attendees") or []:
         name = a.get("displayName") or a.get("email")
         if name and name not in attendees:
             attendees.append(name)
         if a.get("email"):
             emails.append(a["email"].strip().lower())
+            people.append({"name": name, "email": a["email"].strip().lower()})
+
+    meet_link = event.get("hangoutLink")
+    if not meet_link:
+        for entry in (event.get("conferenceData") or {}).get("entryPoints") or []:
+            if entry.get("entryPointType") == "video" and entry.get("uri"):
+                meet_link = entry["uri"]
+                break
 
     return {
         "id": event.get("id"),
@@ -175,6 +184,8 @@ def parse_event(event: dict) -> dict:
         "is_all_day": is_all_day,
         "attendees": attendees,
         "attendee_emails": emails,
+        "people": people,
+        "meet_link": meet_link,
         "html_link": event.get("htmlLink"),
     }
 

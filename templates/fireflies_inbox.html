@@ -26,31 +26,40 @@
   <details class="sales-transcript"><summary>Full summary</summary><div class="sales-transcript-box">{{ m.fireflies_overview }}</div></details>
   {% endif %}
 {% endmacro %}
+{% macro avatars(e) %}
+  <div class="mt-avs">{% for a in e.avatars %}<span class="mt-av{{ ' mt-av-ext' if a.external }}" title="{{ a.label }}">{{ a.initials }}</span>{% endfor %}{% if e.more_people %}<span class="mt-av mt-av-more">+{{ e.more_people }}</span>{% endif %}</div>
+{% endmacro %}
+{% macro dest_chip(e) %}
+  {% if e.dest_kind == 'sales' %}<span class="mt-chip mt-chip-blue">Sales</span>
+  {% elif e.dest_kind == 'client' %}<span class="mt-chip mt-chip-green"><span class="mt-dot"></span>{{ e.dest_name }}</span>
+  {% else %}<span class="mt-chip mt-chip-warn">Needs review</span>{% endif %}
+{% endmacro %}
 {% block content %}
 <div class="page-header">
   <div>
     <div class="page-eyebrow">Meeting Sync</div>
     <h1>Meetings</h1>
-    <div class="page-subtitle">Meetings recorded by Fireflies sync here automatically. Ones we can confidently match to a client become part of that client's record right away - anything else waits below for you to assign.</div>
   </div>
-  <form method="POST" action="{{ url_for('fireflies.sync') }}" style="flex-shrink:0;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn" style="white-space:nowrap;">Sync Now</button>
-  </form>
+  <div class="mt-sync">
+    <span class="small muted">{{ last_synced }}</span>
+    <form method="POST" action="{{ url_for('fireflies.sync') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn" style="white-space:nowrap;" {% if limit_until %}disabled{% endif %}>Sync Now</button>
+    </form>
+  </div>
 </div>
 
-<div class="section">
-  <div class="flex-between mb-16">
-    <h2 class="section-title" style="margin-bottom:0;">Upcoming Meetings</h2>
-    {% if current_user.is_admin %}
-    <a href="{{ url_for('auth.integrations') }}" class="btn btn-sm btn-secondary">{{ calendar_connection.email if calendar_connection else 'Connect Google Calendar' }} &middot; Integrations</a>
-    {% endif %}
-  </div>
+{% if limit_until %}
+<div class="mt-banner"><span class="mt-dot"></span><span><b>Fireflies limit reached.</b> Sync works again after 5:30 AM IST. Nothing is lost; the recordings are still in Fireflies.</span></div>
+{% elif not fireflies_configured and current_user.is_admin %}
+<div class="mt-banner mt-banner-plain"><span class="mt-dot"></span><span>Fireflies is not connected. Add the key in the server settings (FIREFLIES_API_KEY) to sync calls.</span></div>
+{% endif %}
 
+<div class="section">
   {% if not calendar_connection %}
   <div class="empty-state">
     <h3>No calendar connected</h3>
-    <p>{% if current_user.is_admin %}Connect Google Calendar in Settings, then Integrations, to see upcoming meeting titles and participants here.{% else %}Ask an Administrator to connect Google Calendar in Settings.{% endif %}</p>
+    <p>{% if current_user.is_admin %}Connect Google Calendar in Settings, then Integrations, to see upcoming meetings here.{% else %}Ask an Administrator to connect Google Calendar in Settings.{% endif %}</p>
   </div>
   {% elif calendar_error %}
   <div class="empty-state">
@@ -59,21 +68,33 @@
     {% if current_user.is_admin %}<a href="{{ url_for('auth.integrations') }}" class="btn btn-sm mt-16">Reconnect in Integrations</a>{% endif %}
   </div>
   {% elif upcoming_events %}
-  {% for e in upcoming_events %}
-  <div class="card mb-16">
-    <div class="flex-between">
-      <h3 style="font-size:15px;">{{ e.title }}{% if e.is_sales %} <span class="badge badge-type" style="margin-left:6px;">Sales</span>{% endif %}</h3>
-      <span class="small muted">
-        {% if e.is_all_day %}{{ e.start.strftime('%d %b %Y') if e.start else '' }} · All day
-        {% else %}{{ e.start.strftime('%d %b %Y, %I:%M %p') if e.start else 'Time TBD' }}
-        {% endif %}
-      </span>
+  {% if next_up %}
+  <div class="mt-next">
+    <div class="mt-next-main">
+      <div class="mt-next-label">Next up - {{ next_up.start.strftime('%a %d %b, %-I:%M %p') }}, {{ starts_in(next_up.minutes_away) }}</div>
+      <div class="mt-next-title">{{ next_up.title }}</div>
+      <div class="mt-next-foot">{{ avatars(next_up) }}{{ dest_chip(next_up) }}</div>
     </div>
-    {% if e.attendees %}
-    <div class="small muted mt-8">{{ e.attendees|join(', ') }}</div>
-    {% endif %}
+    {% if next_up.meet_link %}<a class="btn mt-join-inv" href="{{ next_up.meet_link }}" target="_blank" rel="noopener">Join Meet</a>{% endif %}
   </div>
-  {% endfor %}
+  {% endif %}
+  {% if agenda_days %}
+  <div class="mt-head">
+    <h2 class="section-title" style="margin:0;">Coming up</h2>
+    {% if current_user.is_admin %}<a href="{{ url_for('auth.integrations') }}" class="small muted">{{ calendar_connection.email }}</a>{% endif %}
+  </div>
+  <div class="mt-agenda">
+    {% for day in agenda_days %}{% for e in day.events %}
+    <div class="mt-row">
+      <div class="mt-dd">{% if loop.first and day.date %}<b>{{ day.date.strftime('%d') }}</b><span>{{ day.date.strftime('%a') }}</span>{% endif %}</div>
+      <span class="mt-tm">{% if e.is_all_day %}All day{% elif e.start %}{{ e.start.strftime('%-I:%M %p') }}{% else %}TBD{% endif %}</span>
+      <div class="mt-main"><div class="mt-title">{{ e.title }}</div>{{ avatars(e) }}</div>
+      <div class="mt-dest">{{ dest_chip(e) }}</div>
+      <div class="mt-act">{% if e.meet_link %}<a class="btn btn-sm btn-secondary" href="{{ e.meet_link }}" target="_blank" rel="noopener">Join</a>{% endif %}</div>
+    </div>
+    {% endfor %}{% endfor %}
+  </div>
+  {% endif %}
   {% else %}
   <div class="empty-state">
     <h3>No upcoming meetings</h3>
@@ -83,10 +104,13 @@
 </div>
 
 <div class="section">
-  <div class="subnav" style="margin-bottom:20px;">
-    <button type="button" class="tab-btn active" id="tab-pending-btn" onclick="switchMeetingTab('pending')">Pending{% if pending %} ({{ pending|length }}){% endif %}</button>
-    <button type="button" class="tab-btn" id="tab-completed-btn" onclick="switchMeetingTab('completed')">Completed{% if completed %} ({{ completed|length }}){% endif %}</button>
-    <button type="button" class="tab-btn" id="tab-sales-btn" onclick="switchMeetingTab('sales')">Sales{% if sales_meetings %} ({{ sales_meetings|length }}){% endif %}</button>
+  <div class="mt-head">
+    <h2 class="section-title" style="margin:0;">Recorded</h2>
+    <div class="mt-seg">
+      <button type="button" class="tab-btn active" id="tab-pending-btn" onclick="switchMeetingTab('pending')">Needs review <i>{{ pending|length }}</i></button>
+      <button type="button" class="tab-btn" id="tab-completed-btn" onclick="switchMeetingTab('completed')">Completed <i>{{ completed|length }}</i></button>
+      <button type="button" class="tab-btn" id="tab-sales-btn" onclick="switchMeetingTab('sales')">Sales <i>{{ sales_meetings|length }}</i></button>
+    </div>
   </div>
 
   <div id="tab-pending">
@@ -128,32 +152,27 @@
     {% endfor %}
     {% else %}
     <div class="empty-state">
-      <h3>No pending meetings</h3>
-      <p>Meetings Fireflies can't confidently match to a client will show up here for manual review.</p>
+      <h3>All caught up</h3>
+      <p>Calls we can't match to a client will wait here for a quick review.</p>
     </div>
     {% endif %}
   </div>
 
   <div id="tab-completed" style="display:none;">
     {% if completed %}
-    <ul>
+    <div class="mt-rec-list">
       {% for m in completed %}
-      <li class="list-item">
-        <div class="flex-between">
-          {% if m.assigned_client and m.assigned_conversation_id %}
-          <a href="{{ url_for('conversations.detail', slug=m.assigned_client.slug, conversation_id=m.assigned_conversation_id) }}">{{ m.title }}</a>
-          {% else %}
-          <span>{{ m.title }}</span>
-          {% endif %}
-          <span class="small muted">{{ m.assigned_client.name if m.assigned_client else '' }}</span>
+      {% set pts = parse_highlights(m.fireflies_highlights) %}
+      <div class="mt-rec">
+        <div class="mt-main">
+          <div class="mt-title">{% if m.assigned_client and m.assigned_conversation_id %}<a href="{{ url_for('conversations.detail', slug=m.assigned_client.slug, conversation_id=m.assigned_conversation_id) }}">{{ m.title }}</a>{% else %}{{ m.title }}{% endif %}</div>
+          {% if pts %}<div class="mt-kp">{% if pts[0][0] %}{{ pts[0][0] }}: {% endif %}{{ pts[0][1] }}</div>{% endif %}
         </div>
-        <div class="small muted mt-8">
-          {{ m.meeting_date.strftime('%d %b %Y') if m.meeting_date else '' }}
-          {% if m.synced_by %} · Synced by {{ m.synced_by.name }}{% endif %}
-        </div>
-      </li>
+        <div class="mt-dest">{% if m.assigned_client %}<span class="mt-chip mt-chip-green"><span class="mt-dot"></span>{{ m.assigned_client.name }}</span>{% endif %}</div>
+        <span class="small muted mt-date">{{ m.meeting_date.strftime('%d %b') if m.meeting_date else '' }}</span>
+      </div>
       {% endfor %}
-    </ul>
+    </div>
     {% else %}
     <div class="empty-state">
       <h3>No completed meetings yet</h3>

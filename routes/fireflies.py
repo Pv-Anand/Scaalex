@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
@@ -184,6 +184,112 @@ def _sync_transcripts():
     db.session.commit()
     return new_count, auto_matched_count, sales_count, refreshed
 
+LAST_SYNC_KEY = "fireflies_last_sync"
+LIMIT_UNTIL_KEY = "fireflies_limit_until"
+
+
+def _set_setting(key, value):
+    row = AppSetting.query.get(key)
+    if row:
+        row.value = value
+    else:
+        db.session.add(AppSetting(key=key, value=value))
+    db.session.commit()
+
+
+def _setting_time(key):
+    row = AppSetting.query.get(key)
+    if not row or not row.value:
+        return None
+    try:
+        return datetime.fromisoformat(row.value)
+    except ValueError:
+        return None
+
+
+def _is_limit_error(exc):
+    text = str(exc).lower()
+    return "too_many_requests" in text or "too many requests" in text or "429" in text or "rate limit" in text
+
+
+def _next_midnight_utc():
+    now = datetime.now(timezone.utc)
+    return (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def time_ago(then):
+    """'4 min ago' style text for a UTC timestamp (naive = UTC)."""
+    if not then:
+        return "Not synced yet"
+    if then.tzinfo is None:
+        then = then.replace(tzinfo=timezone.utc)
+    mins = int((datetime.now(timezone.utc) - then).total_seconds() // 60)
+    if mins < 1:
+        return "Synced just now"
+    if mins < 60:
+        return f"Synced {mins} min ago"
+    if mins < 60 * 24:
+        return f"Synced {mins // 60} hr ago"
+    return f"Synced {mins // (60 * 24)} d ago"
+
+
+def starts_in(minutes):
+    if minutes < 1:
+        return "starting now"
+    if minutes < 60:
+        return f"in {minutes} min"
+    if minutes < 60 * 24:
+        return f"in {minutes // 60} hr"
+    return f"in {minutes // (60 * 24)} d"
+
+
+def _initials(name):
+    parts = [p for p in (name or "").replace("@", " ").replace(".", " ").split() if p]
+    if not parts:
+        return "?"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return (parts[0][0] + parts[1][0]).upper()
+
+
+def _agenda(events, own_domain, sales):
+    """Decorate calendar events for the Meetings page: where each call will be
+    filed, who is outside the company, and how far away it is. Returns
+    (next_up, days) where days groups the remaining events by date."""
+    now = datetime.now(timezone.utc)
+    for e in events:
+        people = e.get("people") or []
+        e["is_sales"] = any(p["email"] in sales for p in people)
+        if e["is_sales"]:
+            e["dest_kind"], e["dest_name"] = "sales", "Sales"
+        else:
+            client = guess_client_match(e["title"], [p["name"] or "" for p in people])
+            if client:
+                e["dest_kind"], e["dest_name"] = "client", client.name
+            else:
+                e["dest_kind"], e["dest_name"] = "review", "Needs review"
+        e["avatars"] = [
+            {"initials": _initials(p["name"]), "external": bool(own_domain) and not p["email"].endswith("@" + own_domain),
+             "label": p["name"]}
+            for p in people
+        ][:4]
+        e["more_people"] = max(0, len(people) - 4)
+        start = e.get("start")
+        e["minutes_away"] = None
+        if start is not None and not e.get("is_all_day") and start.tzinfo is not None:
+            e["minutes_away"] = int((start - now).total_seconds() // 60)
+
+    next_up = next((e for e in events if e["minutes_away"] is not None and e["minutes_away"] >= -30), None)
+    rest = [e for e in events if e is not next_up]
+    days = []
+    for e in rest:
+        start = e.get("start")
+        key = start.date() if start else None
+        if not days or days[-1]["date"] != key:
+            days.append({"date": key, "events": []})
+        days[-1]["events"].append(e)
+    return next_up, days
+
 
 @fireflies_bp.route("")
 @login_required
@@ -207,8 +313,15 @@ def inbox():
     )
     clients = Client.query.order_by(Client.name).all()
 
+    limit_until = _setting_time(LIMIT_UNTIL_KEY)
+    if limit_until and limit_until.tzinfo is None:
+        limit_until = limit_until.replace(tzinfo=timezone.utc)
+    if limit_until and limit_until <= datetime.now(timezone.utc):
+        limit_until = None
+
     calendar_connection = CalendarConnection.query.first()
     upcoming_events = []
+    next_up, agenda_days = None, []
     calendar_error = None
     if calendar_connection:
         access_token = get_valid_access_token()
@@ -218,9 +331,8 @@ def inbox():
             try:
                 raw_events = fetch_upcoming_events(access_token, max_results=10)
                 upcoming_events = [parse_event(e) for e in raw_events]
-                sales = set(sales_addresses())
-                for e in upcoming_events:
-                    e["is_sales"] = any(x in sales for x in e.get("attendee_emails", []))
+                own_domain = (calendar_connection.email or "").rpartition("@")[2].lower()
+                next_up, agenda_days = _agenda(upcoming_events, own_domain, set(sales_addresses()))
             except CalendarRequestError as exc:
                 calendar_error = str(exc)
 
@@ -230,7 +342,11 @@ def inbox():
         sales_addresses=sales_addresses(),
         parse_highlights=parse_highlights, parse_action_items=parse_action_items,
         calendar_connection=calendar_connection, upcoming_events=upcoming_events,
+        next_up=next_up, agenda_days=agenda_days, starts_in=starts_in,
         calendar_error=calendar_error,
+        last_synced=time_ago(_setting_time(LAST_SYNC_KEY)),
+        limit_until=limit_until,
+        fireflies_configured=bool(current_app.config.get("FIREFLIES_API_KEY")),
     )
 
 
@@ -244,9 +360,14 @@ def sync():
         flash(str(exc), "error")
         return redirect(url_for("fireflies.inbox"))
     except FirefliesRequestError as exc:
-        flash(f"Fireflies sync failed: {exc}", "error")
+        if _is_limit_error(exc):
+            db.session.rollback()
+            _set_setting(LIMIT_UNTIL_KEY, _next_midnight_utc().isoformat())
+        else:
+            flash(f"Fireflies sync failed: {exc}", "error")
         return redirect(url_for("fireflies.inbox"))
 
+    _set_setting(LAST_SYNC_KEY, datetime.now(timezone.utc).isoformat())
     if new_count == 0:
         flash(
             f"No new meetings found. {refreshed} earlier meeting(s) had their summary or transcript filled in." if refreshed
