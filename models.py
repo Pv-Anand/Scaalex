@@ -553,6 +553,9 @@ class FirefliesMeeting(db.Model):
     synced_at = db.Column(db.DateTime, default=_now)
     # Set when someone marks a Sales meeting as reviewed; NULL means "New".
     sales_reviewed_at = db.Column(db.DateTime)
+    # Short key points and action items from Fireflies, one item per line.
+    fireflies_highlights = db.Column(db.Text)
+    fireflies_action_items = db.Column(db.Text)
 
     matched_client = db.relationship("Client", foreign_keys=[matched_client_id])
     assigned_client = db.relationship("Client", foreign_keys=[assigned_client_id])

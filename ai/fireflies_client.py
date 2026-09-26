@@ -7,6 +7,7 @@ Anthropic and OpenAI directly rather than through a session-bound tool.
 
 API reference: https://docs.fireflies.ai/graphql-api
 """
+import re
 from datetime import datetime, timezone
 
 import requests
@@ -161,3 +162,63 @@ def pick_action_items(summary):
     if isinstance(value, list):
         value = "\n".join(str(v) for v in value if v)
     return (value or "").strip()
+
+
+def _strip_marks(line):
+    """Drop leading emoji and markdown from a line: '💰 **Status:** x' -> 'Status: x'."""
+    line = re.sub(r"^[^\w]+", "", line.strip())
+    return line.replace("**", "").strip()
+
+
+def pick_highlights(summary):
+    """Short key points, one per line. Fireflies' bullet_gist is exactly this
+    (label: point). If a call has none, fall back to the first sentences of the
+    summary so the card is never empty."""
+    summary = summary or {}
+    raw = summary.get("bullet_gist")
+    if isinstance(raw, list):
+        raw = "\n".join(str(v) for v in raw if v)
+    lines = [_strip_marks(l) for l in (raw or "").splitlines() if l.strip()]
+    lines = [l for l in lines if l]
+    if lines:
+        return "\n".join(lines[:8])
+    text = pick_overview(summary)
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+    return "\n".join(sentences[:4])
+
+
+def parse_highlights(text):
+    """[(label, point)] from stored highlight lines ('Label: point')."""
+    out = []
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        label, sep, rest = line.partition(": ")
+        if sep and len(label) <= 40:
+            out.append((label, rest.strip()))
+        else:
+            out.append(("", line))
+    return out
+
+
+def parse_action_items(text):
+    """[(person, [tasks])] from Fireflies' '**Name**\\ntask (12:30)' format."""
+    groups, current = [], None
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        m = re.match(r"^\*\*(.+?)\*\*:?$", line)
+        if m:
+            current = (m.group(1).strip(), [])
+            groups.append(current)
+            continue
+        task = re.sub(r"\s*\(\d{1,2}:\d{2}(?::\d{2})?\)\s*$", "", line).lstrip("-* ").strip()
+        if not task:
+            continue
+        if current is None:
+            current = ("", [])
+            groups.append(current)
+        current[1].append(task)
+    return groups

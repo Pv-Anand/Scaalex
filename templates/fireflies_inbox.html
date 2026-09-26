@@ -1,5 +1,31 @@
 {% extends "base.html" %}
 {% block title %}Meetings - {{ brand.name }} Intelligence{% endblock %}
+{% macro call_notes(m) %}
+  {% set points = parse_highlights(m.fireflies_highlights) %}
+  {% set actions = parse_action_items(m.fireflies_action_items) %}
+  {% if points %}
+  <div class="call-notes">
+    <div class="call-notes-h">Key points</div>
+    <ul class="call-points">
+      {% for label, text in points %}<li>{% if label %}<b>{{ label }}:</b> {% endif %}{{ text }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if actions %}
+  <div class="call-notes">
+    <div class="call-notes-h">Action items</div>
+    {% for person, tasks in actions %}
+    <div class="call-person">{% if person %}<b>{{ person }}</b>{% endif %}
+      <ul class="call-points">{% for t in tasks %}<li>{{ t }}</li>{% endfor %}</ul>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if not points and m.fireflies_overview %}<p class="sales-overview">{{ m.fireflies_overview }}</p>{% endif %}
+  {% if points and m.fireflies_overview %}
+  <details class="sales-transcript"><summary>Full summary</summary><div class="sales-transcript-box">{{ m.fireflies_overview }}</div></details>
+  {% endif %}
+{% endmacro %}
 {% block content %}
 <div class="page-header">
   <div>
@@ -77,9 +103,7 @@
           </div>
         </div>
       </div>
-      {% if m.fireflies_overview %}
-      <p class="small mt-16"><em>Fireflies overview:</em> {{ m.fireflies_overview }}</p>
-      {% endif %}
+      {{ call_notes(m) }}
       <div class="flex-gap mt-16" style="align-items:flex-end;">
         <form method="POST" action="{{ url_for('fireflies.assign', meeting_id=m.id) }}" class="flex-gap" style="align-items:flex-end;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -161,7 +185,7 @@
           {% if m.sales_reviewed_at %}<span class="chip-active">Reviewed</span>{% else %}<span class="chip-blue">New</span>{% endif %}
         </div>
         {% if m.participants %}<div class="sales-people">{% for p in m.participants %}<span>{{ p }}</span>{% endfor %}</div>{% endif %}
-        {% if m.fireflies_overview %}<p class="sales-overview">{{ m.fireflies_overview }}</p>{% endif %}
+        {{ call_notes(m) }}
         {% if m.transcript %}
         <details class="sales-transcript"><summary>View transcript</summary><div class="sales-transcript-box">{{ m.transcript }}</div></details>
         {% endif %}

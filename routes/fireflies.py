@@ -9,7 +9,7 @@ from ai.fireflies_client import (
     FirefliesConfigError, FirefliesRequestError,
     fetch_recent_transcripts, fetch_transcript_detail,
     parse_fireflies_date, extract_participant_names, build_transcript_text,
-    pick_overview, pick_action_items,
+    pick_overview, pick_action_items, pick_highlights, parse_highlights, parse_action_items,
 )
 from ai.google_calendar_client import CalendarRequestError, fetch_upcoming_events, parse_event
 from routes.calendar import get_valid_access_token
@@ -65,6 +65,14 @@ def _refresh_incomplete(record, detail):
     overview = pick_overview(summary)
     transcript_text = build_transcript_text(detail.get("sentences"))
     changed = False
+    highlights = pick_highlights(summary)
+    actions = pick_action_items(summary)
+    if highlights and not record.fireflies_highlights:
+        record.fireflies_highlights = highlights
+        changed = True
+    if actions and not record.fireflies_action_items:
+        record.fireflies_action_items = actions
+        changed = True
     if overview and not record.fireflies_overview:
         record.fireflies_overview = overview
         changed = True
@@ -88,6 +96,7 @@ def _sync_transcripts():
     existing = {m.fireflies_id: m for m in FirefliesMeeting.query.all()}
     existing_ids = set(existing)
     refreshed = 0
+    checks_left = 15  # cap on how many earlier meetings are re-checked per sync
 
     new_count = 0
     auto_matched_count = 0
@@ -99,7 +108,8 @@ def _sync_transcripts():
             continue
         if fid in existing_ids:
             record = existing[fid]
-            if not (record.fireflies_overview and record.transcript):
+            if checks_left > 0 and not (record.fireflies_overview and record.transcript and record.fireflies_highlights):
+                checks_left -= 1
                 if _refresh_incomplete(record, fetch_transcript_detail(fid)):
                     refreshed += 1
             continue
@@ -125,6 +135,8 @@ def _sync_transcripts():
             participants=participant_names,
             transcript=transcript_text,
             fireflies_overview=overview,
+            fireflies_highlights=pick_highlights(summary),
+            fireflies_action_items=pick_action_items(summary),
             matched_client_id=client.id if client else None,
             synced_by_id=current_user.id if (client or is_sales) else None,
             status="sales_meeting" if is_sales else "uncategorized",
@@ -216,6 +228,7 @@ def inbox():
         "fireflies_inbox.html",
         pending=pending, completed=completed, sales_meetings=sales_meetings, clients=clients,
         sales_addresses=sales_addresses(),
+        parse_highlights=parse_highlights, parse_action_items=parse_action_items,
         calendar_connection=calendar_connection, upcoming_events=upcoming_events,
         calendar_error=calendar_error,
     )

@@ -1112,3 +1112,12 @@ input.mail-extra, input[type=text].mail-extra { flex: 0 1 150px; min-width: 100p
 .team-delete-confirm { background: var(--danger-bg); margin: 14px -22px -20px; padding: 16px 22px 20px; border-top: 1px solid #e9c7c7; }
 .team-delete-panel select, .team-delete-panel input[type=text] { max-width: 420px; }
 .btn-danger-solid:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---- Meeting call notes: key points and action items ---- */
+.call-notes { margin-top: 12px; }
+.call-notes-h { font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--grey-500); margin-bottom: 4px; }
+.call-points { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.6; color: var(--grey-700); }
+.call-points li { margin: 2px 0; }
+.call-points b { color: var(--black); font-weight: 600; }
+.call-person { margin-top: 6px; font-size: 12.5px; }
+.call-person > b { color: var(--black); font-weight: 600; }
